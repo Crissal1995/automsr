@@ -2,3 +2,4 @@
 venv*
 .env
 *driver.exe
+__pycache__
