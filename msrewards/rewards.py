@@ -36,15 +36,15 @@ class MicrosoftRewards:
         "div > card-content > mee-rewards-more-activities-card-item > div"
     )
 
-    def __init__(self, driver: WebDriver):
+    def __init__(self, driver: WebDriver, implicitly_wait=7):
+        assert implicitly_wait > 0
+        driver.implicitly_wait(implicitly_wait)
         self.driver = driver
         self.home = None
-
         self.login()
 
     def go_to(self, url):
         self.driver.get(url)
-        self.driver.implicitly_wait(3)
 
     def go_to_home(self):
         self.driver.get(self.rewards_url)
@@ -53,7 +53,6 @@ class MicrosoftRewards:
     def go_to_home_tab(self):
         if self.home:
             self.driver.switch_to.window(self.home)
-        self.driver.implicitly_wait(3)
 
     def save_cookies(self, cookies_json_fp=default_cookies_json_fp):
         json.dump(self.driver.get_cookies(), open(cookies_json_fp, "w"))
@@ -78,6 +77,8 @@ class MicrosoftRewards:
         try:
             self.driver.find_element_by_css_selector(desktop_selector).click()
         except exceptions.NoSuchElementException:
+            hamburger = "#mHamburger"
+            self.driver.find_element_by_css_selector(hamburger).click()
             self.driver.find_element_by_css_selector(mobile_selector).click()
 
         LoginPage(self.driver).complete()
@@ -96,7 +97,6 @@ class MicrosoftRewards:
         input_field.send_keys(Keys.ENTER)
 
         for i in range(limit):
-            self.driver.implicitly_wait(1)
             time.sleep(0.5)
             input_field = self.driver.find_element_by_css_selector("#sb_form_q")
             input_field.send_keys(Keys.BACKSPACE)
@@ -112,7 +112,6 @@ class MicrosoftRewards:
 
             # start activity
             activity.button.click()
-            self.driver.implicitly_wait(2)
 
             # get new windows
             new_windows = set(self.driver.window_handles)

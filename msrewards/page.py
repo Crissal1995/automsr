@@ -29,13 +29,10 @@ class LoginPage(Page):
     def complete(self):
         try:
             self.select_login()
-            self.driver.implicitly_wait(3)
         except NoSuchElementException:
             pass
         self.fill_email()
-        self.driver.implicitly_wait(3)
         self.fill_password()
-        self.driver.implicitly_wait(3)
 
     def select_login(self):
         selector = "body > div.simpleSignIn > div.signInOptions > span > a"

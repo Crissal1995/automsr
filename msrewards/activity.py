@@ -52,7 +52,7 @@ class Activity:
 
 class StandardActivity(Activity):
     def do_it(self, driver: WebDriver):
-        driver.implicitly_wait(5)
+        pass
 
 
 class QuizActivity(Activity):
