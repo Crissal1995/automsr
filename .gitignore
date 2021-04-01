@@ -4,3 +4,4 @@ venv*
 *driver.exe
 __pycache__
 *.json
+*.log
