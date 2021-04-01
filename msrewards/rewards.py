@@ -1,78 +1,17 @@
-import enum
 import json
+import time
 
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.remote.webelement import WebElement
 
-
-class ActivityStatus(enum.IntEnum):
-    TODO = 0
-    DONE = 1
-    INVALID = 2
-
-
-class Activity:
-    base_header = None
-
-    status_selector = "mee-rewards-points > div > div > span.mee-icon"
-    header_selector = "div.contentContainer > h3"
-    text_selector = "div.contentContainer > p"
-    button_selector = "div.actionLink > a > span"
-
-    def __init__(self, element: WebElement):
-        self.element = element
-
-        try:
-            status_class = element.find_element_by_css_selector(
-                self.status_selector
-            ).get_attribute("class")
-            self.status = Activity.get_status(status_class)
-        except NoSuchElementException:
-            self.status = ActivityStatus.INVALID
-
-        self.header = element.find_element_by_css_selector(self.header_selector).text
-        self.text = element.find_element_by_css_selector(self.text_selector).text
-        self.button = element.find_elements_by_css_selector(self.button_selector)[-1]
-
-    @staticmethod
-    def get_status(status_class: str):
-        if "mee-icon-AddMedium" in status_class:
-            value = ActivityStatus.TODO
-        elif "mee-icon-SkypeCircleCheck" in status_class:
-            value = ActivityStatus.DONE
-        else:
-            value = ActivityStatus.INVALID
-        return value
-
-    def do_it(self, driver: WebDriver):
-        raise NotImplementedError
-
-
-class StandardActivity(Activity):
-    def do_it(self, driver: WebDriver):
-        driver.implicitly_wait(5)
-
-
-class QuizActivity(Activity):
-    base_header = "Quiz bonus"
-
-    def do_it(self, driver: WebDriver):
-        pass
-
-
-class PollActivity(Activity):
-    base_header = "Sondaggio giornaliero"
-
-    def do_it(self, driver: WebDriver):
-        pass
-
-
-class ThisOrThatActivity(Activity):
-    base_header = "Questo o quello?"
-
-    def do_it(self, driver: WebDriver):
-        pass
+from msrewards.activity import (
+    Activity,
+    ActivityStatus,
+    PollActivity,
+    QuizActivity,
+    StandardActivity,
+    ThisOrThatActivity,
+)
+from msrewards.page import CookieAcceptPage, LoginPage
 
 
 class MicrosoftRewards:
@@ -95,6 +34,12 @@ class MicrosoftRewards:
         self.driver = driver
         self.home = None
 
+        self.login()
+
+    def go_to(self, url):
+        self.driver.get(url)
+        self.driver.implicitly_wait(3)
+
     def go_to_home(self):
         self.driver.get(self.link)
         self.home = self.driver.current_window_handle
@@ -102,6 +47,7 @@ class MicrosoftRewards:
     def go_to_home_tab(self):
         if self.home:
             self.driver.switch_to.window(self.home)
+        self.driver.implicitly_wait(3)
 
     def save_cookies(self, cookies_json_fp=default_cookies_json_fp):
         json.dump(self.driver.get_cookies(), open(cookies_json_fp, "w"))
@@ -113,19 +59,45 @@ class MicrosoftRewards:
             self.driver.add_cookie(cookie)
         self.driver.get(self.link)
 
+    def execute_activity(self, activity: Activity):
+        return self.execute_activities([activity])
+
+    def login(self):
+        self.go_to("https://www.bing.com/")
+        CookieAcceptPage(self.driver).complete()
+
+        self.driver.find_element_by_css_selector("#id_s").click()
+        LoginPage(self.driver).complete()
+
     def execute_activities(self, activities=None):
         if not activities:
             activities = self.get_todo_activities()
 
         for activity in activities:
+            # get old windows
+            old_windows = set(self.driver.window_handles)
+
             # start activity
             activity.button.click()
+            self.driver.implicitly_wait(2)
 
-            # wait for the page to load
-            self.driver.implicitly_wait(1)
+            # get new windows
+            new_windows = set(self.driver.window_handles)
+
+            # get window as diff between new and old windows
+            # if the set is empty (pop fails), then the button
+            # opened in current window handle
+            try:
+                window = new_windows.difference(old_windows).pop()
+            except KeyError:
+                window = self.driver.current_window_handle
+
+            # switch to page and let it load
+            self.driver.switch_to.window(window)
+            time.sleep(2)
 
             # execute the activity
-            activity.do_it(self.driver)
+            activity.do_it(driver=self.driver)
 
             # and then return to the home
             self.go_to_home_tab()
@@ -167,11 +139,11 @@ class MicrosoftRewards:
             header = element.find_element_by_css_selector(Activity.header_selector).text
 
             # cast right type to elements
-            if header in ThisOrThatActivity.base_header:
+            if ThisOrThatActivity.base_header in header:
                 activity = ThisOrThatActivity(element)
-            elif header in PollActivity.base_header:
+            elif PollActivity.base_header in header:
                 activity = PollActivity(element)
-            elif header in QuizActivity.base_header:
+            elif QuizActivity.base_header in header:
                 activity = QuizActivity(element)
             else:
                 activity = StandardActivity(element)
