@@ -10,4 +10,4 @@ rewards = msrewards.MicrosoftRewards(driver)
 # rewards.restore_cookies()
 rewards.go_to_home()
 
-rewards.execute_activities(rewards.get_todo_activities())
+rewards.execute_todo_activities()

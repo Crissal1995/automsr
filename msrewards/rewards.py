@@ -69,10 +69,10 @@ class MicrosoftRewards:
         self.driver.find_element_by_css_selector("#id_s").click()
         LoginPage(self.driver).complete()
 
-    def execute_activities(self, activities=None):
-        if not activities:
-            activities = self.get_todo_activities()
+    def execute_todo_activities(self):
+        return self.execute_activities(self.get_todo_activities())
 
+    def execute_activities(self, activities):
         for activity in activities:
             # get old windows
             old_windows = set(self.driver.window_handles)
