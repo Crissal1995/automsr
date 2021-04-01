@@ -1,6 +1,9 @@
 import json
+import random
+import string
 import time
 
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from msrewards.activity import (
@@ -15,7 +18,9 @@ from msrewards.page import CookieAcceptPage, LoginPage
 
 
 class MicrosoftRewards:
-    link = "https://account.microsoft.com/rewards/"
+    rewards_url = "https://account.microsoft.com/rewards/"
+    bing_url = "https://www.bing.com/"
+
     default_cookies_json_fp = "cookies.json"
 
     daily_card_selector = (
@@ -41,7 +46,7 @@ class MicrosoftRewards:
         self.driver.implicitly_wait(3)
 
     def go_to_home(self):
-        self.driver.get(self.link)
+        self.driver.get(self.rewards_url)
         self.home = self.driver.current_window_handle
 
     def go_to_home_tab(self):
@@ -57,17 +62,36 @@ class MicrosoftRewards:
         self.driver.delete_all_cookies()
         for cookie in cookies_json:
             self.driver.add_cookie(cookie)
-        self.driver.get(self.link)
+        self.driver.get(self.rewards_url)
 
     def execute_activity(self, activity: Activity):
         return self.execute_activities([activity])
 
     def login(self):
-        self.go_to("https://www.bing.com/")
+        self.go_to(self.bing_url)
         CookieAcceptPage(self.driver).complete()
 
         self.driver.find_element_by_css_selector("#id_s").click()
         LoginPage(self.driver).complete()
+
+    def execute_searches(self, limit=None):
+        alphabet = string.ascii_letters + string.digits
+        if not limit:
+            limit = random.randint(90, 120)
+        self.go_to(self.bing_url)
+
+        word_length = random.randint(100, 150)
+        word = "".join([random.choice(alphabet) for _ in range(word_length)])
+
+        input_field = self.driver.find_element_by_css_selector("#sb_form_q")
+        input_field.send_keys(word)
+        input_field.send_keys(Keys.ENTER)
+
+        for i in range(limit):
+            time.sleep(0.7)
+            input_field = self.driver.find_element_by_css_selector("#sb_form_q")
+            input_field.send_keys(Keys.BACKSPACE)
+            input_field.send_keys(Keys.ENTER)
 
     def execute_todo_activities(self):
         return self.execute_activities(self.get_todo_activities())
