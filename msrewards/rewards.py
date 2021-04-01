@@ -3,10 +3,11 @@ import random
 import string
 import time
 
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from msrewards import exceptions
 from msrewards.activity import (
     Activity,
     ActivityStatus,
@@ -21,8 +22,10 @@ from msrewards.page import CookieAcceptPage, LoginPage
 class MicrosoftRewards:
     rewards_url = "https://account.microsoft.com/rewards/"
     bing_url = "https://www.bing.com/"
+    login_url = "https://login.live.com/login.srf"
 
     default_cookies_json_fp = "cookies.json"
+    default_credentials_json_fp = "credentials.json"
 
     daily_card_selector = (
         "#daily-sets > "
@@ -36,11 +39,31 @@ class MicrosoftRewards:
         "div > card-content > mee-rewards-more-activities-card-item > div"
     )
 
-    def __init__(self, driver: WebDriver, implicitly_wait=7):
+    edge_win_ua = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        " AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/64.0.3282.140 Safari/537.36 Edge/18.17763"
+    )
+    chrome_android_ua = (
+        "Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011; wv) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.157"
+        " Mobile Safari/537.36"
+    )
+
+    def __init__(
+        self,
+        driver: WebDriver,
+        *,
+        implicitly_wait=7,
+        cookies_json_fp=default_cookies_json_fp,
+        credentials_json_fp=default_credentials_json_fp,
+    ):
         assert implicitly_wait > 0
         driver.implicitly_wait(implicitly_wait)
         self.driver = driver
         self.home = None
+        self.cookies_json_fp = cookies_json_fp
+        self.credentials_json_fp = credentials_json_fp
         self.login()
 
     def go_to(self, url):
@@ -64,6 +87,31 @@ class MicrosoftRewards:
             self.driver.add_cookie(cookie)
         self.driver.get(self.rewards_url)
 
+    @classmethod
+    def daily_routine(cls, credentials_fp=None):
+        credentials_json_fp = credentials_fp or cls.default_credentials_json_fp
+
+        # standard points from activity
+        driver = Chrome()
+
+        rewards = cls(driver, credentials_json_fp=credentials_json_fp)
+        rewards.go_to_home()
+        rewards.execute_todo_activities()
+
+        driver.quit()
+
+        # points from searches
+        uas = [cls.edge_win_ua, cls.chrome_android_ua]
+
+        for ua in uas:
+            options = Options()
+            options.add_argument(f"user-agent={ua}")
+
+            driver = Chrome(options=options)
+            rewards = cls(driver, credentials_json_fp=credentials_json_fp)
+            rewards.execute_searches()
+            driver.quit()
+
     def execute_activity(self, activity: Activity):
         return self.execute_activities([activity])
 
@@ -71,17 +119,10 @@ class MicrosoftRewards:
         self.go_to(self.bing_url)
         CookieAcceptPage(self.driver).complete()
 
-        desktop_selector = "#id_s"
-        mobile_selector = "#hb_s"
-
-        try:
-            self.driver.find_element_by_css_selector(desktop_selector).click()
-        except exceptions.NoSuchElementException:
-            hamburger = "#mHamburger"
-            self.driver.find_element_by_css_selector(hamburger).click()
-            self.driver.find_element_by_css_selector(mobile_selector).click()
-
-        LoginPage(self.driver).complete()
+        self.go_to(self.login_url)
+        LoginPage(
+            driver=self.driver, credentials_fp=self.credentials_json_fp
+        ).complete()
 
     def execute_searches(self, limit=None):
         alphabet = string.ascii_letters + string.digits

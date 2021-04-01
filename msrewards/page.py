@@ -21,9 +21,9 @@ class CookieAcceptPage(Page):
 
 
 class LoginPage(Page):
-    def __init__(self, driver):
+    def __init__(self, driver: WebDriver, credentials_fp):
         super().__init__(driver)
-        with open("credentials.json") as f:
+        with open(credentials_fp) as f:
             self.credentials = json.load(f)
 
     def complete(self):
