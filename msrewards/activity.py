@@ -1,9 +1,10 @@
 import enum
 import time
 
-from selenium.common import exceptions as selex
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+
+from msrewards import exceptions
 
 
 class ActivityStatus(enum.IntEnum):
@@ -28,7 +29,7 @@ class Activity:
                 self.status_selector
             ).get_attribute("class")
             self.status = Activity.get_status(status_class)
-        except selex.NoSuchElementException:
+        except exceptions.NoSuchElementException:
             self.status = ActivityStatus.INVALID
 
         self.header = element.find_element_by_css_selector(self.header_selector).text
@@ -67,7 +68,7 @@ class QuizActivity(Activity):
                 value: str = driver.find_element_by_css_selector(sel).text
                 current_score, max_score = value.strip().split("/")
                 current_score, max_score = int(current_score), int(max_score)
-            except selex.NoSuchElementException:
+            except exceptions.NoSuchElementException:
                 current_score, max_score = None, None
             except ValueError:
                 current_score, max_score = None, None
@@ -75,7 +76,7 @@ class QuizActivity(Activity):
 
         try:
             driver.find_element_by_css_selector(self.start_selector).click()
-        except selex.NoSuchElementException:
+        except exceptions.NoSuchElementException:
             pass
 
         total_score_selector = "#btoHeadPanel > span.rqMenubar > span.rqText > span"
@@ -96,9 +97,9 @@ class QuizActivity(Activity):
                 try:
                     # click possibility tile
                     driver.find_element_by_css_selector(possible_sel).click()
-                except selex.NoSuchElementException:
+                except exceptions.NoSuchElementException:
                     continue
-                except selex.ElementNotInteractableException:
+                except exceptions.ElementNotInteractableException:
                     continue
                 else:
                     time.sleep(0.5)
