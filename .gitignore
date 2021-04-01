@@ -3,4 +3,4 @@ venv*
 .env
 *driver.exe
 __pycache__
-cookies.json
+*.json
