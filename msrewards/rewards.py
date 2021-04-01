@@ -6,6 +6,7 @@ import time
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
+from msrewards import exceptions
 from msrewards.activity import (
     Activity,
     ActivityStatus,
@@ -71,7 +72,14 @@ class MicrosoftRewards:
         self.go_to(self.bing_url)
         CookieAcceptPage(self.driver).complete()
 
-        self.driver.find_element_by_css_selector("#id_s").click()
+        desktop_selector = "#id_s"
+        mobile_selector = "#hb_s"
+
+        try:
+            self.driver.find_element_by_css_selector(desktop_selector).click()
+        except exceptions.NoSuchElementException:
+            self.driver.find_element_by_css_selector(mobile_selector).click()
+
         LoginPage(self.driver).complete()
 
     def execute_searches(self, limit=None):
@@ -88,7 +96,8 @@ class MicrosoftRewards:
         input_field.send_keys(Keys.ENTER)
 
         for i in range(limit):
-            time.sleep(0.7)
+            self.driver.implicitly_wait(1)
+            time.sleep(0.5)
             input_field = self.driver.find_element_by_css_selector("#sb_form_q")
             input_field.send_keys(Keys.BACKSPACE)
             input_field.send_keys(Keys.ENTER)
