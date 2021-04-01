@@ -11,5 +11,3 @@ rewards = msrewards.MicrosoftRewards(driver)
 rewards.go_to_home()
 
 rewards.execute_activities(rewards.get_todo_activities())
-
-print()
