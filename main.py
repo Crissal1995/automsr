@@ -23,6 +23,8 @@ rewards = msrewards.MicrosoftRewards(driver)
 rewards.go_to_home()
 rewards.execute_todo_activities()
 
+driver.quit()
+
 # points from searches
 for ua in uas:
     options = Options()
@@ -30,3 +32,5 @@ for ua in uas:
     driver = Chrome(options=options)
 
     msrewards.MicrosoftRewards(driver).execute_searches()
+
+    driver.quit()
