@@ -1,10 +1,11 @@
 import json
+from abc import ABC
 
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webdriver import WebDriver
 
 
-class Page:
+class Page(ABC):
     def __init__(self, driver: WebDriver):
         self.driver = driver
         self.driver.switch_to.window(self.driver.window_handles[-1])
