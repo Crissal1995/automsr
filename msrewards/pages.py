@@ -1,4 +1,3 @@
-import json
 from abc import ABC
 
 from selenium.common.exceptions import NoSuchElementException
@@ -14,17 +13,36 @@ class Page(ABC):
         raise NotImplementedError
 
 
+class BannerCookiePage(Page):
+    def complete(self):
+        selector = "#wcpConsentBannerCtrl > div > button"
+        self.driver.find_element_by_css_selector(selector).click()
+
+
 class CookieAcceptPage(Page):
     def complete(self):
         selector = "#bnp_btn_accept"
         self.driver.find_element_by_css_selector(selector).click()
 
 
+class BingLoginPage(Page):
+    def __init__(self, driver: WebDriver, is_mobile: bool):
+        super(BingLoginPage, self).__init__(driver)
+        self.is_mobile = is_mobile
+
+    def complete(self):
+        if not self.is_mobile:
+            self.driver.find_element_by_name("submit").click()
+        else:
+            hamburger = "#mHamburger"
+            self.driver.find_element_by_css_selector(hamburger).click()
+            self.driver.find_element_by_css_selector("#hb_s").click()
+
+
 class LoginPage(Page):
-    def __init__(self, driver: WebDriver, credentials_fp):
+    def __init__(self, driver: WebDriver, credentials: dict):
         super().__init__(driver)
-        with open(credentials_fp) as f:
-            self.credentials = json.load(f)
+        self.credentials = credentials
 
     def complete(self):
         try:
@@ -56,5 +74,3 @@ class LoginPage(Page):
 
         forward_selector = "#idSIButton9"
         self.driver.find_element_by_css_selector(forward_selector).click()
-
-        self.driver.refresh()

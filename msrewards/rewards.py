@@ -3,11 +3,13 @@ import random
 import string
 import time
 
+from selenium.common import exceptions
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
+from msrewards import pages
 from msrewards.activity import (
     Activity,
     ActivityStatus,
@@ -16,16 +18,17 @@ from msrewards.activity import (
     StandardActivity,
     ThisOrThatActivity,
 )
-from msrewards.page import CookieAcceptPage, LoginPage
 
 
 class MicrosoftRewards:
     rewards_url = "https://account.microsoft.com/rewards/"
     bing_url = "https://www.bing.com/"
     login_url = "https://login.live.com/login.srf"
+    bing_searched_url = (
+        "https://www.bing.com/search?q=rick+astley+never+gonna+give+you+up"
+    )
 
     default_cookies_json_fp = "cookies.json"
-    default_credentials_json_fp = "credentials.json"
 
     daily_card_selector = (
         "#daily-sets > "
@@ -53,18 +56,23 @@ class MicrosoftRewards:
     def __init__(
         self,
         driver: WebDriver,
+        credentials: dict,
         *,
+        is_mobile=False,
         implicitly_wait=7,
         cookies_json_fp=default_cookies_json_fp,
-        credentials_json_fp=default_credentials_json_fp,
     ):
         assert implicitly_wait > 0
         driver.implicitly_wait(implicitly_wait)
         self.driver = driver
         self.home = None
         self.cookies_json_fp = cookies_json_fp
-        self.credentials_json_fp = credentials_json_fp
+        self.credentials = credentials
+        self.is_mobile = is_mobile
         self.login()
+
+    def __del__(self):
+        self.driver.quit()
 
     def go_to(self, url):
         self.driver.get(url)
@@ -88,27 +96,27 @@ class MicrosoftRewards:
         self.driver.get(self.rewards_url)
 
     @classmethod
-    def daily_routine(cls, credentials_fp=None):
-        credentials_json_fp = credentials_fp or cls.default_credentials_json_fp
-
+    def daily_activities(cls, credentials: dict):
         # standard points from activity
         driver = Chrome()
 
-        rewards = cls(driver, credentials_json_fp=credentials_json_fp)
+        rewards = cls(driver, credentials=credentials)
         rewards.go_to_home()
         rewards.execute_todo_activities()
 
         driver.quit()
 
+    @classmethod
+    def daily_searches(cls, credentials: dict):
         # points from searches
         uas = [cls.edge_win_ua, cls.chrome_android_ua]
 
-        for ua in uas:
+        for ua, is_mobile in zip(uas, (False, True)):
             options = Options()
             options.add_argument(f"user-agent={ua}")
 
             driver = Chrome(options=options)
-            rewards = cls(driver, credentials_json_fp=credentials_json_fp)
+            rewards = cls(driver, credentials, is_mobile=is_mobile)
             rewards.execute_searches()
             driver.quit()
 
@@ -117,12 +125,17 @@ class MicrosoftRewards:
 
     def login(self):
         self.go_to(self.bing_url)
-        CookieAcceptPage(self.driver).complete()
+        pages.CookieAcceptPage(self.driver).complete()
 
         self.go_to(self.login_url)
-        LoginPage(
-            driver=self.driver, credentials_fp=self.credentials_json_fp
-        ).complete()
+        pages.LoginPage(driver=self.driver, credentials=self.credentials).complete()
+
+        self.go_to(self.rewards_url)
+        pages.BannerCookiePage(self.driver).complete()
+
+        self.go_to(self.bing_searched_url)
+        pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+        time.sleep(0.5)
 
     def execute_searches(self, limit=None):
         alphabet = string.ascii_letters + string.digits
@@ -137,6 +150,13 @@ class MicrosoftRewards:
         input_field.send_keys(word)
         input_field.send_keys(Keys.ENTER)
 
+        time.sleep(1)
+
+        try:
+            pages.BingLoginPage(self.driver).complete()
+        except exceptions.NoSuchElementException:
+            pass
+
         for i in range(limit):
             time.sleep(0.5)
             input_field = self.driver.find_element_by_css_selector("#sb_form_q")
@@ -147,7 +167,12 @@ class MicrosoftRewards:
         return self.execute_activities(self.get_todo_activities())
 
     def execute_activities(self, activities):
-        for activity in activities:
+        # while instead of for to do again activity if something goes wrong
+        i = 0
+        while i < len(activities):
+            # take activity i
+            activity = activities[i]
+
             # get old windows
             old_windows = set(self.driver.window_handles)
 
@@ -170,7 +195,14 @@ class MicrosoftRewards:
             time.sleep(2)
 
             # execute the activity
-            activity.do_it(driver=self.driver)
+            try:
+                activity.do_it(driver=self.driver)
+                # increment counter and goes to next activity
+                i += 1
+            # still login error
+            except exceptions.NoSuchElementException:
+                login_sel = "body > div.simpleSignIn > div.signInOptions > span > a"
+                self.driver.find_element_by_css_selector(login_sel).click()
 
             # and then return to the home
             self.go_to_home_tab()
@@ -213,13 +245,13 @@ class MicrosoftRewards:
 
             # cast right type to elements
             if ThisOrThatActivity.base_header in header:
-                activity = ThisOrThatActivity(element)
+                activity = ThisOrThatActivity(driver=self.driver, element=element)
             elif PollActivity.base_header in header:
-                activity = PollActivity(element)
+                activity = PollActivity(driver=self.driver, element=element)
             elif QuizActivity.base_header in header:
-                activity = QuizActivity(element)
+                activity = QuizActivity(driver=self.driver, element=element)
             else:
-                activity = StandardActivity(element)
+                activity = StandardActivity(driver=self.driver, element=element)
 
             # append to activites
             activities.append(activity)

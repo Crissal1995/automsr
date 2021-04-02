@@ -1,12 +1,17 @@
+import json
 import logging
-import pathlib
 
 from msrewards import MicrosoftRewards
 
 logger = logging.getLogger()
 logger.addHandler(logging.StreamHandler())
+logger.addHandler(logging.FileHandler("main.log", "w"))
 logger.setLevel(logging.INFO)
 
-for fp in pathlib.Path().glob("credentials*.json"):
-    logging.info(f"Working on {fp}")
-    MicrosoftRewards.daily_routine(credentials_fp=fp)
+with open("credentials.json") as fp:
+    credentials_list = json.load(fp)
+
+for i, credentials in enumerate(credentials_list):
+    logging.info(f"Working on credentials no. {i + 1}")
+    # MicrosoftRewards.daily_activities(credentials=credentials)
+    MicrosoftRewards.daily_searches(credentials=credentials)
