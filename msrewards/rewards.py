@@ -153,7 +153,7 @@ class MicrosoftRewards:
         time.sleep(1)
 
         try:
-            pages.BingLoginPage(self.driver).complete()
+            pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
         except exceptions.NoSuchElementException:
             pass
 
