@@ -9,15 +9,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from msrewards import pages
-from msrewards.activity import (
-    Activity,
-    ActivityStatus,
-    PollActivity,
-    QuizActivity,
-    StandardActivity,
-    ThisOrThatActivity,
-)
+from msrewards import activities, pages
 
 
 class MicrosoftRewards:
@@ -120,7 +112,7 @@ class MicrosoftRewards:
             rewards.execute_searches()
             driver.quit()
 
-    def execute_activity(self, activity: Activity):
+    def execute_activity(self, activity: activities.Activity):
         return self.execute_activities([activity])
 
     def login(self):
@@ -166,12 +158,12 @@ class MicrosoftRewards:
     def execute_todo_activities(self):
         return self.execute_activities(self.get_todo_activities())
 
-    def execute_activities(self, activities):
+    def execute_activities(self, activities_list):
         # while instead of for to do again activity if something goes wrong
         i = 0
-        while i < len(activities):
+        while i < len(activities_list):
             # take activity i
-            activity = activities[i]
+            activity = activities_list[i]
 
             # get old windows
             old_windows = set(self.driver.window_handles)
@@ -196,7 +188,7 @@ class MicrosoftRewards:
 
             # execute the activity
             try:
-                activity.do_it(driver=self.driver)
+                activity.do_it()
                 # increment counter and goes to next activity
                 i += 1
             # still login error
@@ -211,7 +203,7 @@ class MicrosoftRewards:
         return [
             activity
             for activity in self.get_activities()
-            if activity.status == ActivityStatus.TODO
+            if activity.status == activities.ActivityStatus.TODO
         ]
 
     def get_activities(self):
@@ -237,23 +229,29 @@ class MicrosoftRewards:
                 f"Invalid activity type {activity_type}. Valids are 'daily' and 'other'"
             )
 
-        activities = []
+        activities_list = []
 
         for element in self.driver.find_elements_by_css_selector(selector):
             # find card header of element
-            header = element.find_element_by_css_selector(Activity.header_selector).text
+            header = element.find_element_by_css_selector(
+                activities.Activity.header_selector
+            ).text
 
             # cast right type to elements
-            if ThisOrThatActivity.base_header in header:
-                activity = ThisOrThatActivity(driver=self.driver, element=element)
-            elif PollActivity.base_header in header:
-                activity = PollActivity(driver=self.driver, element=element)
-            elif QuizActivity.base_header in header:
-                activity = QuizActivity(driver=self.driver, element=element)
+            if activities.ThisOrThatActivity.base_header in header:
+                activity = activities.ThisOrThatActivity(
+                    driver=self.driver, element=element
+                )
+            elif activities.PollActivity.base_header in header:
+                activity = activities.PollActivity(driver=self.driver, element=element)
+            elif activities.QuizActivity.base_header in header:
+                activity = activities.QuizActivity(driver=self.driver, element=element)
             else:
-                activity = StandardActivity(driver=self.driver, element=element)
+                activity = activities.StandardActivity(
+                    driver=self.driver, element=element
+                )
 
             # append to activites
-            activities.append(activity)
+            activities_list.append(activity)
 
-        return activities
+        return activities_list
