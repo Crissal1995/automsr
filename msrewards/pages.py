@@ -1,3 +1,4 @@
+import time
 from abc import ABC
 
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -45,6 +46,7 @@ class LoginPage(Page):
 
     def complete(self):
         # self.select_login()
+        time.sleep(2)
         self.fill_email()
         self.fill_password()
 
