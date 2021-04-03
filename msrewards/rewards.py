@@ -62,12 +62,23 @@ class MicrosoftRewards:
         self.cookies_json_fp = cookies_json_fp
         self.credentials = credentials
         self.is_mobile = is_mobile
+        logging.info("Login started")
         self.login()
-        logging.debug("Login finished")
+        logging.info("Login finished")
 
     def __del__(self):
         self.driver.quit()
-        logging.debug("Driver quitted")
+        logging.info("Chromedriver quitted")
+
+    @staticmethod
+    def get_chrome_options():
+        chrome_options = Options()
+        chrome_options.add_argument("no-sandbox")
+        chrome_options.add_argument("ignore-certificate-errors")
+        chrome_options.add_argument("headless")
+        chrome_options.add_argument("disable-gpu")
+        chrome_options.add_argument("allow-running-insecure-content")
+        return chrome_options
 
     def go_to(self, url):
         self.driver.get(url)
@@ -93,8 +104,10 @@ class MicrosoftRewards:
 
     @classmethod
     def daily_activities(cls, credentials: dict):
+        options = cls.get_chrome_options()
+
         # standard points from activity
-        driver = Chrome()
+        driver = Chrome(options=options)
 
         rewards = cls(driver, credentials=credentials)
         rewards.go_to_home()
@@ -108,7 +121,7 @@ class MicrosoftRewards:
         uas = [cls.edge_win_ua, cls.chrome_android_ua]
 
         for ua, is_mobile in zip(uas, (False, True)):
-            options = Options()
+            options = cls.get_chrome_options()
             options.add_argument(f"user-agent={ua}")
 
             driver = Chrome(options=options)
@@ -120,8 +133,11 @@ class MicrosoftRewards:
         return self.execute_activities([activity])
 
     def login(self):
-        self.go_to(self.bing_url)
-        pages.CookieAcceptPage(self.driver).complete()
+        try:
+            self.go_to(self.bing_url)
+            pages.CookieAcceptPage(self.driver).complete()
+        except exceptions.NoSuchElementException:
+            pass
 
         self.go_to(self.login_url)
         pages.LoginPage(driver=self.driver, credentials=self.credentials).complete()
@@ -159,18 +175,24 @@ class MicrosoftRewards:
             logging.warning("Was already authenticated on BingPage")
 
         for i in range(limit):
+            logging.info(f"Search {i + 1}/{limit}")
             time.sleep(0.5)
             input_field = self.driver.find_element_by_css_selector("#sb_form_q")
             input_field.send_keys(Keys.BACKSPACE)
             input_field.send_keys(Keys.ENTER)
 
     def execute_todo_activities(self):
-        return self.execute_activities(self.get_todo_activities())
+        logging.info("Execute todo activities start")
+        activities_list = self.get_todo_activities()
+        logging.info(f"{len(activities_list)} activities to do")
+        return self.execute_activities(activities_list)
 
     def execute_activities(self, activities_list):
+        logging.info("Execute activities start")
         # while instead of for to do again activity if something goes wrong
         i = 0
         while i < len(activities_list):
+            logging.info(f"Activity {i}/{len(activities_list)}")
             # take activity i
             activity = activities_list[i]
 
@@ -194,6 +216,8 @@ class MicrosoftRewards:
             # switch to page and let it load
             self.driver.switch_to.window(window)
             time.sleep(2)
+
+            logging.info("Start activity")
 
             # execute the activity
             try:
@@ -246,19 +270,26 @@ class MicrosoftRewards:
                 activities.Activity.header_selector
             ).text
 
+            logging.debug(f"Activity header found: {header}")
+
             # cast right type to elements
             if activities.ThisOrThatActivity.base_header in header:
                 activity = activities.ThisOrThatActivity(
                     driver=self.driver, element=element
                 )
+                logging.debug("This or That Activity found")
             elif activities.PollActivity.base_header in header:
                 activity = activities.PollActivity(driver=self.driver, element=element)
+                logging.debug("Poll Activity found")
             elif activities.QuizActivity.base_header in header:
                 activity = activities.QuizActivity(driver=self.driver, element=element)
+                logging.debug("Quiz Activity found")
             else:
                 activity = activities.StandardActivity(
                     driver=self.driver, element=element
                 )
+                logging.debug("Standard activity found")
+            logging.debug(str(activity))
 
             # append to activites
             activities_list.append(activity)

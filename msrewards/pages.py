@@ -1,6 +1,5 @@
 from abc import ABC
 
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webdriver import WebDriver
 
 
@@ -45,10 +44,7 @@ class LoginPage(Page):
         self.credentials = credentials
 
     def complete(self):
-        try:
-            self.select_login()
-        except NoSuchElementException:
-            pass
+        # self.select_login()
         self.fill_email()
         self.fill_password()
 
