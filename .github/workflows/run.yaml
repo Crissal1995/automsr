@@ -1,0 +1,26 @@
+name: Decrypt and run script
+
+on:
+  schedule:
+    # scheduled at 13.00 UTC every day
+    - cron:  "0 13 * * *"
+
+
+jobs:
+  my-job:
+    name: Run AutoMSR job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Decrypt credentials.json
+        run: ./decrypt.sh
+        env:
+          SECRET_PASSPHRASE: ${{ secrets.SECRET_PASSPHRASE }}
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Setup requirements
+        run: pip install -r requirements.txt
+      - name: Run AutoMSR
+        run: python main.py
