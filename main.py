@@ -27,7 +27,7 @@ def to_skip(creds: dict):
         logging.error(err)
         raise ValueError(err)
 
-    values = ("activity", "search", "all")
+    values = ("activity", "search", "all", "no")
     if skip_str not in values:
         err = f"skip string must be in {values}"
         logging.error(err)
@@ -37,6 +37,7 @@ def to_skip(creds: dict):
         "activity": (True, False),
         "search": (False, True),
         "all": (True, True),
+        "no": (False, False),
     }
     return return_dict[skip_str]
 
