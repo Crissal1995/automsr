@@ -67,6 +67,9 @@ class QuizActivity(Activity):
     start_selector = "#rqStartQuiz"
     quiz_rounds = 3
 
+    def __repr__(self):
+        return f"Quiz{super().__repr__()}"
+
     def get_score(self, selector):
         try:
             value: str = self.driver.find_element_by_css_selector(selector).text
@@ -138,6 +141,9 @@ class QuizActivity(Activity):
 class PollActivity(Activity):
     base_header = "Sondaggio"
 
+    def __repr__(self):
+        return f"Poll{super().__repr__()}"
+
     def do_it(self):
         selector = "#btoption0"
         self.driver.find_element_by_css_selector(selector).click()
@@ -145,6 +151,9 @@ class PollActivity(Activity):
 
 class ThisOrThatActivity(Activity):
     base_header = "Questo o quello?"
+
+    def __repr__(self):
+        return f"ThisOrThat{super().__repr__()}"
 
     def do_it(self):
         pass
