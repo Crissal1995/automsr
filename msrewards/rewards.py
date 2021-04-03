@@ -1,4 +1,5 @@
 import json
+import logging
 import random
 import string
 import time
@@ -62,12 +63,15 @@ class MicrosoftRewards:
         self.credentials = credentials
         self.is_mobile = is_mobile
         self.login()
+        logging.debug("Login finished")
 
     def __del__(self):
         self.driver.quit()
+        logging.debug("Driver quitted")
 
     def go_to(self, url):
         self.driver.get(url)
+        logging.debug(f"Driver GET {url}")
 
     def go_to_home(self):
         self.driver.get(self.rewards_url)
@@ -135,8 +139,12 @@ class MicrosoftRewards:
             limit = random.randint(90, 120)
         self.go_to(self.bing_url)
 
-        word_length = random.randint(100, 150)
+        logging.info(f"Searches will be executed {limit} times")
+
+        word_length = random.randint(limit, 150)
         word = "".join([random.choice(alphabet) for _ in range(word_length)])
+
+        logging.info(f"Word length be searched: {word_length}, word: {word}")
 
         input_field = self.driver.find_element_by_css_selector("#sb_form_q")
         input_field.send_keys(word)
@@ -146,8 +154,9 @@ class MicrosoftRewards:
 
         try:
             pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+            logging.info("Succesfully authenticated on BingPage")
         except exceptions.NoSuchElementException:
-            pass
+            logging.warning("Was already authenticated on BingPage")
 
         for i in range(limit):
             time.sleep(0.5)

@@ -4,8 +4,19 @@ import logging
 from msrewards import MicrosoftRewards
 
 logger = logging.getLogger()
-logger.addHandler(logging.StreamHandler())
-logger.addHandler(logging.FileHandler("main.log", "w"))
+
+FORMAT = "%(levelname)s :: %(asctime)s :: %(module)s :: %(funcName)s :: %(lineno)d :: %(message)s"
+formatter = logging.Formatter(FORMAT)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+file_handler = logging.FileHandler("main.log")
+file_handler.setFormatter(formatter)
+
+logger.addHandler(stream_handler)
+logger.addHandler(file_handler)
+
 logger.setLevel(logging.INFO)
 
 
@@ -42,22 +53,27 @@ def to_skip(creds: dict):
     return return_dict[skip_str]
 
 
-with open("credentials.json") as fp:
-    credentials_list = json.load(fp)
+def main():
+    with open("credentials.json") as fp:
+        credentials_list = json.load(fp)
 
-for i, credentials in enumerate(credentials_list):
-    logging.info(f"Working on credentials no. {i + 1}")
+    for i, credentials in enumerate(credentials_list):
+        logging.info(f"Working on credentials no. {i + 1}")
 
-    skip_activity, skip_searches = to_skip(credentials)
+        skip_activity, skip_searches = to_skip(credentials)
 
-    if not skip_activity:
-        logging.info("Start daily activities")
-        MicrosoftRewards.daily_activities(credentials=credentials)
-    else:
-        logging.info("Skipping daily activities")
+        if not skip_activity:
+            logging.info("Start daily activities")
+            MicrosoftRewards.daily_activities(credentials=credentials)
+        else:
+            logging.info("Skipping daily activities")
 
-    if not skip_searches:
-        logging.info("Start daily searches")
-        MicrosoftRewards.daily_searches(credentials=credentials)
-    else:
-        logging.info("Skipping daily searches")
+        if not skip_searches:
+            logging.info("Start daily searches")
+            MicrosoftRewards.daily_searches(credentials=credentials)
+        else:
+            logging.info("Skipping daily searches")
+
+
+if __name__ == "__main__":
+    main()
