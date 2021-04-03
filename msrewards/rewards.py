@@ -133,20 +133,25 @@ class MicrosoftRewards:
         return self.execute_activities([activity])
 
     def login(self):
+        self.go_to(self.bing_url)
         try:
-            self.go_to(self.bing_url)
             pages.CookieAcceptPage(self.driver).complete()
+            logging.info("Cookies accepted")
         except exceptions.NoSuchElementException:
-            pass
+            logging.info("Cannot accept cookies")
 
         self.go_to(self.login_url)
         pages.LoginPage(driver=self.driver, credentials=self.credentials).complete()
+        logging.info("Logged in")
 
         self.go_to(self.rewards_url)
         pages.BannerCookiePage(self.driver).complete()
+        logging.info("Banner Cookies accepted")
 
         self.go_to(self.bing_searched_url)
         pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+        logging.info("Login made on bing webpage")
+
         time.sleep(0.5)
 
     def execute_searches(self, limit=None):
@@ -172,19 +177,24 @@ class MicrosoftRewards:
             pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
             logging.info("Succesfully authenticated on BingPage")
         except exceptions.NoSuchElementException:
-            logging.warning("Was already authenticated on BingPage")
+            logging.info("Was already authenticated on BingPage")
 
         for i in range(limit):
             logging.info(f"Search {i + 1}/{limit}")
             time.sleep(0.5)
+
+            # must search again input field because of page reloading
             input_field = self.driver.find_element_by_css_selector("#sb_form_q")
+
             input_field.send_keys(Keys.BACKSPACE)
             input_field.send_keys(Keys.ENTER)
 
     def execute_todo_activities(self):
         logging.info("Execute todo activities start")
+
         activities_list = self.get_todo_activities()
         logging.info(f"{len(activities_list)} activities to do")
+
         return self.execute_activities(activities_list)
 
     def execute_activities(self, activities_list):
@@ -192,9 +202,10 @@ class MicrosoftRewards:
         # while instead of for to do again activity if something goes wrong
         i = 0
         while i < len(activities_list):
-            logging.info(f"Activity {i}/{len(activities_list)}")
             # take activity i
             activity = activities_list[i]
+
+            logging.info(f"Activity {i}/{len(activities_list)} - {str(activity)}")
 
             # get old windows
             old_windows = set(self.driver.window_handles)
@@ -224,6 +235,7 @@ class MicrosoftRewards:
                 activity.do_it()
                 # increment counter and goes to next activity
                 i += 1
+                logging.info("Activity completed")
             # still login error
             except exceptions.NoSuchElementException:
                 login_sel = "body > div.simpleSignIn > div.signInOptions > span > a"
