@@ -146,8 +146,11 @@ class MicrosoftRewards:
         logging.info("Logged in")
 
         self.go_to(self.rewards_url)
-        pages.BannerCookiePage(self.driver).complete()
-        logging.info("Banner Cookies accepted")
+        try:
+            pages.BannerCookiePage(self.driver).complete()
+            logging.info("Banner cookies accepted")
+        except exceptions.NoSuchElementException:
+            logging.info("Cannot accept banner cookies")
 
         self.go_to(self.bing_searched_url)
         pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
