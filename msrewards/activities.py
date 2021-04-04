@@ -1,10 +1,9 @@
 import enum
 import time
 
+from selenium.common import exceptions
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
-
-from msrewards import exceptions
 
 
 class ActivityStatus(enum.IntEnum):
