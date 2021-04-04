@@ -71,13 +71,14 @@ class MicrosoftRewards:
         logging.info("Chromedriver quitted")
 
     @staticmethod
-    def get_chrome_options():
+    def get_chrome_options(headless=True):
         chrome_options = Options()
-        chrome_options.add_argument("no-sandbox")
-        chrome_options.add_argument("ignore-certificate-errors")
-        chrome_options.add_argument("headless")
-        chrome_options.add_argument("disable-gpu")
-        chrome_options.add_argument("allow-running-insecure-content")
+        # chrome_options.add_argument("no-sandbox")
+        # chrome_options.add_argument("ignore-certificate-errors")
+        # chrome_options.add_argument("allow-running-insecure-content")
+        if headless:
+            chrome_options.add_argument("headless")
+            chrome_options.add_argument("disable-gpu")
         return chrome_options
 
     def go_to(self, url):
