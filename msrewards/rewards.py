@@ -251,20 +251,25 @@ class MicrosoftRewards:
             self.go_to_home_tab()
 
     def get_todo_activities(self):
-        return [
+        todos = [
             activity
             for activity in self.get_activities()
             if activity.status == activities.ActivityStatus.TODO
         ]
+        logging.info(f"Found {len(todos)} todo activities")
+        if not todos:
+            logging.warning("No todo activity found!")
+        return todos
 
     def get_activities(self):
         return self.get_daily_activities() + self.get_other_activities()
 
     def get_daily_activities(self):
         dailies = self._get_activities("daily")
-        # get first three cards (current)
-        # the other three are next-day cards
-        assert len(dailies) == 6
+        dailies_len = len(dailies)
+        assert dailies_len > 0, "No daily found"
+        assert dailies_len == 6, "Dailies should be 6: 3 today and 3 tomorrow sets"
+        # take first three, the current daily
         return dailies[:3]
 
     def get_other_activities(self):

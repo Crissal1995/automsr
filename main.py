@@ -66,8 +66,9 @@ def main():
             logging.info("Start daily activities")
             try:
                 MicrosoftRewards.daily_activities(credentials=credentials)
-            except exceptions.WebDriverException as e:
+            except (exceptions.WebDriverException, AssertionError) as e:
                 logging.error(e)
+                logging.error("Cannot complete daily activities")
         else:
             logging.info("Skipping daily activities")
 
@@ -77,6 +78,7 @@ def main():
                 MicrosoftRewards.daily_searches(credentials=credentials)
             except exceptions.WebDriverException as e:
                 logging.error(e)
+                logging.error("Cannot complete daily searches")
         else:
             logging.info("Skipping daily searches")
 
