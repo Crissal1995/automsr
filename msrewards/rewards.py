@@ -74,9 +74,9 @@ class MicrosoftRewards:
     @staticmethod
     def get_chrome_options(headless=True):
         chrome_options = Options()
-        # chrome_options.add_argument("no-sandbox")
-        # chrome_options.add_argument("ignore-certificate-errors")
-        # chrome_options.add_argument("allow-running-insecure-content")
+        chrome_options.add_argument("no-sandbox")
+        chrome_options.add_argument("ignore-certificate-errors")
+        chrome_options.add_argument("allow-running-insecure-content")
         if headless:
             chrome_options.add_argument("headless")
             if sys.platform in ("win32", "cygwin"):
