@@ -11,7 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from msrewards import activities, pages
+from msrewards import activities, pages, punchcards
 
 
 class MicrosoftRewards:
@@ -34,6 +34,10 @@ class MicrosoftRewards:
         "#more-activities > "
         "div > mee-card.ng-scope.ng-isolate-scope.c-card > "
         "div > card-content > mee-rewards-more-activities-card-item > div"
+    )
+
+    punchcard_selector = (
+        "#punch-cards > mee-carousel > div > div:nth-child(4) > ul > li > mee-hero-item"
     )
 
     edge_win_ua = (
@@ -115,6 +119,9 @@ class MicrosoftRewards:
         rewards = cls(driver, credentials=credentials)
         rewards.go_to_home()
         rewards.execute_todo_activities()
+
+        rewards.go_to_home()
+        rewards.execute_todo_punchcards()
 
         driver.quit()
 
@@ -205,13 +212,18 @@ class MicrosoftRewards:
 
     def execute_activities(self, activities_list):
         logging.info("Execute activities start")
+
+        length = len(activities_list)
+        if length == 0:
+            logging.info("No activity found")
+
         # while instead of for to do again activity if something goes wrong
         i = 0
-        while i < len(activities_list):
+        while i < length:
             # take activity i
             activity = activities_list[i]
 
-            logging.info(f"Activity {i + 1}/{len(activities_list)} - {str(activity)}")
+            logging.info(f"Activity {i + 1}/{length} - {str(activity)}")
 
             # get old windows
             old_windows = set(self.driver.window_handles)
@@ -274,6 +286,90 @@ class MicrosoftRewards:
 
     def get_other_activities(self):
         return self._get_activities("other")
+
+    def get_free_punchcards(self):
+        return [
+            punchcard
+            for punchcard in self.get_punchcards()
+            if isinstance(punchcard, punchcards.FreePunchcard)
+        ]
+
+    def get_free_todo_punchcards(self):
+        return [
+            punchcard
+            for punchcard in self.get_free_punchcards()
+            if punchcard.status == punchcards.PunchcardStatus.TODO
+        ]
+
+    def execute_todo_punchcards(self):
+        return self.execute_punchcards(self.get_free_todo_punchcards())
+
+    def execute_punchcards(self, punchcards_list):
+        logging.info("Execute punchcards start")
+        length = len(punchcards_list)
+        if length == 0:
+            logging.info("No punchcard found")
+
+        for i, punchcard in enumerate(punchcards_list):
+            logging.info(f"Punchcard {i + 1}/{length} - {str(punchcard)}")
+
+            # get old windows
+            old_windows = set(self.driver.window_handles)
+
+            # start punchcard
+            punchcard.button.click()
+
+            # get new windows
+            new_windows = set(self.driver.window_handles)
+
+            # get window as diff between new and old windows
+            # if the set is empty (pop fails), then the button
+            # opened in current window handle
+            try:
+                window = new_windows.difference(old_windows).pop()
+            except KeyError:
+                window = self.driver.current_window_handle
+
+            # switch to page and let it load
+            self.driver.switch_to.window(window)
+            time.sleep(2)
+
+            logging.info("Start Punchcard")
+
+            # execute the punchcard
+            punchcard.do_it()
+            logging.info("Punchcard completed")
+
+            # and then return to the home
+            self.go_to_home_tab()
+
+    def get_punchcards(self):
+        paid_keywords = punchcards.PaidPunchcard.keywords
+
+        punchcards_list = []
+
+        for element in self.driver.find_elements_by_css_selector(
+            self.punchcard_selector
+        ):
+            # get element text from aria-label attribute
+            text = element.get_attribute("aria-label").lower()
+
+            # check from text if the punchcard is free or paid
+            # TODO is there a better way?
+            if any(word in text for word in paid_keywords):
+                logging.debug("Paid punchcard found")
+                punchcard = punchcards.PaidPunchcard(
+                    driver=self.driver, element=element
+                )
+            else:
+                logging.debug("Free punchcard found")
+                punchcard = punchcards.FreePunchcard(
+                    driver=self.driver, element=element
+                )
+
+            punchcards_list.append(punchcard)
+
+        return punchcards_list
 
     def _get_activities(self, activity_type):
         if activity_type == "daily":
