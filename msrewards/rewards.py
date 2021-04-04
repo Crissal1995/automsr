@@ -2,6 +2,7 @@ import json
 import logging
 import random
 import string
+import sys
 import time
 
 from selenium.common import exceptions
@@ -78,7 +79,8 @@ class MicrosoftRewards:
         # chrome_options.add_argument("allow-running-insecure-content")
         if headless:
             chrome_options.add_argument("headless")
-            chrome_options.add_argument("disable-gpu")
+            if sys.platform in ("win32", "cygwin"):
+                chrome_options.add_argument("disable-gpu")
         return chrome_options
 
     def go_to(self, url):
