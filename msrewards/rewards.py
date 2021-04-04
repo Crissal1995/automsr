@@ -209,7 +209,7 @@ class MicrosoftRewards:
             # take activity i
             activity = activities_list[i]
 
-            logging.info(f"Activity {i}/{len(activities_list)} - {str(activity)}")
+            logging.info(f"Activity {i + 1}/{len(activities_list)} - {str(activity)}")
 
             # get old windows
             old_windows = set(self.driver.window_handles)
