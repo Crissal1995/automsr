@@ -2,6 +2,7 @@ import json
 import logging
 import random
 import string
+import sys
 import time
 
 from selenium.common import exceptions
@@ -71,13 +72,15 @@ class MicrosoftRewards:
         logging.info("Chromedriver quitted")
 
     @staticmethod
-    def get_chrome_options():
+    def get_chrome_options(headless=True):
         chrome_options = Options()
         chrome_options.add_argument("no-sandbox")
         chrome_options.add_argument("ignore-certificate-errors")
-        chrome_options.add_argument("headless")
-        chrome_options.add_argument("disable-gpu")
         chrome_options.add_argument("allow-running-insecure-content")
+        if headless:
+            chrome_options.add_argument("headless")
+            if sys.platform in ("win32", "cygwin"):
+                chrome_options.add_argument("disable-gpu")
         return chrome_options
 
     def go_to(self, url):
@@ -145,8 +148,11 @@ class MicrosoftRewards:
         logging.info("Logged in")
 
         self.go_to(self.rewards_url)
-        pages.BannerCookiePage(self.driver).complete()
-        logging.info("Banner Cookies accepted")
+        try:
+            pages.BannerCookiePage(self.driver).complete()
+            logging.info("Banner cookies accepted")
+        except exceptions.NoSuchElementException:
+            logging.info("Cannot accept banner cookies")
 
         self.go_to(self.bing_searched_url)
         pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
@@ -205,7 +211,7 @@ class MicrosoftRewards:
             # take activity i
             activity = activities_list[i]
 
-            logging.info(f"Activity {i}/{len(activities_list)} - {str(activity)}")
+            logging.info(f"Activity {i + 1}/{len(activities_list)} - {str(activity)}")
 
             # get old windows
             old_windows = set(self.driver.window_handles)
@@ -245,20 +251,25 @@ class MicrosoftRewards:
             self.go_to_home_tab()
 
     def get_todo_activities(self):
-        return [
+        todos = [
             activity
             for activity in self.get_activities()
             if activity.status == activities.ActivityStatus.TODO
         ]
+        logging.info(f"Found {len(todos)} todo activities")
+        if not todos:
+            logging.warning("No todo activity found!")
+        return todos
 
     def get_activities(self):
         return self.get_daily_activities() + self.get_other_activities()
 
     def get_daily_activities(self):
         dailies = self._get_activities("daily")
-        # get first three cards (current)
-        # the other three are next-day cards
-        assert len(dailies) == 6
+        dailies_len = len(dailies)
+        assert dailies_len > 0, "No daily found"
+        assert dailies_len == 6, "Dailies should be 6: 3 today and 3 tomorrow sets"
+        # take first three, the current daily
         return dailies[:3]
 
     def get_other_activities(self):
