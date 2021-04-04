@@ -14,7 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Decrypt credentials.json
-        run: ./decrypt.sh
+        run: |
+          chmod +x decrypt.sh
+          ./decrypt.sh
         env:
           SECRET_PASSPHRASE: ${{ secrets.SECRET_PASSPHRASE }}
       - name: Setup python
