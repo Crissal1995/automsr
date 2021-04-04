@@ -1,7 +1,7 @@
 import json
 import logging
 
-from msrewards import MicrosoftRewards
+from msrewards import MicrosoftRewards, exceptions
 
 logger = logging.getLogger()
 
@@ -64,13 +64,19 @@ def main():
 
         if not skip_activity:
             logging.info("Start daily activities")
-            MicrosoftRewards.daily_activities(credentials=credentials)
+            try:
+                MicrosoftRewards.daily_activities(credentials=credentials)
+            except exceptions.WebDriverException as e:
+                logging.error(e)
         else:
             logging.info("Skipping daily activities")
 
         if not skip_searches:
             logging.info("Start daily searches")
-            MicrosoftRewards.daily_searches(credentials=credentials)
+            try:
+                MicrosoftRewards.daily_searches(credentials=credentials)
+            except exceptions.WebDriverException as e:
+                logging.error(e)
         else:
             logging.info("Skipping daily searches")
 
