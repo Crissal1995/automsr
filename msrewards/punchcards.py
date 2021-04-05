@@ -20,7 +20,7 @@ class Punchcard(ABC):
         self.driver = driver
         self.element = element
         self.text = element.get_attribute("aria-label")
-        checkmarks = element.find_elements_by_class_name("mee-icon")
+        checkmarks = element.find_elements_by_class_name("span.mee-icon")
         if not checkmarks:
             logging.warning(
                 f"No checkmarks found for punchcard. Is it valid? (text={self.text})."
