@@ -72,7 +72,10 @@ class MicrosoftRewards:
         logging.info("Login finished")
 
     def __del__(self):
-        self.driver.quit()
+        try:
+            self.driver.quit()
+        except (exceptions.WebDriverException, Exception):
+            logging.warning("Driver was already quitted")
         logging.info("Chromedriver quitted")
 
     @staticmethod
