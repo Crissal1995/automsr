@@ -53,7 +53,7 @@ def to_skip(creds: dict):
     return return_dict[skip_str]
 
 
-def main():
+def main(**kwargs):
     with open("credentials.json") as fp:
         credentials_list = json.load(fp)
 
@@ -65,7 +65,7 @@ def main():
         if not skip_activity:
             logging.info("Start daily activities")
             try:
-                MicrosoftRewards.daily_activities(credentials=credentials)
+                MicrosoftRewards.daily_activities(credentials=credentials, **kwargs)
             except (exceptions.WebDriverException, AssertionError) as e:
                 logging.error(e)
                 logging.error("Cannot complete daily activities")
@@ -75,7 +75,7 @@ def main():
         if not skip_searches:
             logging.info("Start daily searches")
             try:
-                MicrosoftRewards.daily_searches(credentials=credentials)
+                MicrosoftRewards.daily_searches(credentials=credentials, **kwargs)
             except exceptions.WebDriverException as e:
                 logging.error(e)
                 logging.error("Cannot complete daily searches")
@@ -84,4 +84,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(headless=False)

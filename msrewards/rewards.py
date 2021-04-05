@@ -11,7 +11,19 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from msrewards import activities, pages, punchcards
+from msrewards.activities import (
+    Activity,
+    FreePunchcard,
+    PaidPunchcard,
+    PollActivity,
+    Punchcard,
+    QuizActivity,
+    Runnable,
+    StandardActivity,
+    Status,
+    ThisOrThatActivity,
+)
+from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
 
 
 class MicrosoftRewards:
@@ -79,15 +91,20 @@ class MicrosoftRewards:
         logging.info("Chromedriver quitted")
 
     @staticmethod
-    def get_chrome_options(headless=True):
+    def get_chrome_options(**kwargs):
+        is_headless = kwargs.get("headless", True)
+
         chrome_options = Options()
         chrome_options.add_argument("no-sandbox")
         chrome_options.add_argument("ignore-certificate-errors")
         chrome_options.add_argument("allow-running-insecure-content")
-        if headless:
+
+        if is_headless:
             chrome_options.add_argument("headless")
             if sys.platform in ("win32", "cygwin"):
+                # fix for windows platforms
                 chrome_options.add_argument("disable-gpu")
+
         return chrome_options
 
     def go_to(self, url):
@@ -113,8 +130,8 @@ class MicrosoftRewards:
         self.driver.get(self.rewards_url)
 
     @classmethod
-    def daily_activities(cls, credentials: dict):
-        options = cls.get_chrome_options()
+    def daily_activities(cls, credentials: dict, **kwargs):
+        options = cls.get_chrome_options(**kwargs)
 
         # standard points from activity
         driver = Chrome(options=options)
@@ -129,12 +146,12 @@ class MicrosoftRewards:
         driver.quit()
 
     @classmethod
-    def daily_searches(cls, credentials: dict):
+    def daily_searches(cls, credentials: dict, **kwargs):
         # points from searches
         uas = [cls.edge_win_ua, cls.chrome_android_ua]
 
         for ua, is_mobile in zip(uas, (False, True)):
-            options = cls.get_chrome_options()
+            options = cls.get_chrome_options(**kwargs)
             options.add_argument(f"user-agent={ua}")
 
             driver = Chrome(options=options)
@@ -142,30 +159,30 @@ class MicrosoftRewards:
             rewards.execute_searches()
             driver.quit()
 
-    def execute_activity(self, activity: activities.Activity):
+    def execute_activity(self, activity: Activity):
         return self.execute_activities([activity])
 
     def login(self):
         self.go_to(self.bing_url)
         try:
-            pages.CookieAcceptPage(self.driver).complete()
+            CookieAcceptPage(self.driver).complete()
             logging.info("Cookies accepted")
         except exceptions.NoSuchElementException:
             logging.info("Cannot accept cookies")
 
         self.go_to(self.login_url)
-        pages.LoginPage(driver=self.driver, credentials=self.credentials).complete()
+        LoginPage(driver=self.driver, credentials=self.credentials).complete()
         logging.info("Logged in")
 
         self.go_to(self.rewards_url)
         try:
-            pages.BannerCookiePage(self.driver).complete()
+            BannerCookiePage(self.driver).complete()
             logging.info("Banner cookies accepted")
         except exceptions.NoSuchElementException:
             logging.info("Cannot accept banner cookies")
 
         self.go_to(self.bing_searched_url)
-        pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+        BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
         logging.info("Login made on bing webpage")
 
         time.sleep(0.5)
@@ -190,7 +207,7 @@ class MicrosoftRewards:
         time.sleep(1)
 
         try:
-            pages.BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+            BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
             logging.info("Succesfully authenticated on BingPage")
         except exceptions.NoSuchElementException:
             logging.info("Was already authenticated on BingPage")
@@ -213,26 +230,29 @@ class MicrosoftRewards:
 
         return self.execute_activities(activities_list)
 
-    def execute_activities(self, activities_list):
-        logging.info("Execute activities start")
+    def _execute(self, runnables: [Runnable], runnable_type: str):
+        assert runnable_type in ("activity", "punchcard"), "Wrong runnable provided"
+        name_dict = {
+            "activity": ("activity", "activities"),
+            "punchcard": ("punchcard", "punchcards"),
+        }
+        singular, plural = name_dict[runnable_type]
 
-        length = len(activities_list)
+        logging.info(f"Start execute {plural}")
+
+        length = len(runnables)
         if length == 0:
-            logging.info("No activity found")
+            logging.info(f"No {singular} found")
+            return
 
-        # while instead of for to do again activity if something goes wrong
-        i = 0
-        while i < length:
-            # take activity i
-            activity = activities_list[i]
-
-            logging.info(f"Activity {i + 1}/{length} - {str(activity)}")
+        for i, runnable in enumerate(runnables):
+            logging.info(f"Starting {singular} {i+1}/{length}: {str(runnable)}")
 
             # get old windows
             old_windows = set(self.driver.window_handles)
 
             # start activity
-            activity.button.click()
+            runnable.button.click()
 
             # get new windows
             new_windows = set(self.driver.window_handles)
@@ -242,34 +262,42 @@ class MicrosoftRewards:
             # opened in current window handle
             try:
                 window = new_windows.difference(old_windows).pop()
+                logging.debug("Link opened in new window")
             except KeyError:
                 window = self.driver.current_window_handle
+                logging.debug("Link opened in same window")
 
             # switch to page and let it load
             self.driver.switch_to.window(window)
             time.sleep(2)
 
-            logging.info("Start activity")
+            # try to log in via bing
+            try:
+                BingLoginPage(self.driver, self.is_mobile).complete()
+                self.driver.refresh()
+                logging.warning("Bing login was required, but is done")
+            except exceptions.WebDriverException:
+                logging.debug("No bing login required")
 
             # execute the activity
             try:
-                activity.do_it()
-                # increment counter and goes to next activity
-                i += 1
-                logging.info("Activity completed")
-            # still login error
-            except exceptions.NoSuchElementException:
-                login_sel = "body > div.simpleSignIn > div.signInOptions > span > a"
-                self.driver.find_element_by_css_selector(login_sel).click()
+                runnable.do_it()
+                logging.info(f"{singular.title()} completed")
+            except exceptions.WebDriverException as e:
+                logging.error(f"{singular.title()} not completed - {e}")
+                logging.info(f"Skipping {singular}")
 
             # and then return to the home
             self.go_to_home_tab()
+
+    def execute_activities(self, activities: [Activity]):
+        return self._execute(activities, "activity")
 
     def get_todo_activities(self):
         todos = [
             activity
             for activity in self.get_activities()
-            if activity.status == activities.ActivityStatus.TODO
+            if activity.status == Status.TODO
         ]
         logging.info(f"Found {len(todos)} todo activities")
         if not todos:
@@ -291,63 +319,34 @@ class MicrosoftRewards:
         return self._get_activities("other")
 
     def get_free_punchcards(self):
-        return [
+        punchcards = [
             punchcard
             for punchcard in self.get_punchcards()
-            if isinstance(punchcard, punchcards.FreePunchcard)
+            if isinstance(punchcard, FreePunchcard)
         ]
+        logging.debug(f"Found {len(punchcards)} free punchcards")
+        return punchcards
 
     def get_free_todo_punchcards(self):
-        return [
+        punchcards = [
             punchcard
             for punchcard in self.get_free_punchcards()
-            if punchcard.status == punchcards.PunchcardStatus.TODO
+            if punchcard.status == Status.TODO
         ]
+        logging.debug(f"Found {len(punchcards)} free todo punchcards")
+        return punchcards
 
     def execute_todo_punchcards(self):
         return self.execute_punchcards(self.get_free_todo_punchcards())
 
-    def execute_punchcards(self, punchcards_list):
-        logging.info("Execute punchcards start")
-        length = len(punchcards_list)
-        if length == 0:
-            logging.info("No punchcard found")
+    def execute_punchcard(self, punchcard: Punchcard):
+        return self.execute_punchcards([punchcard])
 
-        for i, punchcard in enumerate(punchcards_list):
-            logging.info(f"Punchcard {i + 1}/{length} - {str(punchcard)}")
-
-            # get old windows
-            old_windows = set(self.driver.window_handles)
-
-            # start punchcard
-            punchcard.button.click()
-
-            # get new windows
-            new_windows = set(self.driver.window_handles)
-
-            # get window as diff between new and old windows
-            # if the set is empty (pop fails), then the button
-            # opened in current window handle
-            try:
-                window = new_windows.difference(old_windows).pop()
-            except KeyError:
-                window = self.driver.current_window_handle
-
-            # switch to page and let it load
-            self.driver.switch_to.window(window)
-            time.sleep(2)
-
-            logging.info("Start Punchcard")
-
-            # execute the punchcard
-            punchcard.do_it()
-            logging.info("Punchcard completed")
-
-            # and then return to the home
-            self.go_to_home_tab()
+    def execute_punchcards(self, punchcards: [Punchcard]):
+        return self._execute(punchcards, "punchcard")
 
     def get_punchcards(self):
-        paid_keywords = punchcards.PaidPunchcard.keywords
+        paid_keywords = PaidPunchcard.keywords
 
         punchcards_list = []
 
@@ -361,14 +360,10 @@ class MicrosoftRewards:
             # TODO is there a better way?
             if any(word in text for word in paid_keywords):
                 logging.debug("Paid punchcard found")
-                punchcard = punchcards.PaidPunchcard(
-                    driver=self.driver, element=element
-                )
+                punchcard = PaidPunchcard(driver=self.driver, element=element)
             else:
                 logging.debug("Free punchcard found")
-                punchcard = punchcards.FreePunchcard(
-                    driver=self.driver, element=element
-                )
+                punchcard = FreePunchcard(driver=self.driver, element=element)
 
             punchcards_list.append(punchcard)
 
@@ -388,28 +383,22 @@ class MicrosoftRewards:
 
         for element in self.driver.find_elements_by_css_selector(selector):
             # find card header of element
-            header = element.find_element_by_css_selector(
-                activities.Activity.header_selector
-            ).text
+            header = element.find_element_by_css_selector(Activity.header_selector).text
 
             logging.debug(f"Activity header found: {header}")
 
             # cast right type to elements
-            if activities.ThisOrThatActivity.base_header in header:
-                activity = activities.ThisOrThatActivity(
-                    driver=self.driver, element=element
-                )
+            if ThisOrThatActivity.base_header in header:
+                activity = ThisOrThatActivity(driver=self.driver, element=element)
                 logging.debug("This or That Activity found")
-            elif activities.PollActivity.base_header in header:
-                activity = activities.PollActivity(driver=self.driver, element=element)
+            elif PollActivity.base_header in header:
+                activity = PollActivity(driver=self.driver, element=element)
                 logging.debug("Poll Activity found")
-            elif activities.QuizActivity.base_header in header:
-                activity = activities.QuizActivity(driver=self.driver, element=element)
+            elif QuizActivity.base_header in header:
+                activity = QuizActivity(driver=self.driver, element=element)
                 logging.debug("Quiz Activity found")
             else:
-                activity = activities.StandardActivity(
-                    driver=self.driver, element=element
-                )
+                activity = StandardActivity(driver=self.driver, element=element)
                 logging.debug("Standard activity found")
             logging.debug(str(activity))
 
