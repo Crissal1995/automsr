@@ -230,6 +230,22 @@ class MicrosoftRewards:
 
         return self.execute_activities(activities_list)
 
+    def get_new_window(self, old_windows):
+        # get new windows
+        new_windows = set(self.driver.window_handles)
+
+        # get window as diff between new and old windows
+        # if the set is empty (pop fails), then the button
+        # opened in current window handle
+        try:
+            window = new_windows.difference(old_windows).pop()
+            logging.debug("Link opened in new window")
+        except KeyError:
+            window = self.driver.current_window_handle
+            logging.debug("Link opened in same window")
+
+        return window
+
     def _execute(self, runnables: [Runnable], runnable_type: str):
         assert runnable_type in ("activity", "punchcard"), "Wrong runnable provided"
         name_dict = {
@@ -254,28 +270,29 @@ class MicrosoftRewards:
             # start activity
             runnable.button.click()
 
-            # get new windows
-            new_windows = set(self.driver.window_handles)
-
-            # get window as diff between new and old windows
-            # if the set is empty (pop fails), then the button
-            # opened in current window handle
-            try:
-                window = new_windows.difference(old_windows).pop()
-                logging.debug("Link opened in new window")
-            except KeyError:
-                window = self.driver.current_window_handle
-                logging.debug("Link opened in same window")
-
             # switch to page and let it load
+            window = self.get_new_window(old_windows)
             self.driver.switch_to.window(window)
             time.sleep(2)
 
             # try to log in via bing
             try:
                 BingLoginPage(self.driver, self.is_mobile).complete()
-                self.driver.refresh()
                 logging.warning("Bing login was required, but is done")
+
+                # restart the activity - again -
+                logging.info("Restarting the activity")
+
+                self.go_to_home_tab()
+
+                old_windows = set(self.driver.window_handles)
+
+                runnable.button.click()
+
+                window = self.get_new_window(old_windows)
+                self.driver.switch_to.window(window)
+
+                time.sleep(2)
             except exceptions.WebDriverException:
                 logging.debug("No bing login required")
 
@@ -283,7 +300,7 @@ class MicrosoftRewards:
             try:
                 runnable.do_it()
                 logging.info(f"{singular.title()} completed")
-            except exceptions.WebDriverException as e:
+            except (exceptions.WebDriverException, Exception) as e:
                 logging.error(f"{singular.title()} not completed - {e}")
                 logging.info(f"Skipping {singular}")
 
