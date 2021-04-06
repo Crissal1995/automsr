@@ -1,4 +1,5 @@
 # AutoMSR
+[![Linters](https://github.com/Crissal1995/auto_msrewards/actions/workflows/linters.yaml/badge.svg)](https://github.com/Crissal1995/auto_msrewards/actions/workflows/linters.yaml)
 ## Description
 **AutoMSR** is an automation tool created for educational purpose, 
 intending to show how to use selenium as an automation driver
