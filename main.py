@@ -3,21 +3,27 @@ import logging
 
 from msrewards import MicrosoftRewards, exceptions
 
-logger = logging.getLogger()
-
 FORMAT = "%(levelname)s :: %(asctime)s :: %(module)s :: %(funcName)s :: %(lineno)d :: %(message)s"
 formatter = logging.Formatter(FORMAT)
 
 stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
+stream_handler.setLevel(logging.INFO)
 
 file_handler = logging.FileHandler("main.log")
-file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.INFO)
+
+file_debug_handler = logging.FileHandler("main.debug.log")
+file_debug_handler.setLevel(logging.DEBUG)
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 logger.addHandler(stream_handler)
 logger.addHandler(file_handler)
+logger.addHandler(file_debug_handler)
 
-logger.setLevel(logging.INFO)
+for handler in logger.handlers:
+    handler.setFormatter(formatter)
 
 
 def to_skip(creds: dict):
