@@ -188,7 +188,7 @@ class MicrosoftRewards:
         time.sleep(0.5)
 
     def execute_searches(self, limit=None):
-        alphabet = string.ascii_letters + string.digits
+        alphabet = string.ascii_lowercase
         if not limit:
             limit = random.randint(90, 120)
         self.go_to(self.bing_url)
