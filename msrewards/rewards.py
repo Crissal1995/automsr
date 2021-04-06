@@ -189,16 +189,24 @@ class MicrosoftRewards:
 
     def execute_searches(self, limit=None):
         alphabet = string.ascii_lowercase
+        MAX_SEARCH_DESKTOP = 30
+        MAX_SEARCH_MOBILE = 20
+        OFFSET_SEARCH = 10
+        MAX_WORD_LENGTH = 70
+
         if not limit:
-            limit = random.randint(90, 120)
-        self.go_to(self.bing_url)
+            a = MAX_SEARCH_MOBILE if self.is_mobile else MAX_SEARCH_DESKTOP
+            b = a + OFFSET_SEARCH
+            limit = random.randint(a, b)
 
         logging.info(f"Searches will be executed {limit} times")
 
-        word_length = random.randint(limit, 150)
+        word_length = random.randint(limit, MAX_WORD_LENGTH)
         word = "".join([random.choice(alphabet) for _ in range(word_length)])
 
-        logging.info(f"Word length be searched: {word_length}, word: {word}")
+        logging.info(f"Word length be searched: {word_length}")
+
+        self.go_to(self.bing_url)
 
         input_field = self.driver.find_element_by_css_selector("#sb_form_q")
         input_field.send_keys(word)
