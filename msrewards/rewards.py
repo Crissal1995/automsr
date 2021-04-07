@@ -259,6 +259,11 @@ class MicrosoftRewards:
         return window
 
     def _execute(self, runnables: [Runnable], runnable_type: str):
+        """
+        :param runnables: The list of Runnable objects to execute (activities or punchcards)
+        :param runnable_type: The type of the runnables to execute ("activity" or "punchcard")
+        :return: The list of runnables not completed
+        """
         assert runnable_type in ("activity", "punchcard"), "Wrong runnable provided"
         name_dict = {
             "activity": ("activity", "activities"),
@@ -266,20 +271,25 @@ class MicrosoftRewards:
         }
         singular, plural = name_dict[runnable_type]
 
+        runnables_todo_again = []
+
         logging.info(f"Start execute {plural}")
 
         length = len(runnables)
         if length == 0:
             logging.info(f"No {singular} found")
-            return
+            return []
 
         for i, runnable in enumerate(runnables):
             logging.info(f"Starting {singular} {i+1}/{length}: {str(runnable)}")
 
+            # go to homepage
+            self.go_to_home_tab()
+
             # get old windows
             old_windows = set(self.driver.window_handles)
 
-            # start activity
+            # start runnable
             runnable.button.click()
 
             # switch to page and let it load
@@ -290,21 +300,11 @@ class MicrosoftRewards:
             # try to log in via bing
             try:
                 BingLoginPage(self.driver, self.is_mobile).complete()
-                logging.warning("Bing login was required, but is done")
+                logging.warning("Bing login was required, but is done.")
 
-                # restart the activity - again -
-                logging.info("Restarting the activity")
-
-                self.go_to_home_tab()
-
-                old_windows = set(self.driver.window_handles)
-
-                runnable.button.click()
-
-                window = self.get_new_window(old_windows)
-                self.driver.switch_to.window(window)
-
-                time.sleep(2)
+                # add the runnable to the ones to do again
+                runnables_todo_again.append(runnable)
+                continue
             except exceptions.WebDriverException:
                 logging.debug("No bing login required")
 
@@ -314,10 +314,9 @@ class MicrosoftRewards:
                 logging.info(f"{singular.title()} completed")
             except (exceptions.WebDriverException, Exception) as e:
                 logging.error(f"{singular.title()} not completed - {e}")
-                logging.info(f"Skipping {singular}")
+                runnables_todo_again.append(runnable)
 
-            # and then return to the home
-            self.go_to_home_tab()
+        return runnables_todo_again
 
     def execute_activities(self, activities: [Activity]):
         return self._execute(activities, "activity")
