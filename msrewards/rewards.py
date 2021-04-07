@@ -118,6 +118,8 @@ class MicrosoftRewards:
     def go_to_home_tab(self):
         if self.home:
             self.driver.switch_to.window(self.home)
+        else:
+            self.go_to_home()
 
     def save_cookies(self, cookies_json_fp=default_cookies_json_fp):
         json.dump(self.driver.get_cookies(), open(cookies_json_fp, "w"))
