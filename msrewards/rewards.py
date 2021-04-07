@@ -196,7 +196,9 @@ class MicrosoftRewards:
 
         if not limit:
             a = MAX_SEARCH_MOBILE if self.is_mobile else MAX_SEARCH_DESKTOP
+            a += OFFSET_SEARCH
             b = a + OFFSET_SEARCH
+            # limit range is [MAX + OFFSET, MAX + 2*OFFSET]
             limit = random.randint(a, b)
 
         logging.info(f"Searches will be executed {limit} times")
