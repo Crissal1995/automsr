@@ -133,17 +133,27 @@ class MicrosoftRewards:
 
     @classmethod
     def daily_activities(cls, credentials: dict, **kwargs):
+        def str_list(alist, joiner=", "):
+            return joiner.join([str(elem) for elem in alist])
+
         options = cls.get_chrome_options(**kwargs)
 
         # standard points from activity
         driver = Chrome(options=options)
 
         rewards = cls(driver, credentials=credentials)
-        rewards.go_to_home()
-        rewards.execute_todo_activities()
 
+        # execute activities
         rewards.go_to_home()
-        rewards.execute_todo_punchcards()
+        missing_activities = rewards.execute_todo_activities()
+        if missing_activities:
+            logging.warning(f"Missing activities - {str_list(missing_activities)}")
+
+        # execute punchcards
+        rewards.go_to_home()
+        missing_punchcards = rewards.execute_todo_punchcards()
+        if missing_punchcards:
+            logging.warning(f"Missing punchcards - {str_list(missing_punchcards)}")
 
         driver.quit()
 
