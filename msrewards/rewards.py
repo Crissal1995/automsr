@@ -142,21 +142,38 @@ class MicrosoftRewards:
         # standard points from activity
         driver = Chrome(options=options)
 
+        # get a MicrosoftRewards object
         rewards = cls(driver, credentials=credentials)
 
-        # execute activities
-        rewards.go_to_home()
-        missing_activities = rewards.execute_todo_activities()
-        if missing_activities:
-            logging.warning(f"Missing activities - {str_list(missing_activities)}")
-
-        # execute punchcards
-        rewards.go_to_home()
-        missing_punchcards = rewards.execute_todo_punchcards()
-        if missing_punchcards:
-            logging.warning(f"Missing punchcards - {str_list(missing_punchcards)}")
+        # and then execute runnables
+        rewards._execute_todo_runnables("activity")
+        rewards._execute_todo_runnables("punchcard")
 
         driver.quit()
+
+    def _execute_todo_runnables(self, runnable_type: str):
+        runnable_types = ("activity", "punchcard")
+        errmsg = f"Wrong type provided ({runnable_type}). Valids are {runnable_types}"
+        assert runnable_type in runnable_types, errmsg
+
+        self.go_to_home()
+
+        if runnable_type == "activity":
+            missing_runnables = self.execute_todo_activities()
+        elif runnable_type == "punchcard":
+            missing_runnables = self.execute_todo_punchcards()
+        else:
+            # future implementations, but it won't trigger
+            raise NotImplementedError
+
+        if missing_runnables:
+            logging.warning("Missing runnables found, I will try to do them again")
+            missing_runnables = self._execute(missing_runnables, runnable_type)
+
+            if missing_runnables:
+                logging.error(
+                    f"Missing runnables (you should do them): - {str_list(missing_runnables)}"
+                )
 
     @classmethod
     def daily_searches(cls, credentials: dict, **kwargs):
