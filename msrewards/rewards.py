@@ -332,15 +332,30 @@ class MicrosoftRewards:
     def execute_activities(self, activities: [Activity]):
         return self._execute(activities, "activity")
 
-    def get_todo_activities(self):
+    def get_todo_activities(self, reverse: bool = True):
+        """
+        Return the to-do activities of the day,
+        ordered from the first daily to the last other.
+        :param reverse: If True, activities will be performed
+        from last other to first daily. If False, default order.
+        :return: The to-do activities of the day.
+        """
         todos = [
             activity
             for activity in self.get_activities()
             if activity.status == Status.TODO
         ]
         logging.info(f"Found {len(todos)} todo activities")
+
+        # get order of activities as debug msg
+        daily, other = "first daily", "last other"
+        order = f"{daily} to {other}" if not reverse else f"{other} to {daily}"
+        logging.debug(f"Activities order is {order}")
+
         if not todos:
             logging.warning("No todo activity found!")
+        elif reverse:
+            todos = todos[::-1]
         return todos
 
     def get_activities(self):
