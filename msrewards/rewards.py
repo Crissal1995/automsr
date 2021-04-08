@@ -26,6 +26,10 @@ from msrewards.activities import (
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
 
 
+def str_list(alist, joiner=", "):
+    return joiner.join([str(elem) for elem in alist])
+
+
 class MicrosoftRewards:
     rewards_url = "https://account.microsoft.com/rewards/"
     bing_url = "https://www.bing.com/"
@@ -133,9 +137,6 @@ class MicrosoftRewards:
 
     @classmethod
     def daily_activities(cls, credentials: dict, **kwargs):
-        def str_list(alist, joiner=", "):
-            return joiner.join([str(elem) for elem in alist])
-
         options = cls.get_chrome_options(**kwargs)
 
         # standard points from activity
