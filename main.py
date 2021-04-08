@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 
@@ -15,15 +16,20 @@ file_handler.setLevel(logging.INFO)
 file_debug_handler = logging.FileHandler("main.debug.log")
 file_debug_handler.setLevel(logging.DEBUG)
 
+now = datetime.date.today()
+fh = f"{now.isoformat()}.log"
+daily_handler = logging.FileHandler(fh)
+daily_handler.setLevel(logging.INFO)
+
+# set formatters and add handlers to main logger
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-logger.addHandler(stream_handler)
-logger.addHandler(file_handler)
-logger.addHandler(file_debug_handler)
+handlers = (stream_handler, file_handler, file_debug_handler, daily_handler)
 
-for handler in logger.handlers:
+for handler in handlers:
     handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 def to_skip(creds: dict):
