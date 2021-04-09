@@ -3,6 +3,7 @@ import json
 import logging
 
 from msrewards import MicrosoftRewards, exceptions
+from msrewards.constants import NAME
 
 FORMAT = "%(levelname)s :: %(asctime)s :: %(module)s :: %(funcName)s :: %(lineno)d :: %(message)s"
 formatter = logging.Formatter(FORMAT)
@@ -19,10 +20,10 @@ file_debug_handler.setLevel(logging.DEBUG)
 now = datetime.date.today()
 fh = f"{now.isoformat()}.log"
 daily_handler = logging.FileHandler(fh)
-daily_handler.setLevel(logging.INFO)
+daily_handler.setLevel(logging.DEBUG)
 
 # set formatters and add handlers to main logger
-logger = logging.getLogger()
+logger = logging.getLogger(NAME)
 logger.setLevel(logging.DEBUG)
 
 handlers = (stream_handler, file_handler, file_debug_handler, daily_handler)
@@ -70,29 +71,29 @@ def main(**kwargs):
         credentials_list = json.load(fp)
 
     for i, credentials in enumerate(credentials_list):
-        logging.info(f"Working on credentials no. {i + 1}")
+        logger.info(f"Working on credentials no. {i + 1}")
 
         skip_activity, skip_searches = to_skip(credentials)
 
         if not skip_activity:
-            logging.info("Start daily activities")
+            logger.info("Start daily activities")
             try:
                 MicrosoftRewards.daily_activities(credentials=credentials, **kwargs)
             except (exceptions.WebDriverException, AssertionError) as e:
-                logging.error(e)
-                logging.error("Cannot complete daily activities")
+                logger.error(e)
+                logger.error("Cannot complete daily activities")
         else:
-            logging.info("Skipping daily activities")
+            logger.info("Skipping daily activities")
 
         if not skip_searches:
-            logging.info("Start daily searches")
+            logger.info("Start daily searches")
             try:
                 MicrosoftRewards.daily_searches(credentials=credentials, **kwargs)
             except exceptions.WebDriverException as e:
-                logging.error(e)
-                logging.error("Cannot complete daily searches")
+                logger.error(e)
+                logger.error("Cannot complete daily searches")
         else:
-            logging.info("Skipping daily searches")
+            logger.info("Skipping daily searches")
 
 
 if __name__ == "__main__":

@@ -23,7 +23,10 @@ from msrewards.activities import (
     Status,
     ThisOrThatActivity,
 )
+from msrewards.constants import NAME
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
+
+logger = logging.getLogger(NAME)
 
 
 def str_list(alist, joiner=", "):
@@ -83,16 +86,16 @@ class MicrosoftRewards:
         self.cookies_json_fp = cookies_json_fp
         self.credentials = credentials
         self.is_mobile = is_mobile
-        logging.info("Login started")
+        logger.info("Login started")
         self.login()
-        logging.info("Login finished")
+        logger.info("Login finished")
 
     def __del__(self):
         try:
             self.driver.quit()
         except (exceptions.WebDriverException, Exception):
-            logging.warning("Driver was already quitted")
-        logging.info("Chromedriver quitted")
+            logger.warning("Driver was already quitted")
+        logger.info("Chromedriver quitted")
 
     @staticmethod
     def get_chrome_options(**kwargs):
@@ -113,7 +116,7 @@ class MicrosoftRewards:
 
     def go_to(self, url):
         self.driver.get(url)
-        logging.debug(f"Driver GET {url}")
+        logger.debug(f"Driver GET {url}")
 
     def go_to_home(self):
         self.driver.get(self.rewards_url)
@@ -167,11 +170,11 @@ class MicrosoftRewards:
             raise NotImplementedError
 
         if missing_runnables:
-            logging.warning("Missing runnables found, I will try to do them again")
+            logger.warning("Missing runnables found, I will try to do them again")
             missing_runnables = self._execute(missing_runnables, runnable_type)
 
             if missing_runnables:
-                logging.error(
+                logger.error(
                     f"Missing runnables (you should do them): - {str_list(missing_runnables)}"
                 )
 
@@ -196,24 +199,24 @@ class MicrosoftRewards:
         self.go_to(self.bing_url)
         try:
             CookieAcceptPage(self.driver).complete()
-            logging.info("Cookies accepted")
+            logger.info("Cookies accepted")
         except exceptions.NoSuchElementException:
-            logging.info("Cannot accept cookies")
+            logger.info("Cannot accept cookies")
 
         self.go_to(self.login_url)
         LoginPage(driver=self.driver, credentials=self.credentials).complete()
-        logging.info("Logged in")
+        logger.info("Logged in")
 
         self.go_to(self.rewards_url)
         try:
             BannerCookiePage(self.driver).complete()
-            logging.info("Banner cookies accepted")
+            logger.info("Banner cookies accepted")
         except exceptions.NoSuchElementException:
-            logging.info("Cannot accept banner cookies")
+            logger.info("Cannot accept banner cookies")
 
         self.go_to(self.bing_searched_url)
         BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
-        logging.info("Login made on bing webpage")
+        logger.info("Login made on bing webpage")
 
         time.sleep(0.5)
 
@@ -231,12 +234,12 @@ class MicrosoftRewards:
             # limit range is [MAX + OFFSET, MAX + 2*OFFSET]
             limit = random.randint(a, b)
 
-        logging.info(f"Searches will be executed {limit} times")
+        logger.info(f"Searches will be executed {limit} times")
 
         word_length = random.randint(limit, MAX_WORD_LENGTH)
         word = "".join([random.choice(alphabet) for _ in range(word_length)])
 
-        logging.info(f"Word length be searched: {word_length}")
+        logger.info(f"Word length be searched: {word_length}")
 
         self.go_to(self.bing_url)
 
@@ -248,12 +251,12 @@ class MicrosoftRewards:
 
         try:
             BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
-            logging.info("Succesfully authenticated on BingPage")
+            logger.info("Succesfully authenticated on BingPage")
         except exceptions.NoSuchElementException:
-            logging.info("Was already authenticated on BingPage")
+            logger.info("Was already authenticated on BingPage")
 
         for i in range(limit):
-            logging.info(f"Search {i + 1}/{limit}")
+            logger.info(f"Search {i + 1}/{limit}")
             time.sleep(0.5)
 
             # must search again input field because of page reloading
@@ -263,10 +266,10 @@ class MicrosoftRewards:
             input_field.send_keys(Keys.ENTER)
 
     def execute_todo_activities(self):
-        logging.info("Execute todo activities start")
+        logger.info("Execute todo activities start")
 
         activities_list = self.get_todo_activities()
-        logging.info(f"{len(activities_list)} activities to do")
+        logger.info(f"{len(activities_list)} activities to do")
 
         return self.execute_activities(activities_list)
 
@@ -279,10 +282,10 @@ class MicrosoftRewards:
         # opened in current window handle
         try:
             window = new_windows.difference(old_windows).pop()
-            logging.debug("Link opened in new window")
+            logger.debug("Link opened in new window")
         except KeyError:
             window = self.driver.current_window_handle
-            logging.debug("Link opened in same window")
+            logger.debug("Link opened in same window")
 
         return window
 
@@ -301,15 +304,15 @@ class MicrosoftRewards:
 
         runnables_todo_again = []
 
-        logging.info(f"Start execute {plural}")
+        logger.info(f"Start execute {plural}")
 
         length = len(runnables)
         if length == 0:
-            logging.info(f"No {singular} found")
+            logger.info(f"No {singular} found")
             return []
 
         for i, runnable in enumerate(runnables):
-            logging.info(f"Starting {singular} {i+1}/{length}: {str(runnable)}")
+            logger.info(f"Starting {singular} {i+1}/{length}: {str(runnable)}")
 
             # go to homepage
             self.go_to_home_tab()
@@ -328,20 +331,20 @@ class MicrosoftRewards:
             # try to log in via bing
             try:
                 BingLoginPage(self.driver, self.is_mobile).complete()
-                logging.warning("Bing login was required, but is done.")
+                logger.warning("Bing login was required, but is done.")
 
                 # add the runnable to the ones to do again
                 runnables_todo_again.append(runnable)
                 continue
             except exceptions.WebDriverException:
-                logging.debug("No bing login required")
+                logger.debug("No bing login required")
 
             # execute the activity
             try:
                 runnable.do_it()
-                logging.info(f"{singular.title()} completed")
+                logger.info(f"{singular.title()} completed")
             except (exceptions.WebDriverException, Exception) as e:
-                logging.error(f"{singular.title()} not completed - {e}")
+                logger.error(f"{singular.title()} not completed - {e}")
                 runnables_todo_again.append(runnable)
 
         return runnables_todo_again
@@ -362,15 +365,15 @@ class MicrosoftRewards:
             for activity in self.get_activities()
             if activity.status == Status.TODO
         ]
-        logging.info(f"Found {len(todos)} todo activities")
+        logger.info(f"Found {len(todos)} todo activities")
 
         # get order of activities as debug msg
         daily, other = "first daily", "last other"
         order = f"{daily} to {other}" if not reverse else f"{other} to {daily}"
-        logging.debug(f"Activities order is {order}")
+        logger.debug(f"Activities order is {order}")
 
         if not todos:
-            logging.warning("No todo activity found!")
+            logger.warning("No todo activity found!")
         elif reverse:
             todos = todos[::-1]
         return todos
@@ -395,7 +398,7 @@ class MicrosoftRewards:
             for punchcard in self.get_punchcards()
             if isinstance(punchcard, FreePunchcard)
         ]
-        logging.debug(f"Found {len(punchcards)} free punchcards")
+        logger.debug(f"Found {len(punchcards)} free punchcards")
         return punchcards
 
     def get_free_todo_punchcards(self):
@@ -404,7 +407,7 @@ class MicrosoftRewards:
             for punchcard in self.get_free_punchcards()
             if punchcard.status == Status.TODO
         ]
-        logging.debug(f"Found {len(punchcards)} free todo punchcards")
+        logger.debug(f"Found {len(punchcards)} free todo punchcards")
         return punchcards
 
     def execute_todo_punchcards(self):
@@ -430,10 +433,10 @@ class MicrosoftRewards:
             # check from text if the punchcard is free or paid
             # TODO is there a better way?
             if any(word in text for word in paid_keywords):
-                logging.debug("Paid punchcard found")
+                logger.debug("Paid punchcard found")
                 punchcard = PaidPunchcard(driver=self.driver, element=element)
             else:
-                logging.debug("Free punchcard found")
+                logger.debug("Free punchcard found")
                 punchcard = FreePunchcard(driver=self.driver, element=element)
 
             punchcards_list.append(punchcard)
@@ -456,22 +459,22 @@ class MicrosoftRewards:
             # find card header of element
             header = element.find_element_by_css_selector(Activity.header_selector).text
 
-            logging.debug(f"Activity header found: {header}")
+            logger.debug(f"Activity header found: {header}")
 
             # cast right type to elements
             if ThisOrThatActivity.base_header in header:
                 activity = ThisOrThatActivity(driver=self.driver, element=element)
-                logging.debug("This or That Activity found")
+                logger.debug("This or That Activity found")
             elif PollActivity.base_header in header:
                 activity = PollActivity(driver=self.driver, element=element)
-                logging.debug("Poll Activity found")
+                logger.debug("Poll Activity found")
             elif QuizActivity.base_header in header:
                 activity = QuizActivity(driver=self.driver, element=element)
-                logging.debug("Quiz Activity found")
+                logger.debug("Quiz Activity found")
             else:
                 activity = StandardActivity(driver=self.driver, element=element)
-                logging.debug("Standard activity found")
-            logging.debug(str(activity))
+                logger.debug("Standard activity found")
+            logger.debug(str(activity))
 
             # append to activites
             activities_list.append(activity)
