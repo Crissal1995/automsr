@@ -1,7 +1,6 @@
 import json
 import logging
 import random
-import string
 import sys
 import time
 
@@ -23,7 +22,7 @@ from msrewards.activities import (
     Status,
     ThisOrThatActivity,
 )
-from msrewards.constants import NAME
+from msrewards.constants import NAME, SearchConfig
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
 
 logger = logging.getLogger(NAME)
@@ -221,22 +220,19 @@ class MicrosoftRewards:
         time.sleep(0.5)
 
     def execute_searches(self, limit=None):
-        alphabet = string.ascii_lowercase
-        MAX_SEARCH_DESKTOP = 30
-        MAX_SEARCH_MOBILE = 20
-        OFFSET_SEARCH = 10
-        MAX_WORD_LENGTH = 70
+        config = SearchConfig.get_config()
 
         if not limit:
-            a = MAX_SEARCH_MOBILE if self.is_mobile else MAX_SEARCH_DESKTOP
-            a += OFFSET_SEARCH
-            b = a + OFFSET_SEARCH
+            a = config["max_mobile"] if self.is_mobile else config["max_desktop"]
+            a += config["offset"]
+            b = a + config["offset"]
             # limit range is [MAX + OFFSET, MAX + 2*OFFSET]
             limit = random.randint(a, b)
 
         logger.info(f"Searches will be executed {limit} times")
 
-        word_length = random.randint(limit, MAX_WORD_LENGTH)
+        word_length = random.randint(limit, config["max_word_length"])
+        alphabet = config["alphabet"]
         word = "".join([random.choice(alphabet) for _ in range(word_length)])
 
         logger.info(f"Word length be searched: {word_length}")
@@ -256,8 +252,8 @@ class MicrosoftRewards:
             logger.info("Was already authenticated on BingPage")
 
         for i in range(limit):
-            logger.info(f"Search {i + 1}/{limit}")
-            time.sleep(0.5)
+            logger.debug(f"Search {i + 1}/{limit}")
+            time.sleep(0.7)
 
             # must search again input field because of page reloading
             input_field = self.driver.find_element_by_css_selector("#sb_form_q")
