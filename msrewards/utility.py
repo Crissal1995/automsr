@@ -11,29 +11,13 @@ class InvalidCredentialsError(Exception):
 __possible_skips = ("no", "all", "yes", "search", "searches", "activity", "activities")
 
 
-def to_skip(creds: dict):
+def activity_skip(skip_str: str) -> (bool, bool):
     """Function utility to know which activity,
     listed as (daily_activities, daily_searches), is
     to be skipped.
     False means the activity should not be skipped,
     True otherwise.
     """
-    if not creds.get("skip"):
-        return False, False
-
-    # lower() to ensure it's a str
-    try:
-        skip_str = creds["skip"].lower()
-    except AttributeError:
-        err = "skip value must be string!"
-        logger.error(err)
-        raise ValueError(err)
-
-    if skip_str not in __possible_skips:
-        err = f"skip string must be in {__possible_skips}"
-        logger.error(err)
-        raise ValueError(err)
-
     return_dict = {
         "activity": (True, False),
         "activities": (True, False),
@@ -61,13 +45,11 @@ def get_credentials(credentials_fp):
     try:
         creds_list = json.loads(content)
     except json.JSONDecodeError:
-        logger.error(errmsg)
-        logger.error("Invalid Json provided")
+        logger.error(errmsg + " Invalid Json provided")
         raise ValueError(errmsg)
 
     if not isinstance(creds_list, (list, tuple)):
-        logger.error(errmsg)
-        logger.error("Json must be a list of objects")
+        logger.error(errmsg + " Json must be a list of objects")
         raise ValueError(errmsg)
 
     for i, creds in enumerate(creds_list):
@@ -80,11 +62,20 @@ def get_credentials(credentials_fp):
         password = creds.get("password")
         skip = creds.get("skip")
 
-        if any(not field for field in (email, password)):
-            logger.error("Invalid email or password provided")
-            raise InvalidCredentialsError(creds_errmsg)
+        if not email:
+            msg = f"{creds_errmsg} - Missing email"
+            logger.error(msg)
+            raise InvalidCredentialsError(msg)
 
-        skip_error = f"Invalid skip provided. Possible values are {__possible_skips}"
+        if not password:
+            msg = f"{creds_errmsg} - Missing password"
+            logger.error(msg)
+            raise InvalidCredentialsError(msg)
+
+        skip_error = (
+            f"{creds_errmsg} - Invalid skip provided. "
+            f"Possible values are {__possible_skips}"
+        )
 
         if not skip:
             logger.warning("Skip value missing, defaults to 'no'")
@@ -97,7 +88,7 @@ def get_credentials(credentials_fp):
 
         creds.update(skip=skip)
 
-        skip_activity, skip_search = to_skip(creds)
+        skip_activity, skip_search = activity_skip(skip)
         creds.update(skip_activity=skip_activity)
         creds.update(skip_search=skip_search)
 
