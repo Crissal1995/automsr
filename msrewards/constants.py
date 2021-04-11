@@ -1,9 +1,6 @@
 import abc
 import string
 
-# name of the application, also used by logging module
-NAME = "AutoMSR"
-
 
 # config class to provide utility methods
 class Config(abc.ABC):

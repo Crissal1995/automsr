@@ -22,10 +22,10 @@ from msrewards.activities import (
     Status,
     ThisOrThatActivity,
 )
-from msrewards.constants import NAME, SearchConfig
+from msrewards.constants import SearchConfig
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
 
-logger = logging.getLogger(NAME)
+logger = logging.getLogger(__name__)
 
 
 def str_list(alist, joiner=", "):

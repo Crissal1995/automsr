@@ -3,7 +3,6 @@ import json
 import logging
 
 from msrewards import MicrosoftRewards, exceptions
-from msrewards.constants import NAME
 
 FORMAT = "%(levelname)s :: %(asctime)s :: %(module)s :: %(funcName)s :: %(lineno)d :: %(message)s"
 formatter = logging.Formatter(FORMAT)
@@ -23,7 +22,7 @@ daily_handler = logging.FileHandler(fh)
 daily_handler.setLevel(logging.DEBUG)
 
 # set formatters and add handlers to main logger
-logger = logging.getLogger(NAME)
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 handlers = (stream_handler, file_handler, file_debug_handler, daily_handler)

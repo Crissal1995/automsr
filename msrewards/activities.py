@@ -7,9 +7,7 @@ from selenium.common import exceptions
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from msrewards.constants import NAME
-
-logger = logging.getLogger(NAME)
+logger = logging.getLogger(__name__)
 
 
 class Status(enum.IntEnum):
