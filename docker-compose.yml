@@ -26,10 +26,9 @@ services:
   python:
     build: .
     depends_on:
+      - chrome
       - selenium-hub
     container_name: python
     volumes:
       - ./credentials.json:/app/credentials.json
       - ./setup.cfg:/app/setup.cfg
-    links:
-      - selenium-hub
