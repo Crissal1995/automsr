@@ -235,7 +235,7 @@ class MicrosoftRewards:
         alphabet = config["alphabet"]
         word = "".join([random.choice(alphabet) for _ in range(word_length)])
 
-        logger.info(f"Word length be searched: {word_length}")
+        logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
 
         self.go_to(self.bing_url)
 
@@ -260,6 +260,8 @@ class MicrosoftRewards:
 
             input_field.send_keys(Keys.BACKSPACE)
             input_field.send_keys(Keys.ENTER)
+
+        logger.info("Searches completed")
 
     def execute_todo_activities(self):
         logger.info("Execute todo activities start")
