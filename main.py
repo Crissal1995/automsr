@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from msrewards import MicrosoftRewards, exceptions
+from msrewards import MicrosoftRewards
 from msrewards.utility import get_safe_credentials
 
 FORMAT = "%(levelname)s :: %(asctime)s :: %(module)s :: %(funcName)s :: %(lineno)d :: %(message)s"
@@ -47,9 +47,8 @@ def main(credentials_fp="credentials.json", *, headless: bool, **kwargs):
             logger.info("Start daily activities")
             try:
                 MicrosoftRewards.daily_activities(credentials=credentials, **kwargs)
-            except (exceptions.WebDriverException, AssertionError) as e:
-                logger.error(e)
-                logger.error("Cannot complete daily activities")
+            except Exception as e:
+                logger.error(f"Cannot complete daily activities - error: {e}")
         else:
             logger.info("Skipping daily activities")
 
@@ -57,9 +56,8 @@ def main(credentials_fp="credentials.json", *, headless: bool, **kwargs):
             logger.info("Start daily searches")
             try:
                 MicrosoftRewards.daily_searches(credentials=credentials, **kwargs)
-            except exceptions.WebDriverException as e:
-                logger.error(e)
-                logger.error("Cannot complete daily searches")
+            except Exception as e:
+                logger.error(f"Cannot complete daily searches - error: {e}")
         else:
             logger.info("Skipping daily searches")
 
