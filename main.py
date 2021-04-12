@@ -2,9 +2,9 @@ import datetime
 import logging
 
 from msrewards import MicrosoftRewards
-from msrewards.utility import get_safe_credentials
+from msrewards.utility import get_safe_credentials, test_environment
 
-FORMAT = "%(levelname)s :: %(asctime)s :: %(module)s :: %(funcName)s :: %(lineno)d :: %(message)s"
+FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
 formatter = logging.Formatter(FORMAT)
 
 stream_handler = logging.StreamHandler()
@@ -37,6 +37,9 @@ def main(credentials_fp="credentials.json", *, headless: bool, **kwargs):
     # actual value passed as keyword arg
     kwargs.update(headless=headless)
 
+    # test if environment is set correctly
+    test_environment(**kwargs)
+
     for credentials in get_safe_credentials(credentials_fp):
         logger.info(f"Working on credentials [email={credentials['email']}]")
 
@@ -63,4 +66,4 @@ def main(credentials_fp="credentials.json", *, headless: bool, **kwargs):
 
 
 if __name__ == "__main__":
-    main(headless=False)
+    main(headless=True)

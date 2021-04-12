@@ -69,6 +69,17 @@ def get_driver(**kwargs):
     return driver
 
 
+def test_environment(**kwargs):
+    """Determine if current environment is correctly set"""
+    try:
+        get_driver(**kwargs).close()
+    except Exception as err:
+        logger.error(str(err))
+        raise err
+    else:
+        logger.info("Driver found!")
+
+
 possible_skips = ("no", "all", "yes", "search", "searches", "activity", "activities")
 
 
