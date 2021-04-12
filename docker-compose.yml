@@ -4,6 +4,7 @@ services:
 
   chrome:
     image: selenium/node-chrome:4.0.0-beta-3-prerelease-20210402
+    container_name: chrome
     volumes:
       - /dev/shm:/dev/shm
     depends_on:
@@ -31,4 +32,3 @@ services:
     container_name: python
     volumes:
       - ./credentials.json:/app/credentials.json
-      - ./setup.cfg:/app/setup.cfg
