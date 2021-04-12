@@ -43,18 +43,25 @@ def get_driver(**kwargs):
         err = "Missing or wrong setup.cfg"
         logger.error(err)
         raise EnvironmentError(err)
-    env = parser["selenium"]["env"]
+    section = parser["selenium"]
+    env = section["env"]
     logger.debug(f"selenium env is {env}")
 
     if env == "local":
-        default_path = "chromedriver"
-        path = parser["selenium:local"].get("path") or default_path
+        path = section.get("path")
+        if not path:
+            path = "chromedriver"
+            logger.debug(f"Missing 'path' from config, defaults to '{path}'")
+
         logger.debug(f"selenium path is {path}")
         driver = Chrome(executable_path=path, options=options)
 
-    elif env == "docker":
-        default_url = "http://selenium-hub:4444/wd/hub"
-        url = parser["selenium:docker"].get("url") or default_url
+    elif env == "remote":
+        url = section.get("url")
+        if not url:
+            url = "http://selenium-hub:4444/wd/hub"
+            logger.debug(f"Missing 'url' from config, defaults to '{url}'")
+
         logger.debug(f"selenium url is {url}")
         driver = Remote(
             command_executor=url,
@@ -77,7 +84,7 @@ def test_environment(**kwargs):
         logger.error(str(err))
         raise err
     else:
-        logger.info("Driver found!")
+        logger.info("Selenium driver found!")
 
 
 possible_skips = ("no", "all", "yes", "search", "searches", "activity", "activities")
