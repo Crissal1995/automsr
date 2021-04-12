@@ -14,7 +14,29 @@ class InvalidCredentialsError(Exception):
     """Error class for invalid Credentials objects"""
 
 
-def get_driver(options: Options = None):
+def get_options(**kwargs):
+    is_headless = kwargs.get("headless", True)
+
+    options = Options()
+    options.add_argument("no-sandbox")
+    options.add_argument("ignore-certificate-errors")
+    options.add_argument("allow-running-insecure-content")
+
+    ua = kwargs.get("user_agent")
+    if ua:
+        options.add_argument(f"user-agent={ua}")
+
+    if is_headless:
+        options.add_argument("headless")
+        if sys.platform in ("win32", "cygwin"):
+            # fix for windows platforms
+            options.add_argument("disable-gpu")
+
+    return options
+
+
+def get_driver(**kwargs):
+    options = get_options(**kwargs)
     parser = configparser.ConfigParser()
     parser.read("setup.cfg")
     if not parser:
@@ -26,14 +48,12 @@ def get_driver(options: Options = None):
 
     if env == "local":
         default_path = "chromedriver"
-        if sys.platform == "win32":
-            default_path += ".exe"
         path = parser["selenium:local"].get("path") or default_path
         logger.debug(f"selenium path is {path}")
-        driver = Chrome(path, options=options)
+        driver = Chrome(executable_path=path, options=options)
 
     elif env == "docker":
-        default_url = "http://selenium-hub:4444/wd/hub"
+        default_url = "https://selenium-hub:4444/wd/hub"
         url = parser["selenium:docker"].get("url") or default_url
         logger.debug(f"selenium url is {url}")
         driver = Remote(

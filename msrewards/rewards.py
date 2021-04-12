@@ -1,11 +1,9 @@
 import json
 import logging
 import random
-import sys
 import time
 
 from selenium.common import exceptions
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
@@ -96,23 +94,6 @@ class MicrosoftRewards:
             logger.warning("Driver was already quitted")
         logger.info("Chromedriver quitted")
 
-    @staticmethod
-    def get_chrome_options(**kwargs):
-        is_headless = kwargs.get("headless", True)
-
-        chrome_options = Options()
-        chrome_options.add_argument("no-sandbox")
-        chrome_options.add_argument("ignore-certificate-errors")
-        chrome_options.add_argument("allow-running-insecure-content")
-
-        if is_headless:
-            chrome_options.add_argument("headless")
-            if sys.platform in ("win32", "cygwin"):
-                # fix for windows platforms
-                chrome_options.add_argument("disable-gpu")
-
-        return chrome_options
-
     def go_to(self, url):
         self.driver.get(url)
         logger.debug(f"Driver GET {url}")
@@ -139,10 +120,8 @@ class MicrosoftRewards:
 
     @classmethod
     def daily_activities(cls, credentials: dict, **kwargs):
-        options = cls.get_chrome_options(**kwargs)
-
         # standard points from activity
-        driver = get_driver(options=options)
+        driver = get_driver(**kwargs)
 
         # get a MicrosoftRewards object
         rewards = cls(driver, credentials=credentials)
@@ -183,10 +162,8 @@ class MicrosoftRewards:
         uas = [cls.edge_win_ua, cls.chrome_android_ua]
 
         for ua, is_mobile in zip(uas, (False, True)):
-            options = cls.get_chrome_options(**kwargs)
-            options.add_argument(f"user-agent={ua}")
-
-            driver = get_driver(options=options)
+            kwargs.update(user_agent=ua)
+            driver = get_driver(**kwargs)
             rewards = cls(driver, credentials, is_mobile=is_mobile)
             rewards.execute_searches()
             driver.quit()
