@@ -53,7 +53,7 @@ def get_driver(**kwargs):
         driver = Chrome(executable_path=path, options=options)
 
     elif env == "docker":
-        default_url = "https://selenium-hub:4444/wd/hub"
+        default_url = "http://selenium-hub:4444/wd/hub"
         url = parser["selenium:docker"].get("url") or default_url
         logger.debug(f"selenium url is {url}")
         driver = Remote(
