@@ -8,7 +8,7 @@ class InvalidCredentialsError(Exception):
     """Error class for invalid Credentials objects"""
 
 
-__possible_skips = ("no", "all", "yes", "search", "searches", "activity", "activities")
+possible_skips = ("no", "all", "yes", "search", "searches", "activity", "activities")
 
 
 def activity_skip(skip_str: str) -> (bool, bool):
@@ -18,16 +18,20 @@ def activity_skip(skip_str: str) -> (bool, bool):
     False means the activity should not be skipped,
     True otherwise.
     """
-    return_dict = {
+    skip_dict = {
         "activity": (True, False),
-        "activities": (True, False),
         "search": (False, True),
-        "searches": (False, True),
         "all": (True, True),
-        "yes": (True, True),
         "no": (False, False),
     }
-    return return_dict[skip_str]
+    skip_dict["activities"] = skip_dict["activity"]
+    skip_dict["searches"] = skip_dict["search"]
+    skip_dict["yes"] = skip_dict["all"]
+
+    if any(kw not in skip_dict for kw in possible_skips):
+        raise KeyError(f"Fix skip_dict! Missing some keys from {possible_skips}")
+
+    return skip_dict[skip_str]
 
 
 def get_credentials(credentials_fp):
@@ -74,14 +78,14 @@ def get_credentials(credentials_fp):
 
         skip_error = (
             f"{creds_errmsg} - Invalid skip provided. "
-            f"Possible values are {__possible_skips}"
+            f"Possible values are {possible_skips}"
         )
 
         if not skip:
             logger.warning("Skip value missing, defaults to 'no'")
             skip = "no"
 
-        if skip not in __possible_skips:
+        if skip not in possible_skips:
             logger.error(skip_error)
             logger.warning("Wrong skip value, defaults to 'no'")
             skip = "no"
