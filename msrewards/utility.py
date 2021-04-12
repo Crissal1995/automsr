@@ -1,11 +1,52 @@
+import configparser
 import json
 import logging
+import sys
+
+from selenium.webdriver import Chrome, Remote
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 logger = logging.getLogger(__name__)
 
 
 class InvalidCredentialsError(Exception):
     """Error class for invalid Credentials objects"""
+
+
+def get_driver(options: Options = None):
+    parser = configparser.ConfigParser()
+    parser.read("setup.cfg")
+    if not parser:
+        err = "Missing or wrong setup.cfg"
+        logger.error(err)
+        raise EnvironmentError(err)
+    env = parser["selenium"]["env"]
+    logger.debug(f"selenium env is {env}")
+
+    if env == "local":
+        default_path = "chromedriver"
+        if sys.platform == "win32":
+            default_path += ".exe"
+        path = parser["selenium:local"].get("path") or default_path
+        logger.debug(f"selenium path is {path}")
+        driver = Chrome(path, options=options)
+
+    elif env == "docker":
+        default_url = "http://selenium-hub:4444/wd/hub"
+        url = parser["selenium:docker"].get("url") or default_url
+        logger.debug(f"selenium url is {url}")
+        driver = Remote(
+            command_executor=url,
+            desired_capabilities=DesiredCapabilities.CHROME,
+            options=options,
+        )
+    else:
+        err = "Invalid selenium env value provided!"
+        logger.error(err)
+        raise ValueError(err)
+
+    return driver
 
 
 possible_skips = ("no", "all", "yes", "search", "searches", "activity", "activities")

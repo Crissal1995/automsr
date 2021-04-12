@@ -5,7 +5,6 @@ import sys
 import time
 
 from selenium.common import exceptions
-from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -24,6 +23,7 @@ from msrewards.activities import (
 )
 from msrewards.constants import SearchConfig
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
+from msrewards.utility import get_driver
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +142,7 @@ class MicrosoftRewards:
         options = cls.get_chrome_options(**kwargs)
 
         # standard points from activity
-        driver = Chrome(options=options)
+        driver = get_driver(options=options)
 
         # get a MicrosoftRewards object
         rewards = cls(driver, credentials=credentials)
@@ -186,7 +186,7 @@ class MicrosoftRewards:
             options = cls.get_chrome_options(**kwargs)
             options.add_argument(f"user-agent={ua}")
 
-            driver = Chrome(options=options)
+            driver = get_driver(options=options)
             rewards = cls(driver, credentials, is_mobile=is_mobile)
             rewards.execute_searches()
             driver.quit()
