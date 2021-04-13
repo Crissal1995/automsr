@@ -3,7 +3,7 @@ FROM python:3.8-slim-buster
 WORKDIR /app
 
 # crontab
-RUN apt update && apt -y install cron
+RUN apt update && apt install -y cron
 
 # copy reqs and install them
 COPY requirements.txt requirements.txt
