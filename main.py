@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from msrewards import MicrosoftRewards
-from msrewards.utility import get_safe_credentials, test_environment
+from msrewards.utility import force_skip, get_safe_credentials, test_environment
 
 FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
 formatter = logging.Formatter(FORMAT)
@@ -39,6 +39,13 @@ def main(credentials_fp="credentials.json", *, headless: bool, **kwargs):
 
     # test if environment is set correctly
     test_environment(**kwargs)
+
+    # check if should skip all credentials
+    # placed after test_environment to check
+    # for possible env errors
+    if force_skip():
+        logger.info("force_skip was true in config")
+        return
 
     for credentials in get_safe_credentials(credentials_fp):
         logger.info(f"Working on credentials [email={credentials['email']}]")

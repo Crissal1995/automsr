@@ -35,38 +35,62 @@ def get_options(**kwargs):
     return options
 
 
-def get_driver(**kwargs):
-    options = get_options(**kwargs)
+def get_config(cfg_fp="setup.cfg"):
     parser = configparser.ConfigParser()
-    parser.read("setup.cfg")
-    if not parser:
-        err = "Missing or wrong setup.cfg"
+    if not parser.read(cfg_fp):
+        err = f"No such file or directory: {cfg_fp}"
         logger.error(err)
         raise EnvironmentError(err)
 
-    valid_envs = ("local", "remote")
+    valid_selenium_envs = ("local", "remote")
 
     env = parser.get("selenium", "env", fallback="local")
-    logger.debug(f"selenium env is {env}")
+    path = parser.get("selenium", "path", fallback="chromedriver")
+    url = parser.get("selenium", "url", fallback="http://selenium-hub:4444/wd/hub")
+
+    force_skip_attr = parser.getboolean("automsr", "force_skip", fallback=False)
+
+    if env not in valid_selenium_envs:
+        err = f"Invalid selenium env provided! Valid envs are: {valid_selenium_envs}"
+        logger.error(err)
+        raise ValueError(err)
+
+    return {
+        "automsr": dict(force_skip=force_skip_attr),
+        "selenium": dict(env=env, path=path, url=url),
+    }
+
+
+# read one time and then use it
+config = get_config()
+
+
+def get_driver(**kwargs):
+    options = get_options(**kwargs)
+
+    global config
+    env = config["selenium"]["env"]
 
     if env == "local":
-        path = parser.get("selenium", "path", fallback="chromedriver")
-        logger.debug(f"selenium path is {path}")
+        path = config["selenium"]["path"]
         driver = Chrome(executable_path=path, options=options)
     elif env == "remote":
-        url = parser.get("selenium", "url", fallback="http://selenium-hub:4444/wd/hub")
-        logger.debug(f"selenium url is {url}")
+        url = config["selenium"]["url"]
         driver = Remote(
             command_executor=url,
             desired_capabilities=DesiredCapabilities.CHROME,
             options=options,
         )
     else:
-        err = f"Invalid selenium env value provided! Valid values are: {valid_envs}"
-        logger.error(err)
-        raise ValueError(err)
+        # cannot enter this branch
+        raise AssertionError
 
     return driver
+
+
+def force_skip():
+    global config
+    return config["automsr"]["force_skip"]
 
 
 def test_environment(**kwargs):
