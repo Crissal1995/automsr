@@ -32,3 +32,4 @@ services:
     container_name: python
     volumes:
       - ./credentials.json:/app/credentials.json
+      - ./setup.cfg:/app/setup.cfg
