@@ -43,25 +43,18 @@ def get_driver(**kwargs):
         err = "Missing or wrong setup.cfg"
         logger.error(err)
         raise EnvironmentError(err)
-    section = parser["selenium"]
-    env = section["env"]
+
+    valid_envs = ("local", "remote")
+
+    env = parser.get("selenium", "env", fallback="local")
     logger.debug(f"selenium env is {env}")
 
     if env == "local":
-        path = section.get("path")
-        if not path:
-            path = "chromedriver"
-            logger.debug(f"Missing 'path' from config, defaults to '{path}'")
-
+        path = parser.get("selenium", "path", fallback="chromedriver")
         logger.debug(f"selenium path is {path}")
         driver = Chrome(executable_path=path, options=options)
-
     elif env == "remote":
-        url = section.get("url")
-        if not url:
-            url = "http://selenium-hub:4444/wd/hub"
-            logger.debug(f"Missing 'url' from config, defaults to '{url}'")
-
+        url = parser.get("selenium", "url", fallback="http://selenium-hub:4444/wd/hub")
         logger.debug(f"selenium url is {url}")
         driver = Remote(
             command_executor=url,
@@ -69,7 +62,7 @@ def get_driver(**kwargs):
             options=options,
         )
     else:
-        err = "Invalid selenium env value provided!"
+        err = f"Invalid selenium env value provided! Valid values are: {valid_envs}"
         logger.error(err)
         raise ValueError(err)
 
@@ -79,7 +72,7 @@ def get_driver(**kwargs):
 def test_environment(**kwargs):
     """Determine if current environment is correctly set"""
     try:
-        get_driver(**kwargs).close()
+        get_driver(**kwargs).quit()
     except Exception as err:
         logger.error(str(err))
         raise err
