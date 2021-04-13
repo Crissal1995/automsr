@@ -2,10 +2,6 @@ FROM python:3.8-slim-buster
 
 WORKDIR /app
 
-# set correct timezone
-ENV TZ=Europe/Rome
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
 # crontab
 RUN apt update && apt -y install cron
 
