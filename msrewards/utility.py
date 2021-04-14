@@ -55,13 +55,20 @@ def get_config(cfg_fp="setup.cfg"):
     retry = parser.getint("automsr", "retry", fallback=3)
     credentials = parser.get("automsr", "credentials", fallback="credentials.json")
 
+    search_type = parser.get("automsr", "search_type", fallback="random")
+
     if env not in valid_selenium_envs:
         err = f"Invalid selenium env provided! Valid envs are: {valid_selenium_envs}"
         logger.error(err)
         raise ValueError(err)
 
     return {
-        "automsr": dict(skip_all=skip_all, retry=retry, credentials=credentials),
+        "automsr": dict(
+            skip_all=skip_all,
+            retry=retry,
+            credentials=credentials,
+            search_type=search_type,
+        ),
         "selenium": dict(env=env, path=path, url=url, headless=headless),
     }
 

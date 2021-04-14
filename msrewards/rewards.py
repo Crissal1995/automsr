@@ -21,6 +21,7 @@ from msrewards.activities import (
     ThisOrThatActivity,
 )
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
+from msrewards.search_takeout_parser import SearchTakeoutParser
 from msrewards.utility import config, get_driver
 
 logger = logging.getLogger(__name__)
@@ -175,6 +176,8 @@ class MicrosoftRewards:
 
     @classmethod
     def daily_searches(cls, credentials: dict, **kwargs):
+        global config
+
         user_agents = [
             dict(value=cls.edge_win_ua, is_mobile=False),
             dict(value=cls.chrome_android_ua, is_mobile=True),
@@ -184,7 +187,8 @@ class MicrosoftRewards:
             kwargs.update(user_agent=user_agent["value"])
             driver = get_driver(**kwargs)
             rewards = cls(driver, credentials, is_mobile=user_agent["is_mobile"])
-            rewards.execute_searches()
+            search_type = config["automsr"]["search_type"]
+            rewards.execute_searches(search_type=search_type)
             driver.quit()
 
     def execute_activity(self, activity: Activity):
@@ -215,7 +219,7 @@ class MicrosoftRewards:
 
         time.sleep(0.5)
 
-    def execute_searches(self, limit=None):
+    def execute_searches(self, limit=None, search_type="random"):
         MAX_MOBILE = 20
         MAX_DESKTOP = 30
         MAX_WORD_LENGTH = 70
@@ -230,6 +234,44 @@ class MicrosoftRewards:
             limit = random.randint(a, b)
 
         logger.info(f"Searches will be executed {limit} times")
+
+        if search_type == "takeout":
+            self.takeout_searcher(limit)
+        elif search_type == "random":
+            self.random_searcher(limit, MAX_WORD_LENGTH, ALPHABET)
+        else:
+            error_msg = "Invalid search_type provided"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+    def takeout_searcher(self, limit):
+
+        for i in range(limit):
+            try:
+                BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+                logger.info("Succesfully authenticated on BingPage")
+            except exceptions.NoSuchElementException:
+                logger.info("Was already authenticated on BingPage")
+
+            parser = SearchTakeoutParser("./my_activities.json")
+            random_key = random.randint(0, parser.n_of_search)
+            word = parser.get_query(random_key)
+            word_length = len(word)
+
+            logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
+
+            self.go_to(self.bing_url)
+
+            input_field = self.driver.find_element_by_css_selector("#sb_form_q")
+            input_field.send_keys(word)
+            input_field.send_keys(Keys.ENTER)
+
+            sleep_time = random.randint(10, 60)
+            logger.debug(f"Next search after {sleep_time}s")
+
+            time.sleep(sleep_time)
+
+    def random_searcher(self, limit, MAX_WORD_LENGTH, ALPHABET):
 
         word_length = random.randint(limit, MAX_WORD_LENGTH)
         word = "".join([random.choice(ALPHABET) for _ in range(word_length)])
