@@ -3,7 +3,13 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-from searchTakeoutParser.utility import is_valid_url
+
+def is_valid_url(url):
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc, result.path])
+    except Exception:
+        return False
 
 
 class SearchTakeoutParser:
