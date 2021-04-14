@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import string
 import time
 
 from selenium.common import exceptions
@@ -19,9 +20,8 @@ from msrewards.activities import (
     Status,
     ThisOrThatActivity,
 )
-from msrewards.constants import SearchConfig
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
-from msrewards.utility import get_driver, retries
+from msrewards.utility import config, get_driver
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +158,8 @@ class MicrosoftRewards:
             logger.info(f"No {singular} found...")
             return
 
-        for i in range(retries()):
+        retries = config["automsr"]["retry"]
+        for i in range(retries):
             logger.info(f"Execute {plural}, try {i + 1}/{retries()}")
             runnables = self._execute(runnables, runnable_type)
             if not runnables:
@@ -215,20 +216,23 @@ class MicrosoftRewards:
         time.sleep(0.5)
 
     def execute_searches(self, limit=None):
-        config = SearchConfig.get_config()
+        MAX_MOBILE = 20
+        MAX_DESKTOP = 30
+        MAX_WORD_LENGTH = 70
+        OFFSET = 10
+        ALPHABET = string.ascii_lowercase
 
         if not limit:
-            a = config["max_mobile"] if self.is_mobile else config["max_desktop"]
-            a += config["offset"]
-            b = a + config["offset"]
+            a = MAX_MOBILE if self.is_mobile else MAX_DESKTOP
+            a += OFFSET
+            b = a + OFFSET
             # limit range is [MAX + OFFSET, MAX + 2*OFFSET]
             limit = random.randint(a, b)
 
         logger.info(f"Searches will be executed {limit} times")
 
-        word_length = random.randint(limit, config["max_word_length"])
-        alphabet = config["alphabet"]
-        word = "".join([random.choice(alphabet) for _ in range(word_length)])
+        word_length = random.randint(limit, MAX_WORD_LENGTH)
+        word = "".join([random.choice(ALPHABET) for _ in range(word_length)])
 
         logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
 

@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from msrewards import MicrosoftRewards
-from msrewards.utility import force_skip, get_safe_credentials, test_environment
+from msrewards.utility import config, get_safe_credentials, test_environment
 
 FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
 formatter = logging.Formatter(FORMAT)
@@ -32,7 +32,11 @@ for handler in handlers:
     logger.addHandler(handler)
 
 
-def main(credentials_fp="credentials.json", *, headless: bool, **kwargs):
+def main(**kwargs):
+    # get options from config
+    credentials_fp = config["automsr"]["credentials"]
+    headless = config["selenium"]["headless"]
+
     # overwrite headless kw in kwargs with the
     # actual value passed as keyword arg
     kwargs.update(headless=headless)
@@ -43,8 +47,8 @@ def main(credentials_fp="credentials.json", *, headless: bool, **kwargs):
     # check if should skip all credentials
     # placed after test_environment to check
     # for possible env errors
-    if force_skip():
-        logger.info("force_skip was true in config")
+    if config["automsr"]["skip_all"]:
+        logger.info("Skipping all credentials")
         return
 
     for credentials in get_safe_credentials(credentials_fp):
@@ -73,4 +77,4 @@ def main(credentials_fp="credentials.json", *, headless: bool, **kwargs):
 
 
 if __name__ == "__main__":
-    main(headless=True)
+    main()

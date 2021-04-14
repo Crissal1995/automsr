@@ -44,12 +44,16 @@ def get_config(cfg_fp="setup.cfg"):
 
     valid_selenium_envs = ("local", "remote")
 
+    # get selenium options
     env = parser.get("selenium", "env", fallback="local")
     path = parser.get("selenium", "path", fallback="chromedriver")
     url = parser.get("selenium", "url", fallback="http://selenium-hub:4444/wd/hub")
+    headless = parser.get("selenium", "headless", fallback=True)
 
-    force_skip_attr = parser.getboolean("automsr", "force_skip", fallback=False)
+    # get automsr options
+    skip_all = parser.getboolean("automsr", "skip_all", fallback=False)
     retry = parser.getint("automsr", "retry", fallback=3)
+    credentials = parser.get("automsr", "credentials", fallback="credentials.json")
 
     if env not in valid_selenium_envs:
         err = f"Invalid selenium env provided! Valid envs are: {valid_selenium_envs}"
@@ -57,8 +61,8 @@ def get_config(cfg_fp="setup.cfg"):
         raise ValueError(err)
 
     return {
-        "automsr": dict(force_skip=force_skip_attr, retry=retry),
-        "selenium": dict(env=env, path=path, url=url),
+        "automsr": dict(skip_all=skip_all, retry=retry, credentials=credentials),
+        "selenium": dict(env=env, path=path, url=url, headless=headless),
     }
 
 
@@ -87,16 +91,6 @@ def get_driver(**kwargs):
         raise AssertionError
 
     return driver
-
-
-def force_skip():
-    global config
-    return config["automsr"]["force_skip"]
-
-
-def retries():
-    global config
-    return config["automsr"]["retry"]
 
 
 def test_environment(**kwargs):
