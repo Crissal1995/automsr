@@ -48,7 +48,7 @@ def get_config(cfg_fp="setup.cfg"):
     env = parser.get("selenium", "env", fallback="local")
     path = parser.get("selenium", "path", fallback="chromedriver")
     url = parser.get("selenium", "url", fallback="http://selenium-hub:4444/wd/hub")
-    headless = parser.get("selenium", "headless", fallback=True)
+    headless = parser.getboolean("selenium", "headless", fallback=True)
 
     # get automsr options
     skip_all = parser.getboolean("automsr", "skip_all", fallback=False)
