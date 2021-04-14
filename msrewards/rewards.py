@@ -21,7 +21,7 @@ from msrewards.activities import (
 )
 from msrewards.constants import SearchConfig
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
-from msrewards.utility import get_driver
+from msrewards.utility import get_driver, retries
 
 logger = logging.getLogger(__name__)
 
@@ -137,34 +137,52 @@ class MicrosoftRewards:
         errmsg = f"Wrong type provided ({runnable_type}). Valids are {runnable_types}"
         assert runnable_type in runnable_types, errmsg
 
+        plural_dict = {
+            "activity": "activities",
+            "punchcard": "punchcards",
+        }
+        plural = plural_dict[runnable_type]
+        singular = runnable_type
+
         self.go_to_home()
 
         if runnable_type == "activity":
-            missing_runnables = self.execute_todo_activities()
+            runnables = self.get_todo_activities()
         elif runnable_type == "punchcard":
-            missing_runnables = self.execute_todo_punchcards()
+            runnables = self.get_free_todo_punchcards()
         else:
             # future implementations, but it won't trigger
             raise NotImplementedError
 
-        if missing_runnables:
-            logger.warning("Missing runnables found, I will try to do them again")
-            missing_runnables = self._execute(missing_runnables, runnable_type)
+        if not runnables:
+            logger.info(f"No {singular} found...")
+            return
 
-            if missing_runnables:
-                logger.error(
-                    f"Missing runnables (you should do them): - {str_list(missing_runnables)}"
-                )
+        for i in range(retries()):
+            logger.info(f"Execute {plural}, try {i + 1}/{retries()}")
+            runnables = self._execute(runnables, runnable_type)
+            if not runnables:
+                logger.info(f"All {plural} completed")
+                break
+            else:
+                logger.warning(f"One or more {plural} weren't completed, try again...")
+
+        if runnables:
+            logger.error(
+                f"Missing runnables (you should do them): - {str_list(runnables)}"
+            )
 
     @classmethod
     def daily_searches(cls, credentials: dict, **kwargs):
-        # points from searches
-        uas = [cls.edge_win_ua, cls.chrome_android_ua]
+        user_agents = [
+            dict(value=cls.edge_win_ua, is_mobile=False),
+            dict(value=cls.chrome_android_ua, is_mobile=True),
+        ]
 
-        for ua, is_mobile in zip(uas, (False, True)):
-            kwargs.update(user_agent=ua)
+        for user_agent in user_agents:
+            kwargs.update(user_agent=user_agent["value"])
             driver = get_driver(**kwargs)
-            rewards = cls(driver, credentials, is_mobile=is_mobile)
+            rewards = cls(driver, credentials, is_mobile=user_agent["is_mobile"])
             rewards.execute_searches()
             driver.quit()
 
