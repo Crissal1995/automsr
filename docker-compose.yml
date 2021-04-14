@@ -4,6 +4,7 @@ services:
 
   chrome:
     image: selenium/node-chrome:4.0.0-beta-3-prerelease-20210402
+    restart: "always"
     container_name: chrome
     volumes:
       - /dev/shm:/dev/shm
@@ -18,6 +19,7 @@ services:
 
   selenium-hub:
     image: selenium/hub:4.0.0-beta-3-prerelease-20210402
+    restart: "always"
     container_name: selenium-hub
     ports:
       - "4442:4442"
@@ -26,6 +28,7 @@ services:
 
   python:
     build: .
+    restart: "always"
     depends_on:
       - chrome
       - selenium-hub
