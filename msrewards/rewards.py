@@ -184,8 +184,6 @@ class MicrosoftRewards:
 
     @classmethod
     def daily_searches(cls, credentials: dict, **kwargs):
-        global config
-
         user_agents = [
             dict(value=cls.edge_win_ua, is_mobile=False),
             dict(value=cls.chrome_android_ua, is_mobile=True),
@@ -253,7 +251,6 @@ class MicrosoftRewards:
             raise ValueError(error_msg)
 
     def takeout_searcher(self, limit):
-
         for i in range(limit):
             try:
                 BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
@@ -279,10 +276,9 @@ class MicrosoftRewards:
 
             time.sleep(sleep_time)
 
-    def random_searcher(self, limit, MAX_WORD_LENGTH, ALPHABET):
-
-        word_length = random.randint(limit, MAX_WORD_LENGTH)
-        word = "".join([random.choice(ALPHABET) for _ in range(word_length)])
+    def random_searcher(self, limit, max_word_length, alphabet):
+        word_length = random.randint(limit, max_word_length)
+        word = "".join([random.choice(alphabet) for _ in range(word_length)])
 
         logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
 
