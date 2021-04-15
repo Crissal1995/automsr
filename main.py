@@ -16,16 +16,17 @@ file_handler.setLevel(logging.INFO)
 file_debug_handler = logging.FileHandler("main.debug.log")
 file_debug_handler.setLevel(logging.DEBUG)
 
-now = datetime.date.today()
-fh = f"{now.isoformat()}.log"
-daily_handler = logging.FileHandler(fh)
-daily_handler.setLevel(logging.DEBUG)
+now = datetime.date.today().isoformat()
+missing_fh = logging.FileHandler(f"{now}_missing.log", encoding="utf-8")
+missing_fh.setLevel(logging.DEBUG)
+missing_fh.setFormatter(formatter)
+logging.getLogger("missing").addHandler(missing_fh)
 
 # set formatters and add handlers to main logger
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-handlers = (stream_handler, file_handler, file_debug_handler, daily_handler)
+handlers = (stream_handler, file_handler, file_debug_handler)
 
 for handler in handlers:
     handler.setFormatter(formatter)
