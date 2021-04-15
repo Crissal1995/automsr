@@ -14,6 +14,44 @@ class InvalidCredentialsError(Exception):
     """Error class for invalid Credentials objects"""
 
 
+possible_skips = (
+    "no",
+    "false",
+    "all",
+    "yes",
+    "true",
+    "search",
+    "searches",
+    "activity",
+    "activities",
+)
+
+
+def activity_skip(skip_str: str) -> (bool, bool):
+    """Function utility to know which activity,
+    listed as (daily_activities, daily_searches), is
+    to be skipped.
+    False means the activity should not be skipped,
+    True otherwise.
+    """
+    skip_dict = {
+        "activity": (True, False),
+        "search": (False, True),
+        "yes": (True, True),
+        "no": (False, False),
+    }
+    skip_dict["activities"] = skip_dict["activity"]
+    skip_dict["searches"] = skip_dict["search"]
+    skip_dict["all"] = skip_dict["yes"]
+    skip_dict["true"] = skip_dict["yes"]
+    skip_dict["false"] = skip_dict["no"]
+
+    if any(kw not in skip_dict for kw in possible_skips):
+        raise KeyError(f"Fix skip_dict! Missing some keys from {possible_skips}")
+
+    return skip_dict[skip_str]
+
+
 def get_options(**kwargs):
     is_headless = kwargs.get("headless", True)
 
@@ -51,10 +89,16 @@ def get_config(cfg_fp="setup.cfg"):
     headless = parser.getboolean("selenium", "headless", fallback=True)
 
     # get automsr options
-    skip_all = parser.getboolean("automsr", "skip_all", fallback=False)
+    skip = parser.get("automsr", "skip")
+    # if skip was present in cfg, use it, otherwise global skips are false
+    if skip:
+        skip = skip.lower()
+        skip_activity, skip_search = activity_skip(skip)
+    else:
+        skip_activity, skip_search = False, False
+
     retry = parser.getint("automsr", "retry", fallback=3)
     credentials = parser.get("automsr", "credentials", fallback="credentials.json")
-
     search_type = parser.get("automsr", "search_type", fallback="random")
 
     if env not in valid_selenium_envs:
@@ -64,7 +108,9 @@ def get_config(cfg_fp="setup.cfg"):
 
     return {
         "automsr": dict(
-            skip_all=skip_all,
+            skip=skip,
+            skip_activity=skip_activity,
+            skip_search=skip_search,
             retry=retry,
             credentials=credentials,
             search_type=search_type,
@@ -109,32 +155,6 @@ def test_environment(**kwargs):
         raise err
     else:
         logger.info("Selenium driver found!")
-
-
-possible_skips = ("no", "all", "yes", "search", "searches", "activity", "activities")
-
-
-def activity_skip(skip_str: str) -> (bool, bool):
-    """Function utility to know which activity,
-    listed as (daily_activities, daily_searches), is
-    to be skipped.
-    False means the activity should not be skipped,
-    True otherwise.
-    """
-    skip_dict = {
-        "activity": (True, False),
-        "search": (False, True),
-        "all": (True, True),
-        "no": (False, False),
-    }
-    skip_dict["activities"] = skip_dict["activity"]
-    skip_dict["searches"] = skip_dict["search"]
-    skip_dict["yes"] = skip_dict["all"]
-
-    if any(kw not in skip_dict for kw in possible_skips):
-        raise KeyError(f"Fix skip_dict! Missing some keys from {possible_skips}")
-
-    return skip_dict[skip_str]
 
 
 def get_credentials(credentials_fp):

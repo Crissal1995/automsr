@@ -48,15 +48,15 @@ def main(**kwargs):
     # check if should skip all credentials
     # placed after test_environment to check
     # for possible env errors
-    if config["automsr"]["skip_all"]:
-        logger.info("Skipping all credentials")
-        return
 
     for credentials in get_safe_credentials(credentials_fp):
         logger.info(f"Working on credentials [email={credentials['email']}]")
 
-        skip_activity = credentials["skip_activity"]
-        skip_search = credentials["skip_search"]
+        # override from global to the one placed in credentials
+        skip_activity = (
+            config["automsr"]["skip_activity"] or credentials["skip_activity"]
+        )
+        skip_search = config["automsr"]["skip_search"] or credentials["skip_search"]
 
         if not skip_activity:
             logger.info("Start daily activities")
