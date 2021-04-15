@@ -161,7 +161,7 @@ class MicrosoftRewards:
 
         retries = config["automsr"]["retry"]
         for i in range(retries):
-            logger.info(f"Execute {plural}, try {i + 1}/{retries()}")
+            logger.info(f"Execute {plural}, try {i + 1}/{retries}")
             runnables = self._execute(runnables, runnable_type)
             if not runnables:
                 logger.info(f"All {plural} completed")
