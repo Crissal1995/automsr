@@ -57,7 +57,9 @@ class LoginPage(Page):
     def fill_email(self):
         email_selector = "#i0116"
         email = self.credentials["email"]
-        self.driver.find_element_by_css_selector(email_selector).send_keys(email)
+
+        field = self.driver.find_element_by_css_selector(email_selector)
+        self.driver.execute_script(f"arguments[0].value='{email}'", field)
 
         forward_selector = "#idSIButton9"
         self.driver.find_element_by_css_selector(forward_selector).click()
@@ -65,7 +67,11 @@ class LoginPage(Page):
     def fill_password(self):
         psw_selector = "#i0118"
         psw = self.credentials["password"]
-        self.driver.find_element_by_css_selector(psw_selector).send_keys(psw)
+
+        # self.driver.find_element_by_css_selector(psw_selector).send_keys(psw)
+
+        field = self.driver.find_element_by_css_selector(psw_selector)
+        self.driver.execute_script(f"arguments[0].value='{psw}'", field)
 
         remain_logged_sel = "#idChkBx_PWD_KMSI0Pwd"
         self.driver.find_element_by_css_selector(remain_logged_sel).click()
