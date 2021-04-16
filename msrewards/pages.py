@@ -65,15 +65,19 @@ class LoginPage(Page):
         self.driver.find_element_by_css_selector(forward_selector).click()
 
     def fill_password(self):
+        time.sleep(10)
         psw_selector = "#i0118"
         psw = self.credentials["password"]
 
         # self.driver.find_element_by_css_selector(psw_selector).send_keys(psw)
 
-        field = self.driver.find_element_by_css_selector(psw_selector)
+        field = None
+        while not field:
+            field = self.driver.find_element_by_css_selector(psw_selector)
         self.driver.execute_script(f"arguments[0].value='{psw}'", field)
 
         remain_logged_sel = "#idChkBx_PWD_KMSI0Pwd"
+        time.sleep(2)
         self.driver.find_element_by_css_selector(remain_logged_sel).click()
 
         forward_selector = "#idSIButton9"
