@@ -322,7 +322,7 @@ class MicrosoftRewards:
 
         self.go_to(self.bing_url)
 
-        selector = "input[type=search]"
+        selector = "#sb_form_q"
 
         input_field = self.driver.find_element_by_css_selector(selector)
         input_field.send_keys(word)
@@ -333,7 +333,7 @@ class MicrosoftRewards:
         try:
             BingLoginPage(self).complete()
             logger.info("Succesfully authenticated on BingPage")
-        except exceptions.NoSuchElementException:
+        except exceptions.WebDriverException:
             logger.info("Was already authenticated on BingPage")
 
         for i in range(limit):
