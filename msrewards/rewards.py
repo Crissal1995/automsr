@@ -22,7 +22,7 @@ from msrewards.activities import (
 )
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
 from msrewards.search_takeout_parser import SearchTakeoutParser
-from msrewards.utility import config, get_driver
+from msrewards.utility import change_user_agent, config, get_driver
 
 logger = logging.getLogger(__name__)
 missing_logger = logging.getLogger("missing")
@@ -119,6 +119,42 @@ class MicrosoftRewards:
         for cookie in cookies_json:
             self.driver.add_cookie(cookie)
         self.driver.get(self.rewards_url)
+
+    @classmethod
+    def do_every_activity(cls, credentials: dict, **kwargs):
+        driver = get_driver(**kwargs)
+
+        # set user agent to edge
+        change_user_agent(driver, cls.edge_win_ua)
+
+        rewards = cls(driver, credentials=credentials)
+
+        # detect what to skip
+        skip_activity = config["automsr"]["skip_activity"]
+        skip_search = config["automsr"]["skip_search"]
+
+        # execute runnables
+        if skip_activity:
+            logger.warning("Skipping activity...")
+        else:
+            logger.warning("Starting activity...")
+            rewards._execute_todo_runnables("activity")
+            rewards._execute_todo_runnables("punchcard")
+
+        # execute desktop searches
+        if skip_search:
+            logger.warning("Skipping daily search...")
+        else:
+            logger.warning("Starting daily search...")
+            search_type = config["automsr"]["search_type"]
+
+            rewards.execute_searches(search_type=search_type)
+
+            # change user agent to mobile
+            change_user_agent(driver, cls.chrome_android_ua)
+            rewards.is_mobile = True
+
+            rewards.execute_searches(search_type=search_type)
 
     @classmethod
     def daily_activities(cls, credentials: dict, **kwargs):
@@ -284,7 +320,9 @@ class MicrosoftRewards:
 
         self.go_to(self.bing_url)
 
-        input_field = self.driver.find_element_by_css_selector("#sb_form_q")
+        selector = "input[type=search]"
+
+        input_field = self.driver.find_element_by_css_selector(selector)
         input_field.send_keys(word)
         input_field.send_keys(Keys.ENTER)
 
@@ -301,7 +339,7 @@ class MicrosoftRewards:
             time.sleep(0.7)
 
             # must search again input field because of page reloading
-            input_field = self.driver.find_element_by_css_selector("#sb_form_q")
+            input_field = self.driver.find_element_by_css_selector(selector)
 
             input_field.send_keys(Keys.BACKSPACE)
             input_field.send_keys(Keys.ENTER)
