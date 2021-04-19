@@ -1,6 +1,7 @@
 import time
 from abc import ABC
 
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 
 
@@ -55,20 +56,15 @@ class LoginPage(Page):
         self.driver.find_element_by_css_selector(selector).click()
 
     def fill_email(self):
-        email_selector = "#i0116"
         email = self.credentials["email"]
-        self.driver.find_element_by_css_selector(email_selector).send_keys(email)
-
-        forward_selector = "#idSIButton9"
-        self.driver.find_element_by_css_selector(forward_selector).click()
+        input_field = self.driver.find_element_by_tag_name("input")
+        input_field.send_keys(email)
+        input_field.send_keys(Keys.ENTER)
 
     def fill_password(self):
-        psw_selector = "#i0118"
+        # psw_selector = "#i0118"
+        psw_selector = "input[type=password]"
         psw = self.credentials["password"]
-        self.driver.find_element_by_css_selector(psw_selector).send_keys(psw)
-
-        remain_logged_sel = "#idChkBx_PWD_KMSI0Pwd"
-        self.driver.find_element_by_css_selector(remain_logged_sel).click()
-
-        forward_selector = "#idSIButton9"
-        self.driver.find_element_by_css_selector(forward_selector).click()
+        psw_field = self.driver.find_element_by_css_selector(psw_selector)
+        psw_field.send_keys(psw)
+        psw_field.send_keys(Keys.ENTER)
