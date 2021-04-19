@@ -4,12 +4,13 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
-def is_valid_url(url):
+def is_valid_url(url: str):
     try:
         result = urlparse(url)
-        return all([result.scheme, result.netloc, result.path])
-    except Exception:
+    except (AttributeError, ValueError):
         return False
+    else:
+        return all(field for field in (result.scheme, result.netloc, result.path))
 
 
 class SearchTakeoutParser:
@@ -17,30 +18,23 @@ class SearchTakeoutParser:
         self.file_path = Path(file_path)
         with open(self.file_path) as json_file:
             self.activity = json.load(json_file)
-        self.n_of_search = len(self.activity)
+        self.activity_count = len(self.activity)
+        self._invalid_index_msg = (
+            f"Invalid index, max valid is {self.activity_count - 1}"
+        )
 
-    def get_search(self, indices: int):
-        if indices < self.n_of_search:
-            return self.activity[indices]
+    def get_search(self, index: int):
+        if index >= self.activity_count:
+            raise IndexError(self._invalid_index_msg)
+        return self.activity[index]
+
+    def get_query(self, index: int):
+        if index >= self.activity_count:
+            raise IndexError(self._invalid_index_msg)
+        title_url_query = urlparse(self.activity[index]["titleUrl"]).query.replace(
+            "q=", ""
+        )
+        if is_valid_url(title_url_query):
+            return re.sub("&usg=[a-zA-Z0-9]+", "", title_url_query)
         else:
-            raise IndexError("Indice non valido")
-
-    def get_query(self, indices: int):
-        if indices < self.n_of_search:
-            title_url_query = urlparse(
-                self.activity[indices]["titleUrl"]
-            ).query.replace("q=", "")
-            if is_valid_url(title_url_query):
-                return re.sub("&usg=[a-zA-Z0-9]+", "", title_url_query)
-            else:
-                return title_url_query.replace("+", " ")
-        else:
-            raise IndexError("Indice non valido")
-
-
-# Press the green button in the gutter to run the script.
-if __name__ == "__main__":
-    parser = SearchTakeoutParser("./LeMieAttività.json")
-    print(parser.get_query(3))
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+            return title_url_query.replace("+", " ")
