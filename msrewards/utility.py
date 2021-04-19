@@ -5,6 +5,7 @@ import sys
 
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.remote_connection import ChromeRemoteConnection
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ def activity_skip(skip_str: str) -> (bool, bool):
 
 
 def get_options(**kwargs):
-    is_headless = kwargs.get("headless", True)
+    global config
 
     options = Options()
     options.add_argument("no-sandbox")
@@ -64,7 +65,7 @@ def get_options(**kwargs):
     if ua:
         options.add_argument(f"user-agent={ua}")
 
-    if is_headless:
+    if config["selenium"]["headless"]:
         options.add_argument("headless")
         if sys.platform in ("win32", "cygwin"):
             # fix for windows platforms
@@ -85,7 +86,7 @@ def get_config(cfg_fp="setup.cfg"):
     # get selenium options
     env = parser.get("selenium", "env", fallback="local")
     path = parser.get("selenium", "path", fallback="chromedriver")
-    url = parser.get("selenium", "url", fallback="http://selenium-hub:4444/wd/hub")
+    url = parser.get("selenium", "url", fallback="http://selenium:4444/wd/hub")
     headless = parser.getboolean("selenium", "headless", fallback=True)
 
     # get automsr options
@@ -125,17 +126,21 @@ config = get_config()
 
 def get_driver(**kwargs):
     options = get_options(**kwargs)
+    path = kwargs.get("path")
+    url = kwargs.get("url")
 
     global config
     env = config["selenium"]["env"]
 
     if env == "local":
-        path = config["selenium"]["path"]
+        path = path or config["selenium"]["path"]
         driver = Chrome(executable_path=path, options=options)
     elif env == "remote":
-        url = config["selenium"]["url"]
+        url = url or config["selenium"]["url"]
         driver = Remote(
-            command_executor=url,
+            command_executor=ChromeRemoteConnection(
+                remote_server_addr="http://127.0.0.1:4444/wd/hub"
+            ),
             desired_capabilities=DesiredCapabilities.CHROME,
             options=options,
         )
@@ -144,6 +149,19 @@ def get_driver(**kwargs):
         raise AssertionError
 
     return driver
+
+
+def change_user_agent(driver, new_user_agent: str):
+    # go here to check commands
+    # venv/Lib/site-packages/selenium/webdriver/chrome/remote_connection.py
+    cmd = "Network.setUserAgentOverride"
+    cmd_args = dict(userAgent=new_user_agent)
+
+    driver.execute("executeCdpCommand", {"cmd": cmd, "params": cmd_args})
+
+    actual_user_agent = str(driver.execute_script("return navigator.userAgent;"))
+    assert actual_user_agent == new_user_agent, "Cannot set user-agent!"
+    logger.info(f"Changed user-agent to {new_user_agent}")
 
 
 def test_environment(**kwargs):
