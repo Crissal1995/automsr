@@ -130,8 +130,10 @@ class MicrosoftRewards:
         rewards = cls(driver, credentials=credentials)
 
         # detect what to skip
-        skip_activity = config["automsr"]["skip_activity"]
-        skip_search = config["automsr"]["skip_search"]
+        skip_activity = (
+            config["automsr"]["skip_activity"] or credentials["skip_activity"]
+        )
+        skip_search = config["automsr"]["skip_search"] or credentials["skip_search"]
 
         # execute runnables
         if skip_activity:

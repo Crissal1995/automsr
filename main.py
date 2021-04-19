@@ -52,29 +52,7 @@ def main(**kwargs):
     for credentials in get_safe_credentials(credentials_fp):
         logger.info(f"Working on credentials [email={credentials['email']}]")
 
-        # override from global to the one placed in credentials
-        skip_activity = (
-            config["automsr"]["skip_activity"] or credentials["skip_activity"]
-        )
-        skip_search = config["automsr"]["skip_search"] or credentials["skip_search"]
-
-        if not skip_activity:
-            logger.info("Start daily activities")
-            try:
-                MicrosoftRewards.daily_activities(credentials=credentials, **kwargs)
-            except Exception as e:
-                logger.error(f"Cannot complete daily activities - error: {e}")
-        else:
-            logger.info("Skipping daily activities")
-
-        if not skip_search:
-            logger.info("Start daily searches")
-            try:
-                MicrosoftRewards.daily_searches(credentials=credentials, **kwargs)
-            except Exception as e:
-                logger.error(f"Cannot complete daily searches - error: {e}")
-        else:
-            logger.info("Skipping daily searches")
+        MicrosoftRewards.do_every_activity(credentials=credentials)
 
 
 if __name__ == "__main__":
