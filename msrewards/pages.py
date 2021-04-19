@@ -2,12 +2,14 @@ import time
 from abc import ABC
 
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.remote.webdriver import WebDriver
+
+from msrewards.rewards import MicrosoftRewards
 
 
 class Page(ABC):
-    def __init__(self, driver: WebDriver):
-        self.driver = driver
+    def __init__(self, rewards: MicrosoftRewards):
+        self.rewards = rewards
+        self.driver = rewards.driver
         self.driver.switch_to.window(self.driver.window_handles[-1])
 
     def complete(self):
@@ -27,12 +29,8 @@ class CookieAcceptPage(Page):
 
 
 class BingLoginPage(Page):
-    def __init__(self, driver: WebDriver, is_mobile: bool):
-        super(BingLoginPage, self).__init__(driver)
-        self.is_mobile = is_mobile
-
     def complete(self):
-        if not self.is_mobile:
+        if not self.rewards.is_mobile:
             self.driver.find_element_by_name("submit").click()
         else:
             hamburger = "#mHamburger"
@@ -41,10 +39,6 @@ class BingLoginPage(Page):
 
 
 class LoginPage(Page):
-    def __init__(self, driver: WebDriver, credentials: dict):
-        super().__init__(driver)
-        self.credentials = credentials
-
     def complete(self):
         # self.select_login()
         time.sleep(2)
@@ -56,7 +50,7 @@ class LoginPage(Page):
         self.driver.find_element_by_css_selector(selector).click()
 
     def fill_email(self):
-        email = self.credentials["email"]
+        email = self.rewards.credentials["email"]
         input_field = self.driver.find_element_by_tag_name("input")
         input_field.send_keys(email)
         input_field.send_keys(Keys.ENTER)
@@ -64,7 +58,7 @@ class LoginPage(Page):
     def fill_password(self):
         # psw_selector = "#i0118"
         psw_selector = "input[type=password]"
-        psw = self.credentials["password"]
+        psw = self.rewards.credentials["password"]
         psw_field = self.driver.find_element_by_css_selector(psw_selector)
         psw_field.send_keys(psw)
         psw_field.send_keys(Keys.ENTER)

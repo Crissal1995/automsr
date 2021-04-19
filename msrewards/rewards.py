@@ -241,24 +241,24 @@ class MicrosoftRewards:
     def login(self):
         self.go_to(self.bing_url)
         try:
-            CookieAcceptPage(self.driver).complete()
+            CookieAcceptPage(self).complete()
             logger.info("Cookies accepted")
         except exceptions.NoSuchElementException:
             logger.info("Cannot accept cookies")
 
         self.go_to(self.login_url)
-        LoginPage(driver=self.driver, credentials=self.credentials).complete()
+        LoginPage(self).complete()
         logger.info("Logged in")
 
         self.go_to(self.rewards_url)
         try:
-            BannerCookiePage(self.driver).complete()
+            BannerCookiePage(self).complete()
             logger.info("Banner cookies accepted")
         except exceptions.NoSuchElementException:
             logger.info("Cannot accept banner cookies")
 
         self.go_to(self.bing_searched_url)
-        BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+        BingLoginPage(self).complete()
         logger.info("Login made on bing webpage")
 
         time.sleep(0.5)
@@ -291,13 +291,13 @@ class MicrosoftRewards:
     def takeout_searcher(self, limit):
         for i in range(limit):
             try:
-                BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+                BingLoginPage(self).complete()
                 logger.info("Succesfully authenticated on BingPage")
             except exceptions.NoSuchElementException:
                 logger.info("Was already authenticated on BingPage")
 
             parser = SearchTakeoutParser("./my_activities.json")
-            random_key = random.randint(0, parser.n_of_search)
+            random_key = random.randint(0, parser.activity_count)
             word = parser.get_query(random_key)
             word_length = len(word)
 
@@ -331,7 +331,7 @@ class MicrosoftRewards:
         time.sleep(1)
 
         try:
-            BingLoginPage(self.driver, is_mobile=self.is_mobile).complete()
+            BingLoginPage(self).complete()
             logger.info("Succesfully authenticated on BingPage")
         except exceptions.NoSuchElementException:
             logger.info("Was already authenticated on BingPage")
@@ -413,7 +413,7 @@ class MicrosoftRewards:
 
             # try to log in via bing
             try:
-                BingLoginPage(self.driver, self.is_mobile).complete()
+                BingLoginPage(self).complete()
                 logger.warning("Bing login was required, but is done.")
 
                 # add the runnable to the ones to do again
