@@ -110,10 +110,13 @@ class QuizActivity(Activity):
         return rounds
 
     def do_it(self):
+        time.sleep(1)
+
         try:
             self.driver.find_element_by_css_selector(self.start_selector).click()
-        except exceptions.NoSuchElementException:
-            pass
+            logger.info("Start button clicked")
+        except exceptions.ElementNotInteractableException:
+            logger.info("Start button was already clicked")
 
         try:
             container = self.driver.find_element_by_css_selector(
@@ -132,6 +135,8 @@ class QuizActivity(Activity):
 
         for quiz_round in range(rounds):
             time.sleep(2)
+
+            logger.info(f"Round {quiz_round + 1}/{rounds} started")
 
             for possible_sel in answer_selectors:
                 time.sleep(1)

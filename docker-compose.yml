@@ -2,37 +2,18 @@ version: "3"
 
 services:
 
-  chrome:
-    image: selenium/node-chrome:4.0.0-beta-3-prerelease-20210402
-    restart: "always"
-    container_name: chrome
-    volumes:
-      - /dev/shm:/dev/shm
-    depends_on:
-      - selenium-hub
-    environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+  selenium:
+    image: selenium/standalone-chrome:89.0
+    restart: always
+    container_name: selenium
     ports:
-      - "6900:5900"
-
-  selenium-hub:
-    image: selenium/hub:4.0.0-beta-3-prerelease-20210402
-    restart: "always"
-    container_name: selenium-hub
-    ports:
-      - "4442:4442"
-      - "4443:4443"
       - "4444:4444"
 
   python:
     build: .
-    restart: "always"
-    depends_on:
-      - chrome
-      - selenium-hub
     container_name: python
     volumes:
       - ./credentials.json:/app/credentials.json
       - ./setup.cfg:/app/setup.cfg
+    depends_on:
+      - selenium

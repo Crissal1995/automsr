@@ -1,12 +1,17 @@
+import logging
 import time
 from abc import ABC
 
-from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.common import exceptions
+from selenium.webdriver.common.keys import Keys
+
+logger = logging.getLogger(__name__)
 
 
 class Page(ABC):
-    def __init__(self, driver: WebDriver):
-        self.driver = driver
+    def __init__(self, rewards):
+        self.rewards = rewards
+        self.driver = rewards.driver
         self.driver.switch_to.window(self.driver.window_handles[-1])
 
     def complete(self):
@@ -26,49 +31,47 @@ class CookieAcceptPage(Page):
 
 
 class BingLoginPage(Page):
-    def __init__(self, driver: WebDriver, is_mobile: bool):
-        super(BingLoginPage, self).__init__(driver)
-        self.is_mobile = is_mobile
-
     def complete(self):
-        if not self.is_mobile:
-            self.driver.find_element_by_name("submit").click()
+        time.sleep(1)
+
+        if not self.rewards.is_mobile:
+            self.driver.find_element_by_css_selector("#id_a").click()
         else:
             hamburger = "#mHamburger"
             self.driver.find_element_by_css_selector(hamburger).click()
             self.driver.find_element_by_css_selector("#hb_s").click()
 
+        try:
+            LoginPage(self.rewards).complete()
+            logger.warning("Bing login required another login")
+        except exceptions.WebDriverException:
+            logger.info("No additional login was required")
+
 
 class LoginPage(Page):
-    def __init__(self, driver: WebDriver, credentials: dict):
-        super().__init__(driver)
-        self.credentials = credentials
-
     def complete(self):
-        # self.select_login()
-        time.sleep(2)
-        self.fill_email()
-        self.fill_password()
+        url = self.driver.current_url
+        if self.rewards.login_url not in url:
+            logger.warning("Weren't inside a login page, exit...")
+            return
+        else:
+            self.fill_email()
+            self.fill_password()
 
     def select_login(self):
         selector = "body > div.simpleSignIn > div.signInOptions > span > a"
         self.driver.find_element_by_css_selector(selector).click()
 
     def fill_email(self):
-        email_selector = "#i0116"
-        email = self.credentials["email"]
-        self.driver.find_element_by_css_selector(email_selector).send_keys(email)
-
-        forward_selector = "#idSIButton9"
-        self.driver.find_element_by_css_selector(forward_selector).click()
+        email = self.rewards.credentials["email"]
+        self.driver.find_element_by_tag_name("input").send_keys(email)
+        time.sleep(0.5)
+        self.driver.find_element_by_tag_name("input").send_keys(Keys.ENTER)
 
     def fill_password(self):
-        psw_selector = "#i0118"
-        psw = self.credentials["password"]
+        # psw_selector = "#i0118"
+        psw_selector = "input[type=password]"
+        psw = self.rewards.credentials["password"]
         self.driver.find_element_by_css_selector(psw_selector).send_keys(psw)
-
-        remain_logged_sel = "#idChkBx_PWD_KMSI0Pwd"
-        self.driver.find_element_by_css_selector(remain_logged_sel).click()
-
-        forward_selector = "#idSIButton9"
-        self.driver.find_element_by_css_selector(forward_selector).click()
+        time.sleep(0.5)
+        self.driver.find_element_by_css_selector(psw_selector).send_keys(Keys.ENTER)
