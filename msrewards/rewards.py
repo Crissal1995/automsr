@@ -36,9 +36,7 @@ class MicrosoftRewards:
     rewards_url = "https://account.microsoft.com/rewards/"
     bing_url = "https://www.bing.com/"
     login_url = "https://login.live.com/login.srf"
-    bing_searched_url = (
-        "https://www.bing.com/search?q=rick+astley+never+gonna+give+you+up"
-    )
+    bing_searched_url = "https://www.bing.com/search?q=google"
 
     default_cookies_json_fp = "cookies.json"
 
@@ -157,6 +155,9 @@ class MicrosoftRewards:
             rewards.is_mobile = True
 
             rewards.execute_searches(search_type=search_type)
+
+        # delete rewards object (and also quit driver)
+        del rewards
 
     @classmethod
     def daily_activities(cls, credentials: dict, **kwargs):
