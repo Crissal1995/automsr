@@ -50,8 +50,13 @@ class BingLoginPage(Page):
 
 class LoginPage(Page):
     def complete(self):
-        self.fill_email()
-        self.fill_password()
+        url = self.driver.current_url
+        if self.rewards.login_url not in url:
+            logger.warning("Weren't inside a login page, exit...")
+            return
+        else:
+            self.fill_email()
+            self.fill_password()
 
     def select_login(self):
         selector = "body > div.simpleSignIn > div.signInOptions > span > a"
