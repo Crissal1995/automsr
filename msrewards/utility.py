@@ -86,7 +86,7 @@ def get_config(cfg_fp="setup.cfg"):
     # get selenium options
     env = parser.get("selenium", "env", fallback="local")
     path = parser.get("selenium", "path", fallback="chromedriver")
-    url = parser.get("selenium", "url", fallback="http://selenium:4444/wd/hub")
+    url = parser.get("selenium", "url", fallback="http://127.0.0.1:4444/wd/hub")
     headless = parser.getboolean("selenium", "headless", fallback=True)
 
     # get automsr options
@@ -138,9 +138,7 @@ def get_driver(**kwargs):
     elif env == "remote":
         url = url or config["selenium"]["url"]
         driver = Remote(
-            command_executor=ChromeRemoteConnection(
-                remote_server_addr="http://127.0.0.1:4444/wd/hub"
-            ),
+            command_executor=ChromeRemoteConnection(remote_server_addr=url),
             desired_capabilities=DesiredCapabilities.CHROME,
             options=options,
         )
