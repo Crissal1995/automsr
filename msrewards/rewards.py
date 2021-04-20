@@ -409,7 +409,6 @@ class MicrosoftRewards:
             # switch to page and let it load
             window = self.get_new_window(old_windows)
             self.driver.switch_to.window(window)
-            time.sleep(2)
 
             # try to log in via bing
             try:
@@ -421,6 +420,12 @@ class MicrosoftRewards:
                 continue
             except exceptions.WebDriverException:
                 logger.debug("No bing login required")
+
+            # refresh tab for some activities that don't always load
+            self.driver.refresh()
+
+            # let page load
+            time.sleep(3)
 
             # execute the activity
             try:
