@@ -70,6 +70,11 @@ On a Docker setup, the environment should be `remote`.
 
 Defaults to `local`.
 
+#### headless
+Choose to start the Chrome session in headless mode or not.
+
+Defaults to `true`.
+
 #### path
 Ignored when `env` is `remote`. The path to the chromedriver executable.
 
