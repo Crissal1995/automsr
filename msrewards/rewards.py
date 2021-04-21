@@ -243,9 +243,9 @@ class MicrosoftRewards:
         self.go_to(self.bing_url)
         try:
             CookieAcceptPage(self).complete()
-            logger.info("Cookies accepted")
+            logger.debug("Cookies accepted")
         except exceptions.NoSuchElementException:
-            logger.info("Cannot accept cookies")
+            logger.debug("Cannot accept cookies")
 
         self.go_to(self.login_url)
         LoginPage(self).complete()
@@ -254,9 +254,9 @@ class MicrosoftRewards:
         self.go_to(self.rewards_url)
         try:
             BannerCookiePage(self).complete()
-            logger.info("Banner cookies accepted")
+            logger.debug("Banner cookies accepted")
         except exceptions.NoSuchElementException:
-            logger.info("Cannot accept banner cookies")
+            logger.debug("Cannot accept banner cookies")
 
         self.go_to(self.bing_searched_url)
         BingLoginPage(self).complete()
@@ -265,25 +265,24 @@ class MicrosoftRewards:
         time.sleep(0.5)
 
     def execute_searches(self, limit=None, search_type="random"):
-        MAX_MOBILE = 20
-        MAX_DESKTOP = 30
-        MAX_WORD_LENGTH = 70
-        OFFSET = 10
-        ALPHABET = string.ascii_lowercase
+        max_mobile = 20
+        max_desktop = 30
+        offset = 10
 
         if not limit:
-            a = MAX_MOBILE if self.is_mobile else MAX_DESKTOP
-            a += OFFSET
-            b = a + OFFSET
+            a = max_mobile if self.is_mobile else max_desktop
+            a += offset
+            b = a + offset
             # limit range is [MAX + OFFSET, MAX + 2*OFFSET]
             limit = random.randint(a, b)
 
-        logger.info(f"Searches will be executed {limit} times")
+        search_type_str = "Mobile" if self.is_mobile else "Desktop"
+        logger.info(f"{search_type_str} searches will be executed {limit} times")
 
         if search_type == "takeout":
             self.takeout_searcher(limit)
         elif search_type == "random":
-            self.random_searcher(limit, MAX_WORD_LENGTH, ALPHABET)
+            self.random_searcher(limit)
         else:
             error_msg = "Invalid search_type provided"
             logger.error(error_msg)
@@ -293,9 +292,9 @@ class MicrosoftRewards:
         for i in range(limit):
             try:
                 BingLoginPage(self).complete()
-                logger.info("Succesfully authenticated on BingPage")
+                logger.debug("Succesfully authenticated on BingPage")
             except exceptions.NoSuchElementException:
-                logger.info("Was already authenticated on BingPage")
+                logger.debug("Was already authenticated on BingPage")
 
             parser = SearchTakeoutParser("./my_activities.json")
             random_key = random.randint(0, parser.activity_count)
@@ -315,7 +314,10 @@ class MicrosoftRewards:
 
             time.sleep(sleep_time)
 
-    def random_searcher(self, limit, max_word_length, alphabet):
+    def random_searcher(self, limit):
+        max_word_length = 70
+        alphabet = string.ascii_lowercase
+
         word_length = random.randint(limit, max_word_length)
         word = "".join([random.choice(alphabet) for _ in range(word_length)])
 
