@@ -1,6 +1,7 @@
 import json
 import logging
 import random
+import re
 import string
 import time
 
@@ -155,16 +156,30 @@ class MicrosoftRewards:
             logger.warning("Starting daily search...")
             search_type = config["automsr"]["search_type"]
 
-            rewards.execute_searches(search_type=search_type)
+            search_dict = rewards.check_missing_searches()
+
+            if search_dict["desktop"]["missing"] == 0:
+                logger.info("Skipping desktop search, they are already done")
+            else:
+                limit = search_dict["desktop"]["missing"] // 3
+                # to ensure we get all points, add an amount
+                limit += 5
+                rewards.execute_searches(search_type=search_type, limit=limit)
 
             # change user agent to mobile
             change_user_agent(driver, cls.chrome_android_ua)
             rewards.is_mobile = True
 
-            rewards.execute_searches(search_type=search_type)
+            if search_dict["mobile"]["missing"] == 0:
+                logger.info("Skipping mobile search, they are already done")
+            else:
+                limit = search_dict["mobile"]["missing"] // 3
+                # to ensure we get all points, add an offset
+                limit += 5
+                rewards.execute_searches(search_type=search_type, limit=limit)
 
-        # delete rewards object (and also quit driver)
-        del rewards
+        # quit driver
+        driver.quit()
 
     @classmethod
     def daily_activities(cls, credentials: dict, **kwargs):
@@ -271,6 +286,45 @@ class MicrosoftRewards:
 
         time.sleep(0.5)
 
+    def check_missing_searches(self) -> dict:
+        # go to rewards page
+        self.go_to_home()
+        time.sleep(0.5)
+
+        # open points popup
+        self.driver.find_element_by_css_selector("#rx-user-status-action").click()
+        time.sleep(2)
+
+        # get searches
+        cards_sel = "#userPointsBreakdown > div > div:nth-child(2) > div"
+        cards = self.driver.find_elements_by_css_selector(cards_sel)
+
+        # cards should be 5:
+        # desktop searches, mobile searches, edge bonus
+        # points from ms store, activity points
+        # assert len(cards) == 5
+
+        # take first two cards (desktop and mobile searches)
+        cards = cards[:2]
+
+        # get text and points (as regexp)
+        texts = [card.find_element_by_class_name("title-detail").text for card in cards]
+        points = [re.search(r"(\d+) / (\d+)", text).groups() for text in texts]
+        points_dict = dict(desktop=None, mobile=None)
+
+        for points_group, key in zip(points, points_dict):
+            current_value = int(points_group[0])
+            max_value = int(points_group[1])
+            missing_value = max_value - current_value
+
+            points_dict[key] = {
+                "current": current_value,
+                "max": max_value,
+                "missing": missing_value,
+            }
+
+        return points_dict
+
     def execute_searches(self, limit=None, search_type="random"):
         max_mobile = 20
         max_desktop = 30
@@ -345,6 +399,9 @@ class MicrosoftRewards:
             logger.info("Succesfully authenticated on BingPage")
         except exceptions.WebDriverException:
             logger.info("Was already authenticated on BingPage")
+
+        # ensure we're on bng search
+        self.go_to(self.bing_url)
 
         for i in range(limit):
             logger.debug(f"Search {i + 1}/{limit}")
