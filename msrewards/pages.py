@@ -56,6 +56,7 @@ class LoginPage(Page):
             return
         else:
             self.fill_email()
+            time.sleep(0.5)
             self.fill_password()
 
     def select_login(self):
