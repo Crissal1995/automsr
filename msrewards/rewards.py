@@ -120,18 +120,25 @@ class MicrosoftRewards:
 
     @classmethod
     def do_every_activity(cls, credentials: dict, **kwargs):
-        driver = get_driver(**kwargs)
-
-        # set user agent to edge
-        change_user_agent(driver, cls.edge_win_ua)
-
-        rewards = cls(driver, credentials=credentials)
-
         # detect what to skip
         skip_activity = (
             config["automsr"]["skip_activity"] or credentials["skip_activity"]
         )
         skip_search = config["automsr"]["skip_search"] or credentials["skip_search"]
+
+        # if both skips are true, exit function
+        if skip_activity and skip_search:
+            logger.info("Skipping everything...")
+            return
+
+        # else get a selenium driver
+        driver = get_driver(**kwargs)
+
+        # set its user agent to edge
+        change_user_agent(driver, cls.edge_win_ua)
+
+        # create a rewards object
+        rewards = cls(driver, credentials=credentials)
 
         # execute runnables
         if skip_activity:
