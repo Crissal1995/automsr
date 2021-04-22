@@ -384,8 +384,20 @@ class MicrosoftRewards:
 
         logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
 
+        # go the bing page
         self.go_to(self.bing_url)
 
+        # try to complete its login
+        try:
+            BingLoginPage(self).complete()
+            logger.debug("Succesfully authenticated on BingPage")
+        except exceptions.WebDriverException:
+            logger.debug("Was already authenticated on BingPage")
+
+        # ensure we're on bing search again
+        self.go_to(self.bing_url)
+
+        # and then send entire word
         selector = "#sb_form_q"
 
         input_field = self.driver.find_element_by_css_selector(selector)
@@ -393,15 +405,6 @@ class MicrosoftRewards:
         input_field.send_keys(Keys.ENTER)
 
         time.sleep(1)
-
-        try:
-            BingLoginPage(self).complete()
-            logger.info("Succesfully authenticated on BingPage")
-        except exceptions.WebDriverException:
-            logger.info("Was already authenticated on BingPage")
-
-        # ensure we're on bng search
-        self.go_to(self.bing_url)
 
         for i in range(limit):
             logger.debug(f"Search {i + 1}/{limit}")
