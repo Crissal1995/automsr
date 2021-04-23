@@ -152,6 +152,7 @@ class MicrosoftRewards:
                     break
                 else:
                     rewards.execute_activities(missing)
+                    rewards.go_to_home()
 
             if missing:
                 count = len(missing)
@@ -169,6 +170,7 @@ class MicrosoftRewards:
                     break
                 else:
                     rewards.execute_punchcards(missing)
+                    rewards.go_to_home()
 
             if missing:
                 count = len(missing)
