@@ -28,10 +28,6 @@ from msrewards.utility import change_user_agent, config, get_driver
 logger = logging.getLogger(__name__)
 
 
-def str_list(alist, joiner=", "):
-    return joiner.join([str(elem) for elem in alist])
-
-
 class MicrosoftRewards:
     rewards_url = "https://account.microsoft.com/rewards/"
     bing_url = "https://www.bing.com/"
@@ -264,9 +260,7 @@ class MicrosoftRewards:
                 logger.warning(f"One or more {plural} weren't completed, try again...")
 
         if runnables:
-            logger.error(
-                f"Missing runnables (you should do them): - {str_list(runnables)}"
-            )
+            logger.error(f"Missing runnables (you should do them): {runnables}")
 
     @classmethod
     def daily_searches(cls, credentials: dict, **kwargs):
