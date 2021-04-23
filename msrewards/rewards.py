@@ -26,7 +26,6 @@ from msrewards.search_takeout_parser import SearchTakeoutParser
 from msrewards.utility import change_user_agent, config, get_driver
 
 logger = logging.getLogger(__name__)
-missing_logger = logging.getLogger("missing")
 
 
 def str_list(alist, joiner=", "):
@@ -235,13 +234,6 @@ class MicrosoftRewards:
             logger.error(
                 f"Missing runnables (you should do them): - {str_list(runnables)}"
             )
-            count = len(runnables)
-            plural = "s" if count != 1 else ""
-            missing_logger.error(
-                f"Missing {count} runnable{plural} found, you have to do them on your own"
-            )
-            for runnable in runnables:
-                missing_logger.error(str(runnable))
 
     @classmethod
     def daily_searches(cls, credentials: dict, **kwargs):
