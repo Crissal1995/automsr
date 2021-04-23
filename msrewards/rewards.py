@@ -145,8 +145,41 @@ class MicrosoftRewards:
             logger.warning("Skipping activity...")
         else:
             logger.warning("Starting activity...")
-            rewards._execute_todo_runnables("activity")
-            rewards._execute_todo_runnables("punchcard")
+            retries = config["automsr"]["retry"]
+
+            rewards.go_to_home()
+
+            missing = None
+            for _ in range(retries):
+                missing = rewards.get_todo_activities()
+                if not missing:
+                    break
+                else:
+                    rewards.execute_activities(missing)
+
+            if missing:
+                count = len(missing)
+                word = "activity" if count == 1 else "activities"
+                logger.error(f"Cannot complete {count} {word}: {missing}")
+            else:
+                logger.info("All activities completed")
+
+            rewards.go_to_home()
+
+            missing = None
+            for _ in range(retries):
+                missing = rewards.get_free_todo_punchcards()
+                if not missing:
+                    break
+                else:
+                    rewards.execute_punchcards(missing)
+
+            if missing:
+                count = len(missing)
+                word = "punchcard" if count == 1 else "punchcards"
+                logger.error(f"Cannot complete {count} {word}: {missing}")
+            else:
+                logger.info("All punchcards completed")
 
         # execute desktop searches
         if skip_search:
