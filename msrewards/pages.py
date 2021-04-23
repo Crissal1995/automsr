@@ -13,6 +13,7 @@ class Page(ABC):
         self.rewards = rewards
         self.driver = rewards.driver
         self.driver.switch_to.window(self.driver.window_handles[-1])
+        time.sleep(0.5)
 
     def complete(self):
         raise NotImplementedError
@@ -32,8 +33,6 @@ class CookieAcceptPage(Page):
 
 class BingLoginPage(Page):
     def complete(self):
-        time.sleep(1)
-
         if not self.rewards.is_mobile:
             self.driver.find_element_by_css_selector("#id_a").click()
         else:
