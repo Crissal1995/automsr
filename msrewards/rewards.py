@@ -8,6 +8,7 @@ import time
 from selenium.common import exceptions
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
+from tqdm import tqdm
 
 from msrewards.activities import (
     Activity,
@@ -371,7 +372,7 @@ class MicrosoftRewards:
             raise ValueError(error_msg)
 
     def takeout_searcher(self, limit):
-        for i in range(limit):
+        for _ in tqdm(range(limit)):
             try:
                 BingLoginPage(self).complete()
                 logger.debug("Succesfully authenticated on BingPage")
@@ -427,7 +428,7 @@ class MicrosoftRewards:
 
         time.sleep(1)
 
-        for i in range(limit):
+        for i in tqdm(range(limit)):
             logger.debug(f"Search {i + 1}/{limit}")
             time.sleep(0.7)
 
