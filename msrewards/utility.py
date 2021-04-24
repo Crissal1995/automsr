@@ -50,7 +50,10 @@ def activity_skip(skip_str: str) -> (bool, bool):
     if any(kw not in skip_dict for kw in possible_skips):
         raise KeyError(f"Fix skip_dict! Missing some keys from {possible_skips}")
 
-    return skip_dict[skip_str]
+    try:
+        return skip_dict[skip_str]
+    except KeyError:
+        raise ValueError(f"Invalid skip value provided: {skip_str}")
 
 
 def get_options(**kwargs):
@@ -90,13 +93,8 @@ def get_config(cfg_fp="setup.cfg"):
     headless = parser.getboolean("selenium", "headless", fallback=True)
 
     # get automsr options
-    skip = parser.get("automsr", "skip")
-    # if skip was present in cfg, use it, otherwise global skips are false
-    if skip:
-        skip = skip.lower()
-        skip_activity, skip_search = activity_skip(skip)
-    else:
-        skip_activity, skip_search = False, False
+    skip = parser.get("automsr", "skip", fallback="no").lower()
+    skip_activity, skip_search = activity_skip(skip)
 
     retry = parser.getint("automsr", "retry", fallback=3)
     credentials = parser.get("automsr", "credentials", fallback="credentials.json")
