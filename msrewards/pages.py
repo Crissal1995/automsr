@@ -3,7 +3,6 @@ import time
 from abc import ABC
 
 from selenium.common import exceptions
-from selenium.webdriver.common.keys import Keys
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ class Page(ABC):
         self.rewards = rewards
         self.driver = rewards.driver
         self.driver.switch_to.window(self.driver.window_handles[-1])
-        time.sleep(0.5)
+        time.sleep(2)
 
     def complete(self):
         raise NotImplementedError
@@ -64,7 +63,7 @@ class LoginPage(Page):
 
     def fill_email(self):
         email_selector = "#i0116"
-        email = self.credentials["email"]
+        email = self.rewards.credentials["email"]
 
         field = self.driver.find_element_by_css_selector(email_selector)
         self.driver.execute_script(f"arguments[0].value='{email}'", field)
@@ -75,7 +74,7 @@ class LoginPage(Page):
     def fill_password(self):
         time.sleep(10)
         psw_selector = "#i0118"
-        psw = self.credentials["password"]
+        psw = self.rewards.credentials["password"]
 
         # self.driver.find_element_by_css_selector(psw_selector).send_keys(psw)
 
