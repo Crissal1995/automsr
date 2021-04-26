@@ -68,7 +68,7 @@ def get_options(**kwargs):
     if ua:
         options.add_argument(f"user-agent={ua}")
 
-    if config["selenium"]["headless"]:
+    if kwargs.get("headless") or config["selenium"]["headless"]:
         options.add_argument("headless")
         if sys.platform in ("win32", "cygwin"):
             # fix for windows platforms
@@ -123,18 +123,17 @@ config = get_config()
 
 
 def get_driver(**kwargs):
-    options = get_options(**kwargs)
-    path = kwargs.get("path")
-    url = kwargs.get("url")
-
     global config
+
+    options = get_options(**kwargs)
+    path = kwargs.get("path", config["selenium"]["path"])
+    url = kwargs.get("url", config["selenium"]["url"])
+
     env = config["selenium"]["env"]
 
     if env == "local":
-        path = path or config["selenium"]["path"]
         driver = Chrome(executable_path=path, options=options)
     elif env == "remote":
-        url = url or config["selenium"]["url"]
         driver = Remote(
             command_executor=ChromeRemoteConnection(remote_server_addr=url),
             desired_capabilities=DesiredCapabilities.CHROME,
