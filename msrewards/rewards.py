@@ -372,14 +372,16 @@ class MicrosoftRewards:
             raise ValueError(error_msg)
 
     def takeout_searcher(self, limit):
-        for _ in tqdm(range(limit)):
-            try:
-                BingLoginPage(self).complete()
-                logger.debug("Succesfully authenticated on BingPage")
-            except exceptions.NoSuchElementException:
-                logger.debug("Was already authenticated on BingPage")
 
-            parser = SearchTakeoutParser("./my_activities.json")
+        try:
+            BingLoginPage(self).complete()
+            logger.debug("Succesfully authenticated on BingPage")
+        except exceptions.NoSuchElementException:
+            logger.debug("Was already authenticated on BingPage")
+
+        parser = SearchTakeoutParser("./my_activities.json")
+
+        for _ in tqdm(range(limit)):
             random_key = random.randint(0, parser.activity_count)
             word = parser.get_query(random_key)
             word_length = len(word)
