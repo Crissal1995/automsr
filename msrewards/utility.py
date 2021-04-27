@@ -63,6 +63,7 @@ def get_options(**kwargs):
     options.add_argument("no-sandbox")
     options.add_argument("ignore-certificate-errors")
     options.add_argument("allow-running-insecure-content")
+    options.add_argument("disable-dev-shm-usage")
 
     ua = kwargs.get("user_agent")
     if ua:
