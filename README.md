@@ -83,6 +83,6 @@ If missing, Selenium will search for the chromedriver in the PATH.
 #### url
 Ignored when `env` is `local`. Override of the url of the Selenium hub.
 
-Defaults to `http://selenium:4444/wd/hub` (convenience url for Docker setup).
+Defaults to `http://selenium-hub:4444/wd/hub` (convenience url for Docker setup).
 
 [1]: https://www.microsoft.com/servicesagreement
