@@ -391,7 +391,7 @@ class MicrosoftRewards:
             self.go_to(self.bing_url)
 
             input_field = self.driver.find_element_by_css_selector("#sb_form_q")
-            input_field.send_keys(word)
+            self.driver.execute_script(f"arguments[0].value='{word}'", input_field)
             input_field.send_keys(Keys.ENTER)
 
             sleep_time = random.randint(10, 60)
@@ -424,8 +424,8 @@ class MicrosoftRewards:
         # and then send entire word
         selector = "#sb_form_q"
 
-        input_field = self.driver.find_element_by_css_selector(selector)
-        input_field.send_keys(word)
+        input_field = self.driver.find_element_by_css_selector("#sb_form_q")
+        self.driver.execute_script(f"arguments[0].value='{word}'", input_field)
         input_field.send_keys(Keys.ENTER)
 
         time.sleep(1)
