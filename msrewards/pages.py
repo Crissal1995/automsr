@@ -69,8 +69,8 @@ class LoginPage(Page):
         self.driver.find_element_by_tag_name("input").send_keys(Keys.ENTER)
 
     def fill_password(self):
-        # psw_selector = "#i0118"
-        psw_selector = "input[type=password]"
+        psw_selector = "#i0118"
+        # psw_selector = "input[type=password]"
         psw = self.rewards.credentials["password"]
         self.driver.find_element_by_css_selector(psw_selector).send_keys(psw)
         time.sleep(0.5)
