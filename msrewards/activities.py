@@ -17,6 +17,9 @@ class Status(enum.IntEnum):
 
 
 class Runnable(ABC):
+    name = "runnable"
+    name_plural = "runnables"
+
     @property
     def button(self):
         raise NotImplementedError
@@ -26,6 +29,9 @@ class Runnable(ABC):
 
 
 class Activity(Runnable, ABC):
+    name = "activity"
+    name_plural = "activities"
+
     base_header = None
 
     status_selector = "mee-rewards-points > div > div > span.mee-icon"
@@ -208,6 +214,9 @@ class ThisOrThatActivity(Activity):
 
 
 class Punchcard(Runnable, ABC):
+    name = "punchcard"
+    name_plural = "punchcards"
+
     start_selector = "section > div > div > div > a"
 
     def __init__(self, driver: WebDriver, element: WebElement):

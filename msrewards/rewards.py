@@ -142,42 +142,8 @@ class MicrosoftRewards:
         else:
             logger.warning("Starting activity...")
             retries = config["automsr"]["retry"]
-
-            rewards.go_to_home()
-
-            missing = None
-            for _ in range(retries):
-                missing = rewards.get_todo_activities()
-                if not missing:
-                    break
-                else:
-                    rewards.execute_activities(missing)
-                    rewards.go_to_home()
-
-            if missing:
-                count = len(missing)
-                word = "activity" if count == 1 else "activities"
-                logger.error(f"Cannot complete {count} {word}: {missing}")
-            else:
-                logger.info("All activities completed")
-
-            rewards.go_to_home()
-
-            missing = None
-            for _ in range(retries):
-                missing = rewards.get_free_todo_punchcards()
-                if not missing:
-                    break
-                else:
-                    rewards.execute_punchcards(missing)
-                    rewards.go_to_home()
-
-            if missing:
-                count = len(missing)
-                word = "punchcard" if count == 1 else "punchcards"
-                logger.error(f"Cannot complete {count} {word}: {missing}")
-            else:
-                logger.info("All punchcards completed")
+            rewards._execute_todo_runnables(Activity, retries=retries)
+            rewards._execute_todo_runnables(Punchcard, retries=retries)
 
         # execute desktop searches
         if skip_search:
@@ -211,58 +177,40 @@ class MicrosoftRewards:
         # quit driver
         driver.quit()
 
-    @classmethod
-    def daily_activities(cls, credentials: dict, **kwargs):
-        # standard points from activity
-        driver = get_driver(**kwargs)
-
-        # get a MicrosoftRewards object
-        rewards = cls(driver, credentials=credentials)
-
-        # and then execute runnables
-        rewards._execute_todo_runnables("activity")
-        rewards._execute_todo_runnables("punchcard")
-
-        driver.quit()
-
-    def _execute_todo_runnables(self, runnable_type: str):
-        runnable_types = ("activity", "punchcard")
-        errmsg = f"Wrong type provided ({runnable_type}). Valids are {runnable_types}"
-        assert runnable_type in runnable_types, errmsg
-
-        plural_dict = {
-            "activity": "activities",
-            "punchcard": "punchcards",
-        }
-        plural = plural_dict[runnable_type]
-        singular = runnable_type
-
+    def _execute_todo_runnables(self, runnable_type: type(Runnable), retries: int):
         self.go_to_home()
 
-        if runnable_type == "activity":
-            runnables = self.get_todo_activities()
-        elif runnable_type == "punchcard":
-            runnables = self.get_free_todo_punchcards()
+        missing = None
+        any_todos = False
+
+        if runnable_type is Activity:
+            retrieve = self.get_todo_activities
+            execute = self.execute_activities
+        elif runnable_type is Punchcard:
+            retrieve = self.get_free_todo_punchcards
+            execute = self.execute_punchcards
         else:
-            # future implementations, but it won't trigger
-            raise NotImplementedError
+            raise ValueError(
+                "Invalid classtype provided! Only Activity and Punchcard supported"
+            )
 
-        if not runnables:
-            logger.info(f"No {singular} found...")
-            return
-
-        retries = config["automsr"]["retry"]
-        for i in range(retries):
-            logger.info(f"Execute {plural}, try {i + 1}/{retries}")
-            runnables = self._execute(runnables, runnable_type)
-            if not runnables:
-                logger.info(f"All {plural} completed")
+        for _ in range(retries):
+            missing = retrieve()
+            if not missing:
                 break
             else:
-                logger.warning(f"One or more {plural} weren't completed, try again...")
+                any_todos = True
+                execute(missing)
+                self.go_to_home()
 
-        if runnables:
-            logger.error(f"Missing runnables (you should do them): {runnables}")
+        if missing:
+            count = len(missing)
+            word = runnable_type.name if count == 1 else runnable_type.name_plural
+            logger.error(f"Cannot complete {count} {word}: {missing}")
+        elif any_todos:  # no missing, found at least one to-do runnable
+            logger.info(f"All {runnable_type.name_plural} completed")
+        else:  # no missing, found no to-do runnable
+            logger.info(f"No todo {runnable_type.name_plural} found")
 
     @classmethod
     def daily_searches(cls, credentials: dict, **kwargs):
@@ -544,7 +492,7 @@ class MicrosoftRewards:
             for activity in self.get_activities()
             if activity.status == Status.TODO
         ]
-        logger.info(f"Found {len(todos)} todo activities")
+        logger.debug(f"Found {len(todos)} todo activities")
 
         # get order of activities as debug msg
         daily, other = "first daily", "last other"
@@ -552,7 +500,7 @@ class MicrosoftRewards:
         logger.debug(f"Activities order is {order}")
 
         if not todos:
-            logger.warning("No todo activity found!")
+            logger.debug("No todo activity found")
         elif reverse:
             todos = todos[::-1]
         return todos
