@@ -23,6 +23,7 @@ from msrewards.activities import (
     ThisOrThatActivity,
 )
 from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
+from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from msrewards.search_takeout_parser import SearchTakeoutParser
 from msrewards.utility import change_user_agent, config, get_driver
 
@@ -293,6 +294,69 @@ class MicrosoftRewards:
             }
 
         return points_dict
+
+    def execute_searches2(self, limit=None, search_type="random"):
+        max_mobile = 20
+        max_desktop = 30
+        offset = 5
+
+        if not limit:
+            a = max_mobile if self.is_mobile else max_desktop
+            a += offset
+            b = a + offset
+            # limit range is [MAX + OFFSET, MAX + 2*OFFSET]
+            limit = random.randint(a, b)
+
+        search_type_str = "Mobile" if self.is_mobile else "Desktop"
+        logger.info(f"{search_type_str} searches will be executed {limit} times")
+
+        if search_type == "takeout":
+            search_generator = GoogleTakeoutSearchGenerator()
+        elif search_type == "random":
+            search_generator = RandomSearchGenerator()
+        else:
+            error_msg = "Invalid search_type provided"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        # go the bing page
+        self.go_to(self.bing_url)
+
+        # try to complete its login
+        try:
+            BingLoginPage(self).complete()
+            logger.debug("Succesfully authenticated on BingPage")
+        except exceptions.WebDriverException:
+            logger.debug("Was already authenticated on BingPage")
+
+        # ensure we're on bing search again
+        self.go_to(self.bing_url)
+
+        # take generator from search_generator
+        # tts is not took as var because it's value can change
+        generator = search_generator.query_gen()
+
+        # and then send the query to the input field
+        selector = "#sb_form_q"
+
+        input_field = self.driver.find_element_by_css_selector(selector)
+        input_field.send_keys(next(generator))
+        input_field.send_keys(Keys.ENTER)
+
+        time.sleep(search_generator.tts)
+
+        for i in tqdm(range(limit)):
+            logger.debug(f"Search {i + 1}/{limit}")
+
+            # must search again input field because of page reloading
+            input_field = self.driver.find_element_by_css_selector(selector)
+
+            input_field.send_keys(next(generator))
+            input_field.send_keys(Keys.ENTER)
+
+            time.sleep(search_generator.tts)
+
+        logger.info("Searches completed")
 
     def execute_searches(self, limit=None, search_type="random"):
         max_mobile = 20
