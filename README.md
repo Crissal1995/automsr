@@ -10,21 +10,27 @@ for the Microsoft Rewards referral program.
 This tool is intended to show how to collect automatically daily points for
 Microsoft Rewards.
 
-What it does is:
-- Completing daily activities
-- Completing other activities
-- Completing free punchcards
-- Searching with a desktop User Agent (Edge on Windows)
-- Searching with a mobile User Agent (Chrome on Android)
+What it does:
+- Completes daily activities
+- Completes other activities
+- Completes free punchcards
+- Searches with a desktop User Agent (Edge on Windows)
+- Searches with a mobile User Agent (Chrome on Android)
 
 ### Warning
 Before using this software, read carefully [Microsoft Terms of Service][1],
 section _Microsoft Rewards_.
 
 ## Usage
-1. Create your `credentials.json` following the example file
-2. Install requirements 
-3. Run `python main.py`
+### Local
+1. Place the chromedriver executable in your PATH
+2. Create your `credentials.json` following the example file
+3. Install requirements
+4. Run `python main.py`
+### Docker
+1. Set the environment as `remote` ([refers to Selenium section](#selenium))
+2. Build the image with `docker-compose build`
+3. Run the containers with `docker-compose up`
 
 ## Configuration
 The behaviour of the tool can be configured within `setup.cfg`.
@@ -56,7 +62,7 @@ Defaults to `3`.
 How to perform Bing searches. 
 Can be either `random` 
 (generate a random word, and then perform a search removing
-one character at the end of the string) or `takeout` 
+one character at the end of the string at time) or `takeout` 
 (uses Google searches, parsed from a Takeout Action).
 
 Defaults to `random`.
