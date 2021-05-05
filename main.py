@@ -30,13 +30,34 @@ def main(**kwargs):
     # get credentials filepath from config
     credentials_fp = config["automsr"]["credentials"]
 
+    # get retries from config
+    retry = config["automsr"]["retry"]
+
+    # set at least one cycle
+    if retry < 1:
+        retry = 1
+
     # test if env is correctly set
     test_environment(**kwargs)
 
     # cycle over credentials, getting points from activities
     for credentials in get_safe_credentials(credentials_fp):
-        logger.info(f"Working on credentials [email={credentials['email']}]")
-        MicrosoftRewards.do_every_activity(credentials=credentials)
+        email = credentials["email"]
+        logger.info(f"Working on credentials [email={email}]")
+
+        for i in range(retry):
+            try:
+                MicrosoftRewards.do_every_activity(credentials=credentials)
+            except Exception as e:
+                logger.warning(f"An error occurred: {e}")
+                logger.debug(e, exc_info=True)
+                if i < retry - 1:
+                    logger.info("Retrying...")
+                else:
+                    logger.warning("No more retries!")
+            else:
+                logger.info("Completed all activity")
+                break
 
 
 if __name__ == "__main__":
