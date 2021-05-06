@@ -2,5 +2,5 @@ from selenium.common import exceptions
 
 from msrewards.rewards import MicrosoftRewards
 
-version = "4.1"
+version = "5.0"
 __all__ = ["MicrosoftRewards", "exceptions"]
