@@ -256,6 +256,39 @@ class MicrosoftRewards:
 
         time.sleep(0.5)
 
+    def get_points(self, method: str = "dom") -> int:
+        """Get points from Rewards Home with two possible methods,
+        dom or animation. Dom crawls the page source, while animation
+        get points from home (but has to wait for animation to finish)."""
+
+        # converts to lowercase
+        method = method.lower()
+
+        # go to rewards home
+        self.go_to_home()
+
+        # wait a little bit to let the page load
+        time.sleep(1)
+
+        if method == "dom":
+            source: str = self.driver.page_source
+            match = re.search(r'"availablePoints":(\d+)', source)
+            points = int(match.group(1))
+        elif method == "animation":
+            # wait a little bit to animation to finish
+            time.sleep(3)
+            text: str = self.driver.find_element_by_tag_name(
+                "mee-rewards-user-status-balance"
+            ).text
+            logger.debug(f"User status balance text: {text}")
+            points_str = text.split()[0]
+            points = int(points_str.replace(",", "").replace(".", ""))
+        else:
+            raise ValueError(f"Invalid method provided: {method}")
+
+        logger.info(f"User status balance: {points}")
+        return points
+
     def check_missing_searches(self) -> dict:
         # go to rewards page
         self.go_to_home()
