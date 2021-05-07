@@ -47,13 +47,13 @@ def main(**kwargs):
         email = credentials["email"]
         logger.info(f"Working on credentials [email={email}]")
 
-        for i in range(retry):
+        for j in range(retry):
             try:
                 MicrosoftRewards.do_every_activity(credentials=credentials)
             except Exception as e:
                 logger.warning(f"An error occurred: {e}")
                 logger.debug(e, exc_info=True)
-                if i < retry - 1:
+                if j < retry - 1:
                     logger.info("Retrying...")
                 else:
                     logger.warning("No more retries!")
