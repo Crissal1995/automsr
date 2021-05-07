@@ -137,6 +137,8 @@ class MicrosoftRewards:
         # create a rewards object
         rewards = cls(driver, credentials=credentials)
 
+        start_points = rewards.get_points()
+
         # execute runnables
         if skip_activity:
             logger.warning("Skipping activity...")
@@ -174,6 +176,12 @@ class MicrosoftRewards:
                 # to ensure we get all points, add an offset
                 limit += 5
                 rewards.execute_searches(search_type=search_type, limit=limit)
+
+        # get points after execution
+        end_points = rewards.get_points()
+
+        delta = end_points - start_points
+        logger.info(f"{delta} points accumulated")
 
         # quit driver
         driver.quit()
