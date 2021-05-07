@@ -41,7 +41,9 @@ def main(**kwargs):
     test_environment(**kwargs)
 
     # cycle over credentials, getting points from activities
-    for credentials in get_safe_credentials(credentials_fp):
+    for i, credentials in enumerate(get_safe_credentials(credentials_fp)):
+        if i > 0:
+            logger.info("-" * 30)
         email = credentials["email"]
         logger.info(f"Working on credentials [email={email}]")
 
@@ -56,7 +58,7 @@ def main(**kwargs):
                 else:
                     logger.warning("No more retries!")
             else:
-                logger.info("Completed all activity")
+                logger.info(f"Got every possible point for {email}")
                 break
 
 
