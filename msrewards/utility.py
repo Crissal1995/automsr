@@ -75,6 +75,9 @@ def get_options(**kwargs):
             # fix for windows platforms
             options.add_argument("disable-gpu")
 
+    if not config["selenium"]["enable_logging"]:
+        options.add_experimental_option("excludeSwitches", ["enable-logging"])
+
     return options
 
 
@@ -92,6 +95,7 @@ def get_config(cfg_fp="setup.cfg"):
     path = parser.get("selenium", "path", fallback="chromedriver")
     url = parser.get("selenium", "url", fallback="http://selenium-hub:4444/wd/hub")
     headless = parser.getboolean("selenium", "headless", fallback=True)
+    enable_logging = parser.getboolean("selenium", "logging", fallback=True)
 
     # get automsr options
     skip = parser.get("automsr", "skip", fallback="no").lower()
@@ -115,7 +119,13 @@ def get_config(cfg_fp="setup.cfg"):
             credentials=credentials,
             search_type=search_type,
         ),
-        "selenium": dict(env=env, path=path, url=url, headless=headless),
+        "selenium": dict(
+            env=env,
+            path=path,
+            url=url,
+            headless=headless,
+            enable_logging=enable_logging,
+        ),
     }
 
 

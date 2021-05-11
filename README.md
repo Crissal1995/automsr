@@ -91,4 +91,9 @@ Ignored when `env` is `local`. Override of the url of the Selenium hub.
 
 Defaults to `http://selenium-hub:4444/wd/hub` (convenience url for Docker setup).
 
+#### logging
+Enable or disable Selenium server logging.
+
+Defaults to `true`.
+
 [1]: https://www.microsoft.com/servicesagreement
