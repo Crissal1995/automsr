@@ -33,7 +33,7 @@ section _Microsoft Rewards_.
 3. Run the containers with `docker-compose up`
 
 ## Configuration
-The behaviour of the tool can be configured within `setup.cfg`.
+The behaviour of the tool can be configured within `automsr.cfg`.
 
 There are two main sections used in AutoMSR: **automsr** and **selenium**.
 

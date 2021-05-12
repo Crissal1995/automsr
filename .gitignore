@@ -5,7 +5,7 @@ venv*
 __pycache__
 *.json
 !credentials.example.json
-setup.cfg
+automsr.cfg
 *.log
 
 .DS_Store

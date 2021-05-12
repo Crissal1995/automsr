@@ -81,7 +81,7 @@ def get_options(**kwargs):
     return options
 
 
-def get_config(cfg_fp="setup.cfg"):
+def get_config(cfg_fp):
     parser = configparser.ConfigParser()
     if not parser.read(cfg_fp):
         err = f"No such file or directory: {cfg_fp}"
@@ -130,7 +130,7 @@ def get_config(cfg_fp="setup.cfg"):
 
 
 # read one time and then use it
-config = get_config()
+config = get_config("automsr.cfg")
 
 
 def get_driver(**kwargs):
