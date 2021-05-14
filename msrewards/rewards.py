@@ -137,14 +137,17 @@ class MicrosoftRewards:
         # create a rewards object
         rewards = cls(driver, credentials=credentials)
 
+        # get points at the start of execution
         start_points = rewards.get_points()
+
+        # get retries
+        retries = config["automsr"]["retry"]
 
         # execute runnables
         if skip_activity:
             logger.warning("Skipping activity...")
         else:
             logger.warning("Starting activity...")
-            retries = config["automsr"]["retry"]
             rewards._execute_todo_runnables(Activity, retries=retries)
             rewards._execute_todo_runnables(Punchcard, retries=retries)
 
@@ -154,28 +157,7 @@ class MicrosoftRewards:
         else:
             logger.warning("Starting daily search...")
             search_type = config["automsr"]["search_type"]
-
-            search_dict = rewards.check_missing_searches()
-
-            if search_dict["desktop"]["missing"] == 0:
-                logger.info("Skipping desktop search, they are already done")
-            else:
-                limit = search_dict["desktop"]["missing"] // 3
-                # to ensure we get all points, add an amount
-                limit += 5
-                rewards.execute_searches(search_type=search_type, limit=limit)
-
-            # change user agent to mobile
-            change_user_agent(driver, cls.chrome_android_ua)
-            rewards.is_mobile = True
-
-            if search_dict["mobile"]["missing"] == 0:
-                logger.info("Skipping mobile search, they are already done")
-            else:
-                limit = search_dict["mobile"]["missing"] // 3
-                # to ensure we get all points, add an offset
-                limit += 5
-                rewards.execute_searches(search_type=search_type, limit=limit)
+            rewards.execute_all_searches(search_type=search_type, retries=retries)
 
         # get points after execution
         end_points = rewards.get_points()
@@ -185,6 +167,44 @@ class MicrosoftRewards:
 
         # quit driver
         driver.quit()
+
+    def execute_all_searches(self, search_type: str, retries: int = 1):
+        for i in range(retries):
+            logger.debug(f"Searches retry {i+1} / {retries}")
+
+            # change user agent to desktop
+            change_user_agent(self.driver, self.edge_win_ua)
+            self.is_mobile = False
+
+            # get points dict
+            search_dict = self.check_missing_searches()
+
+            # if every search dict is missing, exit
+            if all(search_dict[ua]["missing"] == 0 for ua in ("desktop", "mobile")):
+                logger.info("Searches completed")
+                return
+
+            # else execute desktop searches
+            if search_dict["desktop"]["missing"] == 0:
+                logger.info("Skipping desktop search, they are already done")
+            else:
+                limit = search_dict["desktop"]["missing"] // 3
+                # to ensure we get all points, add an amount
+                limit += 5
+                self.execute_searches2(search_type=search_type, limit=limit)
+
+            # change user agent to mobile
+            change_user_agent(self.driver, self.chrome_android_ua)
+            self.is_mobile = True
+
+            # and execute mobile searches
+            if search_dict["mobile"]["missing"] == 0:
+                logger.info("Skipping mobile search, they are already done")
+            else:
+                limit = search_dict["mobile"]["missing"] // 3
+                # to ensure we get all points, add an offset
+                limit += 5
+                self.execute_searches2(search_type=search_type, limit=limit)
 
     def _execute_todo_runnables(self, runnable_type: type(Runnable), retries: int):
         self.go_to_home()
