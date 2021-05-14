@@ -167,18 +167,13 @@ def change_user_agent(driver, new_user_agent: str):
 
     actual_user_agent = str(driver.execute_script("return navigator.userAgent;"))
     assert actual_user_agent == new_user_agent, "Cannot set user-agent!"
-    logger.info(f"Changed user-agent to {new_user_agent}")
+    logger.debug(f"Changed user-agent to {new_user_agent}")
 
 
 def test_environment(**kwargs):
     """Determine if current environment is correctly set"""
-    try:
-        get_driver(**kwargs).quit()
-    except Exception as err:
-        logger.error(str(err))
-        raise err
-    else:
-        logger.info("Selenium driver found!")
+    get_driver(**kwargs).quit()
+    logger.info("Selenium driver found!")
 
 
 def get_credentials(credentials_fp):
