@@ -1,5 +1,7 @@
 import enum
 import logging
+import random
+import re
 import time
 from abc import ABC
 
@@ -182,38 +184,65 @@ class PollActivity(Activity):
 class ThisOrThatActivity(Activity):
     base_header = "Questo o quello?"
 
-    start_selector = "#rqStartQuiz"
     quiz_rounds = 10
 
     def __repr__(self):
         return f"ThisOrThat{super().__repr__()}"
 
     def do_it(self):
-        # start activity
+        # let start popup appears on screen
+        time.sleep(2)
+
+        # try to press start button
         try:
-            self.driver.find_element_by_css_selector(self.start_selector).click()
-            logger.info("Started quiz")
-        except exceptions.NoSuchElementException:
-            logger.info("Quiz already started")
+            self.driver.find_element_by_id("rqStartQuiz").click()
+            logger.debug("Started quiz")
+        except exceptions.WebDriverException:
+            logger.warning("Cannot find start button. ThisOrThat already started?")
+
+        # try to find question container
+        # if not found, raise an exception
+        try:
+            self.driver.find_element_by_id("currentQuestionContainer")
+        except exceptions.WebDriverException:
+            logger.warning(
+                "Cannot find question container. ThisOrThat already finished? ",
+                "If runned with headless=true, try changing to false and retry",
+            )
+            return
+        else:
+            logger.debug("Question container found")
 
         # answer selectors
-        first_option_selector = "#rqAnswerOption0"
-        # second_option_selector = "#rqAnswerOption1"
+        answers = ["rqAnswerOption0", "rqAnswerOption1"]
 
-        for i in range(self.quiz_rounds):
-            # TODO understand question and get right answer
-            # TODO or get it right from some source
-            answer = first_option_selector
+        is_last_round = False
+        match_pattern = re.compile(r"(\d+)[^\d]*(\d+)")
+        while not is_last_round:
+            # regexp match rounds
+            # two whiles for waiting changes
+            rounds_elem = self.driver.find_element_by_class_name("bt_Quefooter")
+            match = match_pattern.match(rounds_elem.text)
+            while not match:
+                time.sleep(1)
+                rounds_elem = self.driver.find_element_by_class_name("bt_Quefooter")
+                match = match_pattern.match(rounds_elem.text)
+            current_round = int(match.group(1))
+            logger.info(f"Starting round {current_round} / {self.quiz_rounds}")
 
-            try:
-                option = self.driver.find_element_by_css_selector(answer)
-            except exceptions.NoSuchElementException:
-                logger.warning("Element not found. Is the quiz already over?")
-                break
-            else:
-                option.click()
-                logger.info("Answer selected")
-                time.sleep(2)
+            # if it's last round, next iteration won't happen
+            if current_round == self.quiz_rounds:
+                is_last_round = True
+
+            # expected value: 25 points out of 50
+            answer = random.choice(answers)
+            answer_index = answers.index(answer)
+
+            # click answer button
+            answer_elem = self.driver.find_element_by_id(answer)
+            answer_elem.click()
+            logger.info(f"Answer {answer_index + 1} selected")
+            time.sleep(2)
 
 
 class Punchcard(Runnable, ABC):
