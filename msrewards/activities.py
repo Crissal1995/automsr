@@ -64,7 +64,10 @@ class Activity(Runnable, ABC):
 
     @staticmethod
     def get_status(status_class: str):
-        if "mee-icon-AddMedium" in status_class:
+        if any(
+            value in status_class
+            for value in ("mee-icon-AddMedium", "mee-icon-HourGlass")
+        ):
             value = Status.TODO
         elif "mee-icon-SkypeCircleCheck" in status_class:
             value = Status.DONE
