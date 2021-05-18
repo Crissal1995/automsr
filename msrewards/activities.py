@@ -123,11 +123,25 @@ class QuizActivity(Activity):
     def do_it(self):
         time.sleep(1)
 
+        # try to press start button
         try:
-            self.driver.find_element_by_css_selector(self.start_selector).click()
-            logger.info("Start button clicked")
-        except exceptions.ElementNotInteractableException:
-            logger.info("Start button was already clicked")
+            self.driver.find_element_by_id("rqStartQuiz").click()
+            logger.debug("Started quiz")
+        except exceptions.WebDriverException:
+            logger.warning("Cannot find start button. Quiz already started?")
+
+        # try to find question container
+        # if not found, raise an exception
+        try:
+            self.driver.find_element_by_id("currentQuestionContainer")
+        except exceptions.WebDriverException:
+            logger.warning(
+                "Cannot find question container. Quiz already finished? "
+                "If runned with headless=true, try changing to false and retry"
+            )
+            return
+        else:
+            logger.debug("Question container found")
 
         try:
             container = self.driver.find_element_by_css_selector(
@@ -206,8 +220,8 @@ class ThisOrThatActivity(Activity):
             self.driver.find_element_by_id("currentQuestionContainer")
         except exceptions.WebDriverException:
             logger.warning(
-                "Cannot find question container. ThisOrThat already finished? ",
-                "If runned with headless=true, try changing to false and retry",
+                "Cannot find question container. Quiz already finished? "
+                "If runned with headless=true, try changing to false and retry"
             )
             return
         else:
