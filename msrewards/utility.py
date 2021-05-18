@@ -81,12 +81,32 @@ def get_options(**kwargs):
     return options
 
 
+_default_config = {
+    "automsr": {
+        "retry": 3,
+        "skip": "no",
+        "credentials": "credentials.json",
+        "search_type": "random",
+    },
+    "selenium": {
+        "env": "local",
+        "path": "chromedriver",
+        "url": "http://selenium-hub:4444/wd/hub",
+        "headless": True,
+        "logging": True,
+    },
+}
+
+
 def get_config(cfg_fp):
     parser = configparser.ConfigParser()
+
+    # read defaults
+    parser.read_dict(_default_config)
+
+    # read file (can also be not found)
     if not parser.read(cfg_fp):
-        err = f"No such file or directory: {cfg_fp}"
-        logger.error(err)
-        raise EnvironmentError(err)
+        logger.warning(f"Cannot read config from {cfg_fp}. Defaults will be used.")
 
     valid_selenium_envs = ("local", "remote")
 
@@ -151,8 +171,10 @@ def get_driver(**kwargs):
             options=options,
         )
     else:
-        # cannot enter this branch
-        raise AssertionError
+        raise NotImplementedError
+
+    # expand driver full-screen
+    driver.maximize_window()
 
     return driver
 
