@@ -92,6 +92,9 @@ class StandardActivity(Activity):
 class QuizActivity(Activity):
     base_header = "Quiz"
     start_selector = "#rqStartQuiz"
+    answers = []
+    answers_4 = [f"rqAnswerOption{i}" for i in range(4)]
+    answers_8 = [f"rqAnswerOption{i}" for i in range(8)]
     quiz_rounds = 3
 
     def __repr__(self):
@@ -127,14 +130,14 @@ class QuizActivity(Activity):
         try:
             self.driver.find_element_by_id("rqStartQuiz").click()
             logger.debug("Started quiz")
-        except exceptions.WebDriverException:
+        except exceptions.NoSuchElementException:
             logger.warning("Cannot find start button. Quiz already started?")
 
         # try to find question container
         # if not found, raise an exception
         try:
             self.driver.find_element_by_id("currentQuestionContainer")
-        except exceptions.WebDriverException:
+        except exceptions.NoSuchElementException:
             logger.warning(
                 "Cannot find question container. Quiz already finished? "
                 "If runned with headless=true, try changing to false and retry"
@@ -148,40 +151,32 @@ class QuizActivity(Activity):
                 "#currentQuestionContainer > div"
             )
             if container.get_attribute("class") == "textBasedMultiChoice":
-                return self.do_it_four_choices()
+                self.answers = self.answers_4
             else:
-                return self.do_it_eigth_choices()
+                self.answers = self.answers_8
         except exceptions.NoSuchElementException:
-            return self.do_it_eigth_choices()
+            self.answers = self.answers_8
 
-    def _do_it(self, answer_selectors):
+        # finally execute quiz
+        self._do_it()
+
+    def _do_it(self):
         # rounds = self.get_rounds()
         rounds = self.quiz_rounds
 
         for quiz_round in range(rounds):
-            time.sleep(2)
-
             logger.info(f"Round {quiz_round + 1}/{rounds} started")
 
-            for possible_sel in answer_selectors:
+            for answer_id in self.answers:
                 time.sleep(1)
                 try:
-                    # click possibility tile
-                    self.driver.find_element_by_css_selector(possible_sel).click()
+                    self.driver.find_element_by_id(answer_id).click()
                 except exceptions.NoSuchElementException:
-                    continue
-                except exceptions.ElementNotInteractableException:
-                    continue
-
-    def do_it_four_choices(self):
-        answer_selectors = [
-            f"#currentQuestionContainer > div > div:nth-child({i})" for i in range(2, 6)
-        ]
-        return self._do_it(answer_selectors)
-
-    def do_it_eigth_choices(self):
-        answer_selectors = [f"#rqAnswerOption{i}" for i in range(8)]
-        return self._do_it(answer_selectors)
+                    logger.warning(
+                        f"Cannot click button with id: {answer_id}."
+                        "If runned with headless=true, try changing to false and retry"
+                    )
+                    return
 
 
 class PollActivity(Activity):
