@@ -22,7 +22,13 @@ from msrewards.activities import (
     Status,
     ThisOrThatActivity,
 )
-from msrewards.pages import BannerCookiePage, BingLoginPage, CookieAcceptPage, LoginPage
+from msrewards.pages import (
+    BannerCookiePage,
+    BingLoginPage,
+    CookieAcceptPage,
+    LoginPage,
+    TryMicrosoftBrowserPage,
+)
 from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from msrewards.search_takeout_parser import SearchTakeoutParser
 from msrewards.utility import change_user_agent, config, get_driver
@@ -262,24 +268,29 @@ class MicrosoftRewards:
     def login(self):
         self.go_to(self.bing_url)
         try:
-            CookieAcceptPage(self).complete()
+            CookieAcceptPage(self.driver).complete()
             logger.debug("Cookies accepted")
         except exceptions.NoSuchElementException:
             logger.debug("Cannot accept cookies")
 
         self.go_to(self.login_url)
-        LoginPage(self).complete()
+        LoginPage(self.driver, self.login_url, self.credentials).complete()
         logger.info("Logged in")
 
         self.go_to(self.rewards_url)
         try:
-            BannerCookiePage(self).complete()
+            BannerCookiePage(self.driver).complete()
             logger.debug("Banner cookies accepted")
         except exceptions.NoSuchElementException:
             logger.debug("Cannot accept banner cookies")
 
         self.go_to(self.bing_searched_url)
-        BingLoginPage(self).complete()
+        TryMicrosoftBrowserPage(self.driver).complete()
+
+        self.go_to(self.bing_searched_url)
+        BingLoginPage(
+            self.driver, self.login_url, self.credentials, self.is_mobile
+        ).complete()
         logger.info("Login made on bing webpage")
 
         time.sleep(0.5)
@@ -385,7 +396,9 @@ class MicrosoftRewards:
 
         # try to complete its login
         try:
-            BingLoginPage(self).complete()
+            BingLoginPage(
+                self.driver, self.login_url, self.credentials, self.is_mobile
+            ).complete()
             logger.debug("Succesfully authenticated on BingPage")
         except exceptions.WebDriverException:
             logger.debug("Was already authenticated on BingPage")
@@ -446,7 +459,9 @@ class MicrosoftRewards:
     def takeout_searcher(self, limit):
         for _ in tqdm(range(limit)):
             try:
-                BingLoginPage(self).complete()
+                BingLoginPage(
+                    self.driver, self.login_url, self.credentials, self.is_mobile
+                ).complete()
                 logger.debug("Succesfully authenticated on BingPage")
             except exceptions.NoSuchElementException:
                 logger.debug("Was already authenticated on BingPage")
@@ -483,7 +498,9 @@ class MicrosoftRewards:
 
         # try to complete its login
         try:
-            BingLoginPage(self).complete()
+            BingLoginPage(
+                self.driver, self.login_url, self.credentials, self.is_mobile
+            ).complete()
             logger.debug("Succesfully authenticated on BingPage")
         except exceptions.WebDriverException:
             logger.debug("Was already authenticated on BingPage")
@@ -558,6 +575,9 @@ class MicrosoftRewards:
             logger.info(f"No {singular} found")
             return []
 
+        # try to dismiss bottom span once for every execution
+        TryMicrosoftBrowserPage(self.driver).complete()
+
         for i, runnable in enumerate(runnables):
             logger.info(f"Starting {singular} {i+1}/{length}: {str(runnable)}")
 
@@ -576,7 +596,9 @@ class MicrosoftRewards:
 
             # try to log in via bing
             try:
-                BingLoginPage(self).complete()
+                BingLoginPage(
+                    self.driver, self.login_url, self.credentials, self.is_mobile
+                ).complete()
                 logger.warning("Bing login was required, but is done.")
 
                 # add the runnable to the ones to do again
