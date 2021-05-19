@@ -58,7 +58,7 @@ def main(**kwargs):
                 else:
                     logger.warning("No more retries!")
             else:
-                logger.info(f"Got every possible point for {email}")
+                logger.info(f"Completed execution for {email}")
                 break
 
 

@@ -350,8 +350,19 @@ class MicrosoftRewards:
         cards = cards[:2]
 
         # get text and points (as regexp)
-        texts = [card.find_element_by_class_name("title-detail").text for card in cards]
-        points = [re.search(r"(\d+) / (\d+)", text).groups() for text in texts]
+        points_found = False
+        points = []
+        while not points_found:
+            texts = [
+                card.find_element_by_class_name("title-detail").text for card in cards
+            ]
+            points = [re.search(r"(\d+) / (\d+)", text) for text in texts]
+            if all(points):
+                points = [points_re.groups() for points_re in points]
+                points_found = True
+            else:
+                time.sleep(1)
+
         points_dict = dict(desktop=None, mobile=None)
 
         for points_group, key in zip(points, points_dict):
