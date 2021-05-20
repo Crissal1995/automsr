@@ -163,6 +163,7 @@ class QuizActivity(Activity):
     def _do_it(self):
         # rounds = self.get_rounds()
         rounds = self.quiz_rounds
+        one_round_complete = False
 
         for quiz_round in range(rounds):
             logger.info(f"Round {quiz_round + 1}/{rounds} started")
@@ -171,12 +172,17 @@ class QuizActivity(Activity):
                 time.sleep(1)
                 try:
                     self.driver.find_element_by_id(answer_id).click()
-                except exceptions.NoSuchElementException:
-                    logger.warning(
-                        f"Cannot click button with id: {answer_id}."
-                        "If runned with headless=true, try changing to false and retry"
-                    )
-                    return
+                except exceptions.WebDriverException:
+                    if not one_round_complete:
+                        logger.warning(
+                            f"Cannot click button with id: {answer_id}."
+                            "If runned with headless=true, try changing to false and retry"
+                        )
+                        return
+                    else:
+                        continue
+
+            one_round_complete = True
 
 
 class PollActivity(Activity):
