@@ -192,8 +192,19 @@ class PollActivity(Activity):
         return f"Poll{super().__repr__()}"
 
     def do_it(self):
-        selector = "#btoption0"
-        self.driver.find_element_by_css_selector(selector).click()
+        retries = 3
+        tts = 3
+
+        for _ in range(retries):
+            try:
+                button = self.driver.find_element_by_id("btoption0")
+                button.click()
+            except exceptions.WebDriverException as e:
+                logger.debug(f"Exception caught when doing {self}: {e}")
+                self.driver.refresh()
+                time.sleep(tts)
+            else:
+                break
 
 
 class ThisOrThatActivity(Activity):
