@@ -281,17 +281,17 @@ class MicrosoftRewards:
         try:
             BannerCookiePage(self.driver).complete()
             logger.debug("Banner cookies accepted")
-        except exceptions.NoSuchElementException:
+        except exceptions.WebDriverException:
             logger.debug("Cannot accept banner cookies")
-
-        self.go_to(self.bing_searched_url)
-        TryMicrosoftBrowserPage(self.driver).complete()
 
         self.go_to(self.bing_searched_url)
         BingLoginPage(
             self.driver, self.login_url, self.credentials, self.is_mobile
         ).complete()
         logger.info("Login made on bing webpage")
+
+        self.go_to(self.bing_searched_url)
+        TryMicrosoftBrowserPage(self.driver).complete()
 
         time.sleep(0.5)
 
