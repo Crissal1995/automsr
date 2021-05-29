@@ -55,7 +55,12 @@ class Activity(Runnable, ABC):
 
         self.header = element.find_element_by_css_selector(self.header_selector).text
         self.text = element.find_element_by_css_selector(self.text_selector).text
-        self._button = element.find_elements_by_css_selector(self.button_selector)[-1]
+        try:
+            self._button = element.find_elements_by_css_selector(self.button_selector)[
+                -1
+            ]
+        except IndexError:
+            self.status = Status.INVALID
 
     @property
     def button(self):
