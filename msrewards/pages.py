@@ -13,7 +13,7 @@ class Page(ABC):
     def __init__(self, driver: WebDriver):
         self.driver = driver
         self.driver.switch_to.window(self.driver.window_handles[-1])
-        time.sleep(0.5)
+        time.sleep(1.5)
 
     def complete(self):
         raise NotImplementedError
@@ -53,7 +53,7 @@ class LoginPage(Page):
             return
         else:
             self.fill_email()
-            time.sleep(0.5)
+            time.sleep(1.5)
             self.fill_password()
 
     def select_login(self):
@@ -63,7 +63,7 @@ class LoginPage(Page):
     def fill_email(self):
         email = self.credentials["email"]
         self.driver.find_element_by_tag_name("input").send_keys(email)
-        time.sleep(0.5)
+        time.sleep(1.5)
         self.driver.find_element_by_tag_name("input").send_keys(Keys.ENTER)
 
     def fill_password(self):
@@ -71,7 +71,7 @@ class LoginPage(Page):
         # psw_selector = "input[type=password]"
         psw = self.credentials["password"]
         self.driver.find_element_by_css_selector(psw_selector).send_keys(psw)
-        time.sleep(0.5)
+        time.sleep(1.5)
         self.driver.find_element_by_css_selector(psw_selector).send_keys(Keys.ENTER)
 
 
