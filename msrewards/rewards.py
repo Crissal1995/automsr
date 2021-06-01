@@ -293,7 +293,7 @@ class MicrosoftRewards:
         self.go_to(self.bing_searched_url)
         TryMicrosoftBrowserPage(self.driver).complete()
 
-        time.sleep(0.5)
+        time.sleep(1.5)
 
     def get_points(self, method: str = "dom") -> int:
         """Get points from Rewards Home with two possible methods,
@@ -331,7 +331,7 @@ class MicrosoftRewards:
     def check_missing_searches(self) -> dict:
         # go to rewards page
         self.go_to_home()
-        time.sleep(0.5)
+        time.sleep(1.5)
 
         # open points popup
         self.driver.find_element_by_css_selector("#rx-user-status-action").click()
@@ -664,7 +664,12 @@ class MicrosoftRewards:
         return todos
 
     def get_activities(self):
-        return self.get_daily_activities() + self.get_other_activities()
+        try:
+            dailies = self.get_daily_activities()
+        except AssertionError:
+            logger.warning("Dailies activities not found! Will skip them...")
+            dailies = []
+        return dailies + self.get_other_activities()
 
     def get_daily_activities(self):
         dailies = self._get_activities("daily")
