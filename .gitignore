@@ -9,3 +9,6 @@ automsr.cfg
 *.log
 
 .DS_Store
+
+/chrome_driver/
+ 
