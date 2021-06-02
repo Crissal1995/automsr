@@ -7,6 +7,7 @@ __pycache__
 !credentials.example.json
 automsr.cfg
 *.log
+screenshots
 
 .DS_Store
 
