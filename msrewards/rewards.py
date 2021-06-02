@@ -31,7 +31,7 @@ from msrewards.pages import (
 )
 from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from msrewards.search_takeout_parser import SearchTakeoutParser
-from msrewards.utility import change_user_agent, config, get_driver
+from msrewards.utility import DriverCatcher, change_user_agent, config, get_driver
 
 logger = logging.getLogger(__name__)
 
@@ -137,42 +137,43 @@ class MicrosoftRewards:
         # else get a selenium driver
         driver = get_driver(**kwargs)
 
-        # set its user agent to edge
-        change_user_agent(driver, cls.edge_win_ua)
+        with DriverCatcher(driver):
+            # set its user agent to edge
+            change_user_agent(driver, cls.edge_win_ua)
 
-        # create a rewards object
-        rewards = cls(driver, credentials=credentials)
+            # create a rewards object
+            rewards = cls(driver, credentials=credentials)
 
-        # get points at the start of execution
-        start_points = rewards.get_points()
+            # get points at the start of execution
+            start_points = rewards.get_points()
 
-        # get retries
-        retries = config["automsr"]["retry"]
+            # get retries
+            retries = config["automsr"]["retry"]
 
-        # execute runnables
-        if skip_activity:
-            logger.warning("Skipping activity...")
-        else:
-            logger.warning("Starting activity...")
-            rewards._execute_todo_runnables(Activity, retries=retries)
-            rewards._execute_todo_runnables(Punchcard, retries=retries)
+            # execute runnables
+            if skip_activity:
+                logger.warning("Skipping activity...")
+            else:
+                logger.warning("Starting activity...")
+                rewards._execute_todo_runnables(Activity, retries=retries)
+                rewards._execute_todo_runnables(Punchcard, retries=retries)
 
-        # execute desktop searches
-        if skip_search:
-            logger.warning("Skipping daily search...")
-        else:
-            logger.warning("Starting daily search...")
-            search_type = config["automsr"]["search_type"]
-            rewards.execute_all_searches(search_type=search_type, retries=retries)
+            # execute desktop searches
+            if skip_search:
+                logger.warning("Skipping daily search...")
+            else:
+                logger.warning("Starting daily search...")
+                search_type = config["automsr"]["search_type"]
+                rewards.execute_all_searches(search_type=search_type, retries=retries)
 
-        # get points after execution
-        end_points = rewards.get_points()
+            # get points after execution
+            end_points = rewards.get_points()
 
-        delta = end_points - start_points
-        logger.info(f"{delta} points accumulated")
+            delta = end_points - start_points
+            logger.info(f"{delta} points accumulated")
 
-        # quit driver
-        driver.quit()
+            # quit driver
+            driver.quit()
 
     def execute_all_searches(self, search_type: str, retries: int = 1):
         for i in range(retries):
