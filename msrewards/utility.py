@@ -1,6 +1,9 @@
 import configparser
+import datetime
 import json
 import logging
+import os
+import pathlib
 import sys
 
 from selenium.webdriver import Chrome, Remote
@@ -273,3 +276,57 @@ def get_safe_credentials(credentials_fp):
             continue
         except StopIteration:
             break
+
+
+class DriverCatcher:
+    """A context manager wrapper for selenium driver,
+    used to catch exceptions and store informations about it"""
+
+    def __init__(self, driver: Remote, propagate_exception: bool = True):
+        self.driver = driver
+        self.screen_dir = pathlib.Path("screenshots")
+        self.propagate = propagate_exception
+
+    def store_information_as_screenshot(self, fname: str = None):
+        """Store the current driver screenshot in root dir with
+        the specified fname.
+        If no fname is provided, a timestamp will be used."""
+
+        if not fname:
+            # get current timestamp
+            now = datetime.datetime.now()
+
+            # convert it to a valid filename
+            fname = str(now).replace(":", ".") + ".png"
+
+        if not fname.endswith(".png"):
+            fname += ".png"
+
+        # concatenate it with rootdir
+        path = self.screen_dir / fname
+
+        # path to selenium func must be provided as absolute path
+        fullpath = str(path.resolve())
+
+        # save screenshot as png to path provided
+        self.driver.get_screenshot_as_file(fullpath)
+
+        return path
+
+    def __enter__(self):
+        os.makedirs(self.screen_dir, exist_ok=True)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Manage possible exceptions with the if-else branch.
+        If the return is True, the exception is suppressed;
+        otherwise is propagated."""
+        if exc_type is None:
+            return True
+        else:
+            logger.warning(
+                f"An exception occurred! exc_type: {exc_type}, exc_val: {exc_val}"
+            )
+            path = self.store_information_as_screenshot()
+            logger.warning(f"A screenshot was saved in {path}")
+
+            return not self.propagate
