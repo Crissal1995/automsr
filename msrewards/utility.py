@@ -114,19 +114,19 @@ def get_config(cfg_fp):
     valid_selenium_envs = ("local", "remote")
 
     # get selenium options
-    env = parser.get("selenium", "env", fallback="local")
-    path = parser.get("selenium", "path", fallback="chromedriver")
-    url = parser.get("selenium", "url", fallback="http://selenium-hub:4444/wd/hub")
-    headless = parser.getboolean("selenium", "headless", fallback=True)
-    enable_logging = parser.getboolean("selenium", "logging", fallback=True)
+    env = parser.get("selenium", "env")
+    path = parser.get("selenium", "path")
+    url = parser.get("selenium", "url")
+    headless = parser.getboolean("selenium", "headless")
+    enable_logging = parser.getboolean("selenium", "logging")
 
     # get automsr options
-    skip = parser.get("automsr", "skip", fallback="no").lower()
+    skip = parser.get("automsr", "skip").lower()
     skip_activity, skip_search = activity_skip(skip)
 
-    retry = parser.getint("automsr", "retry", fallback=3)
-    credentials = parser.get("automsr", "credentials", fallback="credentials.json")
-    search_type = parser.get("automsr", "search_type", fallback="random")
+    retry = parser.getint("automsr", "retry")
+    credentials = parser.get("automsr", "credentials")
+    search_type = parser.get("automsr", "search_type")
 
     if env not in valid_selenium_envs:
         err = f"Invalid selenium env provided! Valid envs are: {valid_selenium_envs}"
