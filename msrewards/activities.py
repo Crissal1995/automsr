@@ -1,13 +1,18 @@
+import csv
 import enum
 import logging
+import pathlib
 import random
 import re
 import time
 from abc import ABC
+from typing import Dict, List, Sequence, Union
 
 from selenium.common import exceptions
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
+
+from msrewards.utility import get_date_str
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +215,114 @@ class PollActivity(Activity):
                 time.sleep(tts)
             else:
                 break
+
+
+class ThisOrThatCSV:
+    """
+    Class to manage CSV files for this or that activity.
+    This CSV, if it exists, contains the answers for
+    today's This Or That activity.
+
+    The CSV headers are:
+    - round (values go from 0 to 9)
+    - selection (values can be
+                -1: invalid
+                0: first answer
+                1: second answer)
+    """
+
+    name = f"thisorthat_{get_date_str()}.csv"
+    headers = ["round", "selection"]
+    answers: List[Dict[str, str]] = []
+    _sorted = False
+
+    ANSWERS_SIZE = 10  # must be equal to rounds size
+
+    INVALID = -1
+    FIRST = 0
+    SECOND = 1
+
+    def __init__(self):
+        self.add_empty_answers()  # populate answers array with invalid questions
+        if self.exists():  # but if csv file exists
+            self.read_answers()  # populate answers from it
+
+    def exists(self):
+        return pathlib.Path(self.name).exists()
+
+    def check_answers(self):
+        if len(self.answers) != self.ANSWERS_SIZE:
+            raise ValueError("Answers must be an array of 10 dict-element")
+
+    def append_answer(self, answer: Sequence[Union[int, str]]):
+        """Convert a generic answer to a correct dict answer"""
+        if len(answer) != 2:
+            raise ValueError("Answer must be a two-item sequence")
+        answer_dict = {key: str(value) for (key, value) in zip(self.headers, answer)}
+        self.answers.append(answer_dict)
+
+    def override_answer(self, answer: Sequence[Union[int, str]]):
+        """
+        Ovveride a generic answer in the correct location,
+        casting it as a dict answer
+        """
+        if len(answer) != 2:
+            raise ValueError("Answer must be a two-item sequence")
+        answer_dict = {key: str(value) for (key, value) in zip(self.headers, answer)}
+        if self._sorted:
+            ans_index = int(answer[0])
+        else:
+            ans_index = self.answers.index(
+                [ans for ans in self.answers if ans[self.headers[0]] == str(answer[0])][
+                    0
+                ]
+            )
+        self.answers[ans_index] = answer_dict
+
+    def get_answer(self, round_: Union[int, str]) -> Dict[str, str]:
+        """Get an answer with round value"""
+        if isinstance(round_, str):
+            round_ = int(round_)
+
+        if self._sorted:
+            return self.answers[round_]
+        else:
+            return [ans for ans in self.answers if ans[self.headers[0]] == str(round_)][
+                0
+            ]
+
+    def sort_answers(self):
+        def _sort(adict: Dict[str, str]) -> int:
+            return int(adict[self.headers[0]])
+
+        self.answers.sort(key=_sort)
+        self._sorted = True
+
+    def add_empty_answers(self, sort=True):
+        answers_set = set([int(answer[self.headers[0]]) for answer in self.answers])
+        missing_set = set(range(self.ANSWERS_SIZE)) - answers_set
+        for round_ in missing_set:
+            self.append_answer((round_, self.INVALID))
+        self.check_answers()
+        if sort:
+            self.sort_answers()
+
+    def write_answers(self):
+        self.add_empty_answers()
+        with open(self.name, "w", newline="") as f:
+            writer = csv.DictWriter(f, self.headers)
+            writer.writeheader()
+            writer.writerows(self.answers)
+
+    def read_answers(self):
+        with open(self.name) as f:
+            self.answers = []
+            self._sorted = False
+
+            reader = csv.DictReader(f)
+            for row in reader:
+                self.answers.append(row)
+        self.add_empty_answers()
 
 
 class ThisOrThatActivity(Activity):
