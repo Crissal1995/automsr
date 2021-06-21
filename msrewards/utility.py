@@ -5,6 +5,7 @@ import logging
 import os
 import pathlib
 import sys
+from typing import Union
 
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
@@ -57,6 +58,24 @@ def activity_skip(skip_str: str) -> (bool, bool):
         return skip_dict[skip_str]
     except KeyError:
         raise ValueError(f"Invalid skip value provided: {skip_str}")
+
+
+def get_datetime_str(
+    datetime_obj: Union[datetime.datetime, datetime.date] = None, time: bool = False
+):
+    """Convert a datetime object to string"""
+    if not datetime_obj:
+        datetime_obj = datetime.datetime.today()
+    s = str(datetime_obj)
+    s = s.split(".")[0]  # remove ms
+    s = s.replace("-", "_").replace(":", "_")
+    if not time:
+        s = s.split()[0]  # take only date part
+    return s
+
+
+def get_date_str(datetime_obj: Union[datetime.datetime, datetime.date] = None):
+    return get_datetime_str(datetime_obj, False)
 
 
 def get_options(**kwargs):
