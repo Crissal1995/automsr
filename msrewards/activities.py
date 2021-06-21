@@ -357,8 +357,13 @@ class ThisOrThatActivity(Activity):
         else:
             logger.debug("Question container found")
 
+        # if I'm here, everything should be fine
+        tot_csv = ThisOrThatCSV()
+        if tot_csv.exists():
+            tot_csv.read_answers()
+
         # answer selectors
-        answers = ["rqAnswerOption0", "rqAnswerOption1"]
+        answers_sel = ["rqAnswerOption0", "rqAnswerOption1"]
 
         is_last_round = False
         match_pattern = re.compile(r"(\d+)[^\d]*(\d+)")
@@ -372,21 +377,57 @@ class ThisOrThatActivity(Activity):
                 rounds_elem = self.driver.find_element_by_class_name("bt_Quefooter")
                 match = match_pattern.match(rounds_elem.text)
             current_round = int(match.group(1))
+            round_zerobased = current_round - 1
             logger.info(f"Starting round {current_round} / {self.quiz_rounds}")
 
             # if it's last round, next iteration won't happen
             if current_round == self.quiz_rounds:
                 is_last_round = True
 
-            # expected value: 25 points out of 50
-            answer = random.choice(answers)
-            answer_index = answers.index(answer)
+            answer = tot_csv.get_answer(round_zerobased)
+            value = answer[tot_csv.headers[1]]
+
+            # if it's invalid, take a random shot
+            if value == str(tot_csv.INVALID):
+                answer_sel = random.choice(answers_sel)
+            # else take corresponding value in array
+            else:
+                answer_sel = answers_sel[int(value)]
+
+            # take index from array
+            answer_index = answers_sel.index(answer_sel)
 
             # click answer button
-            answer_elem = self.driver.find_element_by_id(answer)
+            answer_elem = self.driver.find_element_by_id(answer_sel)
             answer_elem.click()
             logger.info(f"Answer {answer_index + 1} selected")
+            time.sleep(1)
+
+            sel = "#nextQuestionContainer > div > div > div > div.btQueInfo > div.bt_optionVS"
+
+            try:
+                response: str = self.driver.find_element_by_css_selector(
+                    sel
+                ).get_attribute("class")
+            except exceptions.WebDriverException:
+                response = "undefined"
+
+            if "wrong" in response.lower():
+                logger.info("Wrong answer")
+                correct_value = (
+                    tot_csv.FIRST if answer_index == tot_csv.SECOND else tot_csv.SECOND
+                )
+            elif "correct" in response.lower():
+                logger.info("Correct answer")
+                correct_value = answer_index
+            else:
+                logger.info("Cannot determine if correct or wrong answer")
+                correct_value = tot_csv.INVALID
+            tot_csv.override_answer((round_zerobased, correct_value))
             time.sleep(2)
+
+        logger.info(f"Writing correct answers to {tot_csv.name}")
+        tot_csv.write_answers()
 
 
 class Punchcard(Runnable, ABC):
