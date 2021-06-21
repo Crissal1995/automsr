@@ -152,6 +152,11 @@ def get_config(cfg_fp):
         logger.error(err)
         raise ValueError(err)
 
+    if retry < 1:
+        msg = "Cannot have non-positive retries! Defaulting it to 1"
+        logger.warning(msg)
+        retry = 1
+
     return {
         "automsr": dict(
             skip=skip,
