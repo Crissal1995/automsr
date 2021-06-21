@@ -30,12 +30,8 @@ def main(**kwargs):
     # get credentials filepath from config
     credentials_fp = config["automsr"]["credentials"]
 
-    # get retries from config
-    retry = config["automsr"]["retry"]
-
-    # set at least one cycle
-    if retry < 1:
-        retry = 1
+    # hardcoded because it should be 2 at least
+    retry = 5
 
     # test if env is correctly set
     test_environment(**kwargs)
