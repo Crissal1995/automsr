@@ -217,6 +217,21 @@ class PollActivity(Activity):
                 break
 
 
+class ThisOrThatAnswer(enum.Enum):
+    MISSING = -1
+    FIRST = 0
+    SECOND = 1
+
+    @classmethod
+    def from_value(cls, value: int):
+        values = {
+            -1: cls.MISSING,
+            0: cls.FIRST,
+            1: cls.SECOND,
+        }
+        return values[value]
+
+
 class ThisOrThatCSV:
     """
     Class to manage CSV files for this or that activity.
@@ -231,98 +246,61 @@ class ThisOrThatCSV:
                 1: second answer)
     """
 
-    name = f"thisorthat_{get_date_str()}.csv"
-    headers = ["round", "selection"]
-    answers: List[Dict[str, str]] = []
-    _sorted = False
-
     ANSWERS_SIZE = 10  # must be equal to rounds size
 
-    INVALID = -1
-    FIRST = 0
-    SECOND = 1
+    name = f"thisorthat_{get_date_str()}.csv"
+    headers = ["round", "answer"]
+    answers: List[ThisOrThatAnswer] = [ThisOrThatAnswer.MISSING] * ANSWERS_SIZE
 
     def __init__(self):
-        self.add_empty_answers()  # populate answers array with invalid questions
-        if self.exists():  # but if csv file exists
+        if self.exists():  # if csv file exists
             self.read_answers()  # populate answers from it
 
     def exists(self):
         return pathlib.Path(self.name).exists()
 
-    def check_answers(self):
-        if len(self.answers) != self.ANSWERS_SIZE:
-            raise ValueError("Answers must be an array of 10 dict-element")
+    def override_answer(self, answer: Sequence[Union[int, ThisOrThatAnswer]]):
+        """Ovveride an answer in its specified position"""
+        index: int = answer[0]
+        validity = answer[1]
+        if isinstance(validity, int):
+            validity = ThisOrThatAnswer.from_value(validity)
+        self.answers[index] = validity
 
-    def append_answer(self, answer: Sequence[Union[int, str]]):
-        """Convert a generic answer to a correct dict answer"""
-        if len(answer) != 2:
-            raise ValueError("Answer must be a two-item sequence")
-        answer_dict = {key: str(value) for (key, value) in zip(self.headers, answer)}
-        self.answers.append(answer_dict)
+    def get_answer(self, round_index: int) -> ThisOrThatAnswer:
+        """Get an answer from a round index value"""
+        return self.answers[round_index]
 
-    def override_answer(self, answer: Sequence[Union[int, str]]):
-        """
-        Ovveride a generic answer in the correct location,
-        casting it as a dict answer
-        """
-        if len(answer) != 2:
-            raise ValueError("Answer must be a two-item sequence")
-        answer_dict = {key: str(value) for (key, value) in zip(self.headers, answer)}
-        if self._sorted:
-            ans_index = int(answer[0])
-        else:
-            ans_index = self.answers.index(
-                [ans for ans in self.answers if ans[self.headers[0]] == str(answer[0])][
-                    0
-                ]
-            )
-        self.answers[ans_index] = answer_dict
-
-    def get_answer(self, round_: Union[int, str]) -> Dict[str, str]:
-        """Get an answer with round value"""
-        if isinstance(round_, str):
-            round_ = int(round_)
-
-        if self._sorted:
-            return self.answers[round_]
-        else:
-            return [ans for ans in self.answers if ans[self.headers[0]] == str(round_)][
-                0
-            ]
-
-    def sort_answers(self):
-        def _sort(adict: Dict[str, str]) -> int:
-            return int(adict[self.headers[0]])
-
-        self.answers.sort(key=_sort)
-        self._sorted = True
-
-    def add_empty_answers(self, sort=True):
-        answers_set = set([int(answer[self.headers[0]]) for answer in self.answers])
-        missing_set = set(range(self.ANSWERS_SIZE)) - answers_set
-        for round_ in missing_set:
-            self.append_answer((round_, self.INVALID))
-        self.check_answers()
-        if sort:
-            self.sort_answers()
+    def _get_answers_dict(self) -> List[Dict[str, int]]:
+        return [
+            {
+                key: value
+                for (key, value) in zip(self.headers, [int(round_), int(answer.value)])
+            }
+            for (round_, answer) in enumerate(self.answers)
+        ]
 
     def write_answers(self):
-        self.add_empty_answers()
+        """Writes answers to {name} csv file"""
+
         with open(self.name, "w", newline="") as f:
             writer = csv.DictWriter(f, self.headers)
             writer.writeheader()
-            writer.writerows(self.answers)
+            writer.writerows(self._get_answers_dict())
 
     def read_answers(self):
-        with open(self.name) as f:
-            self.answers = []
-            self._sorted = False
+        """Reads answers from {name} csv file"""
 
+        answers = [ThisOrThatAnswer.MISSING] * self.ANSWERS_SIZE
+
+        with open(self.name) as f:
             reader = csv.DictReader(f)
             for row in reader:
-                self.answers.append(row)
-        self.add_empty_answers()
+                i = int(row[self.headers[0]])
+                v = int(row[self.headers[1]])
+                answers[i] = ThisOrThatAnswer.from_value(v)
+
+        self.answers = answers
 
 
 class ThisOrThatActivity(Activity):
@@ -358,9 +336,8 @@ class ThisOrThatActivity(Activity):
             logger.debug("Question container found")
 
         # if I'm here, everything should be fine
+        # so take the this or that csv manager
         tot_csv = ThisOrThatCSV()
-        if tot_csv.exists():
-            tot_csv.read_answers()
 
         # answer selectors
         answers_sel = ["rqAnswerOption0", "rqAnswerOption1"]
@@ -384,15 +361,16 @@ class ThisOrThatActivity(Activity):
             if current_round == self.quiz_rounds:
                 is_last_round = True
 
+            # take the answer from the csv answers array
+            # it's a validity enum object
             answer = tot_csv.get_answer(round_zerobased)
-            value = answer[tot_csv.headers[1]]
 
-            # if it's invalid, take a random shot
-            if value == str(tot_csv.INVALID):
+            # if the answer it's invalid, take a random shot
+            if answer == ThisOrThatAnswer.MISSING:
                 answer_sel = random.choice(answers_sel)
             # else take corresponding value in array
             else:
-                answer_sel = answers_sel[int(value)]
+                answer_sel = answers_sel[int(answer.value)]
 
             # take index from array
             answer_index = answers_sel.index(answer_sel)
@@ -403,8 +381,10 @@ class ThisOrThatActivity(Activity):
             logger.info(f"Answer {answer_index + 1} selected")
             time.sleep(1)
 
+            # try to understand if the answer was correct or not
             sel = "#nextQuestionContainer > div > div > div > div.btQueInfo > div.bt_optionVS"
 
+            # try-except to don't let this crash the code
             try:
                 response: str = self.driver.find_element_by_css_selector(
                     sel
@@ -414,15 +394,16 @@ class ThisOrThatActivity(Activity):
 
             if "wrong" in response.lower():
                 logger.info("Wrong answer")
-                correct_value = (
-                    tot_csv.FIRST if answer_index == tot_csv.SECOND else tot_csv.SECOND
-                )
+                if answer_index == int(ThisOrThatAnswer.FIRST.value):
+                    correct_value = ThisOrThatAnswer.SECOND
+                else:
+                    correct_value = ThisOrThatAnswer.FIRST
             elif "correct" in response.lower():
                 logger.info("Correct answer")
-                correct_value = answer_index
+                correct_value = ThisOrThatAnswer.from_value(answer_index)
             else:
                 logger.info("Cannot determine if correct or wrong answer")
-                correct_value = tot_csv.INVALID
+                correct_value = ThisOrThatAnswer.MISSING
             tot_csv.override_answer((round_zerobased, correct_value))
             time.sleep(2)
 
