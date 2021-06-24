@@ -6,6 +6,7 @@ import string
 import time
 
 from selenium.common import exceptions
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 from tqdm import tqdm
@@ -590,6 +591,9 @@ class MicrosoftRewards:
         # try to dismiss bottom span once for every execution
         TryMicrosoftBrowserPage(self.driver).complete()
 
+        # create action chainst
+        actions = ActionChains(self.driver)
+
         for i, runnable in enumerate(runnables):
             logger.info(f"Starting {singular} {i+1}/{length}: {str(runnable)}")
 
@@ -598,6 +602,9 @@ class MicrosoftRewards:
 
             # get old windows
             old_windows = set(self.driver.window_handles)
+
+            # move to runnable element
+            actions.move_to_element(runnable.element).perform()
 
             # start runnable
             runnable.button.click()
@@ -638,7 +645,7 @@ class MicrosoftRewards:
     def execute_activities(self, activities: [Activity]):
         return self._execute(activities, "activity")
 
-    def get_todo_activities(self, reverse: bool = True):
+    def get_todo_activities(self, reverse: bool = False):
         """
         Return the to-do activities of the day,
         ordered from the first daily to the last other.

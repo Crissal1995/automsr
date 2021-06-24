@@ -27,6 +27,8 @@ class Runnable(ABC):
     name = "runnable"
     name_plural = "runnables"
 
+    element: WebElement
+
     @property
     def button(self):
         raise NotImplementedError
