@@ -16,7 +16,7 @@ file_debug_handler = logging.FileHandler("main.debug.log")
 file_debug_handler.setLevel(logging.DEBUG)
 
 # set formatters and add handlers to main logger
-logger = logging.getLogger()
+logger = logging.getLogger("msrewards")
 logger.setLevel(logging.DEBUG)
 
 handlers = (stream_handler, file_handler, file_debug_handler)
