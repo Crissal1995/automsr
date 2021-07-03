@@ -173,8 +173,53 @@ class MicrosoftRewards:
             delta = end_points - start_points
             logger.info(f"{delta} points accumulated")
 
+            logger.info(f"{rewards.get_gift_card_amounts_str(end_points)}")
+
             # quit driver
             driver.quit()
+
+    @staticmethod
+    def get_gift_card_amounts(points: int, gift_card_prices: dict = None):
+        """
+        Return the amount of gift cards that can be redeemed on Microsoft Rewards.
+        If no gift_card_prices is given, it will be used the default one
+        for level 2 members, so:
+           1860 points for a 2€ gift card,
+           4650 points for a 5€ gift card,
+           9300 points for a 10€ gift card.
+        """
+        gift_card_prices = gift_card_prices or {2: 1860, 5: 4650, 10: 9300}
+        gift_card_amounts = {k: 0 for k in gift_card_prices}
+        min_price = min(gift_card_prices.values())
+
+        can_redeem = points >= min_price
+        while can_redeem:
+            for eur, price in sorted(gift_card_prices.items(), reverse=True):
+                bought = points // price
+                left = points % price
+                if bought > 0:
+                    points = left
+                    gift_card_amounts[eur] = bought
+            can_redeem = points >= min_price
+
+        return gift_card_amounts
+
+    @staticmethod
+    def get_gift_card_amounts_str(points: int):
+        amounts = MicrosoftRewards.get_gift_card_amounts(points)
+        if not any(amounts.values()):
+            return "Cannot redeem any gift card"
+
+        # if I'm here, at least one gift card can be redeemed
+        s = ["You can redeem "]
+        for eur, amount in sorted(amounts.items(), reverse=True):
+            if not amount:
+                continue
+
+            plural = "" if amount == 1 else "s"
+            s += [f"{amount} {eur}€ gift card{plural}"]
+
+        return s[0] + ", ".join(s[1:])
 
     def execute_all_searches(self, search_type: str, retries: int = 1):
         for i in range(retries):
