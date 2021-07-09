@@ -1,7 +1,7 @@
 import logging
 
 from msrewards import MicrosoftRewards
-from msrewards.mail import MissingRecipientEmailError, OutlookEmailConnection
+from msrewards.mail import OutlookEmailConnection
 from msrewards.utility import config, get_safe_credentials, test_environment
 
 FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
@@ -37,26 +37,21 @@ def main(**kwargs):
     # test if env is correctly set
     test_environment(**kwargs)
 
-    # assume we use emails
-    send_email = True
+    # if the email is not null or empty string, it will be used
+    send_email = bool(config["automsr"]["email"])
+    if send_email:
+        logger.info(
+            "Recipient email found, so emails will be"
+            " sent in case of success/failure"
+        )
+    else:
+        logger.info(
+            "No recipient email was found, so no email will be"
+            " sent in case of success/failure"
+        )
 
     # cycle over credentials, getting points from activities
     for i, credentials in enumerate(get_safe_credentials(credentials_fp)):
-        if i == 0:
-            try:
-                OutlookEmailConnection(credentials)
-            except MissingRecipientEmailError:
-                send_email = False
-                logger.warning(
-                    "No recipient email was found, so no email will be"
-                    " sent in case of success/failure"
-                )
-            else:
-                send_email = True
-                logger.info(
-                    "Recipient email found, so emails will be"
-                    " sent in case of success/failure"
-                )
         if i > 0:
             logger.info("-" * 30)
         email = credentials["email"]
