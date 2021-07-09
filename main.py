@@ -1,6 +1,7 @@
 import logging
 
 from msrewards import MicrosoftRewards
+from msrewards.mail import MissingRecipientEmailError, OutlookEmailConnection
 from msrewards.utility import config, get_safe_credentials, test_environment
 
 FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
@@ -36,8 +37,26 @@ def main(**kwargs):
     # test if env is correctly set
     test_environment(**kwargs)
 
+    # assume we use emails
+    send_email = True
+
     # cycle over credentials, getting points from activities
     for i, credentials in enumerate(get_safe_credentials(credentials_fp)):
+        if i == 0:
+            try:
+                OutlookEmailConnection(credentials)
+            except MissingRecipientEmailError:
+                send_email = False
+                logger.warning(
+                    "No recipient email was found, so no email will be"
+                    " sent in case of success/failure"
+                )
+            else:
+                send_email = True
+                logger.info(
+                    "Recipient email found, so emails will be"
+                    " sent in case of success/failure"
+                )
         if i > 0:
             logger.info("-" * 30)
         email = credentials["email"]
@@ -53,8 +72,14 @@ def main(**kwargs):
                     logger.info("Retrying...")
                 else:
                     logger.warning("No more retries!")
+                    if send_email:
+                        with OutlookEmailConnection(credentials) as conn:
+                            conn.send_failure_message()
             else:
                 logger.info(f"Completed execution for {email}")
+                if send_email:
+                    with OutlookEmailConnection(credentials) as conn:
+                        conn.send_success_message()
                 break
 
 

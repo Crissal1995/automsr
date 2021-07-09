@@ -109,6 +109,7 @@ _default_config = {
         "skip": "no",
         "credentials": "credentials.json",
         "search_type": "random",
+        "email": None,
     },
     "selenium": {
         "env": "local",
@@ -146,6 +147,7 @@ def get_config(cfg_fp):
     retry = parser.getint("automsr", "retry")
     credentials = parser.get("automsr", "credentials")
     search_type = parser.get("automsr", "search_type")
+    email = parser.get("automsr", "email")
 
     if env not in valid_selenium_envs:
         err = f"Invalid selenium env provided! Valid envs are: {valid_selenium_envs}"
@@ -165,6 +167,7 @@ def get_config(cfg_fp):
             retry=retry,
             credentials=credentials,
             search_type=search_type,
+            email=email,
         ),
         "selenium": dict(
             env=env,
