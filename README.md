@@ -67,6 +67,15 @@ one character at the end of the string at time) or `takeout`
 
 Defaults to `random`.
 
+#### email
+The recipient email to send information regards the execution status; success if 
+all points are redeemed, failure otherwise. 
+The sender email is the one AutoMSR is currently working with.
+
+If it's missing, no email will be sent.
+
+Defaults to `None`.
+
 ### selenium
 #### env
 Wether the environment is using a chromedriver executable found in PATH (`local`), 
