@@ -1,7 +1,7 @@
 import logging
 
 from msrewards import MicrosoftRewards
-from msrewards.mail import OutlookEmailConnection
+from msrewards.mail import OutlookEmailConnection, RewardsStatus
 from msrewards.utility import config, get_safe_credentials, test_environment
 
 FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
@@ -51,10 +51,19 @@ def main(**kwargs):
             " sent in case of success/failure"
         )
 
+    credentials_sender = None
+    status_dict = dict()
+
     # cycle over credentials, getting points from activities
     for i, credentials in enumerate(get_safe_credentials(credentials_fp)):
+        # take the first credentials set as only one sender
+        if i == 0:
+            credentials_sender = credentials
+
+        # if we're iterating over multiple credentials, print a divider
         if i > 0:
             logger.info("-" * 30)
+
         email = credentials["email"]
         logger.info(f"Working on credentials [email={email}]")
 
@@ -68,15 +77,18 @@ def main(**kwargs):
                     logger.info("Retrying...")
                 else:
                     logger.warning("No more retries!")
-                    if send_email:
-                        with OutlookEmailConnection(credentials) as conn:
-                            conn.send_failure_message()
+                    status_dict[credentials["email"]] = RewardsStatus.FAILURE
             else:
                 logger.info(f"Completed execution for {email}")
-                if send_email:
-                    with OutlookEmailConnection(credentials) as conn:
-                        conn.send_success_message()
+                status_dict[credentials["email"]] = RewardsStatus.SUCCESS
                 break
+
+    # at the end of the cycle, we'll send the email with the report status
+    # if credentials_sender is set (there is almost one credentials to work with)
+    # and if recipient is set
+    if send_email and credentials_sender:
+        with OutlookEmailConnection(credentials_sender) as conn:
+            conn.send_status_message(status_dict)
 
 
 if __name__ == "__main__":
