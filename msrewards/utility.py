@@ -109,7 +109,7 @@ _default_config = {
         "skip": "no",
         "credentials": "credentials.json",
         "search_type": "random",
-        "email": None,
+        "email": "",
     },
     "selenium": {
         "env": "local",

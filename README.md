@@ -74,7 +74,7 @@ The sender email is the one AutoMSR is currently working with.
 
 If it's missing, no email will be sent.
 
-Defaults to `None`.
+Defaults to empty string.
 
 ### selenium
 #### env
