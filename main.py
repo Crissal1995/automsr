@@ -7,8 +7,9 @@ from msrewards.utility import config, get_safe_credentials, test_environment
 FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
 formatter = logging.Formatter(FORMAT)
 
+stream_level = logging.DEBUG if config["automsr"]["verbose"] else logging.INFO
 stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
+stream_handler.setLevel(stream_level)
 
 file_handler = logging.FileHandler("main.log")
 file_handler.setLevel(logging.INFO)

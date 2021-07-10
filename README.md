@@ -76,6 +76,11 @@ If it's missing, no email will be sent.
 
 Defaults to empty string.
 
+#### verbose
+Wether to increase console output verbosity or not; log files' verbosity is immutable.
+
+Defaults to `False`.
+
 ### selenium
 #### env
 Wether the environment is using a chromedriver executable found in PATH (`local`), 
