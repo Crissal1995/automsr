@@ -5,6 +5,8 @@ from email.message import EmailMessage
 
 from msrewards.utility import config
 
+logger = logging.getLogger(__name__)
+
 
 class MissingRecipientEmailError(Exception):
     """Error raised when no destination email is found inside config"""
@@ -92,11 +94,21 @@ class EmailConnection:
 
         # login with auth credentials
         self.smtp.login(self.from_email, credentials["password"])
-        logging.info("SMTP connection established")
+        logger.debug("SMTP connection established")
+
+    def _quit(self):
+        try:
+            self.smtp.quit()
+            logger.debug("SMTP connection closed")
+        except smtplib.SMTPServerDisconnected:
+            logger.debug("SMTP connection was already closed")
+
+    def __del__(self):
+        self._quit()
 
     def _send_message(self, msg: EmailMessage):
         self.smtp.send_message(msg)
-        logging.info("Sent email to specified recipient")
+        logger.debug("Sent email to specified recipient")
 
     def send_success_message(self):
         msg = RewardsEmailMessage.get_success_message(self.from_email, self.to_email)
@@ -110,7 +122,7 @@ class EmailConnection:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.smtp.quit()
+        self._quit()
 
 
 class OutlookEmailConnection(EmailConnection):
