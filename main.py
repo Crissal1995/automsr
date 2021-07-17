@@ -2,35 +2,50 @@ import logging
 
 from msrewards import MicrosoftRewards
 from msrewards.mail import OutlookEmailConnection, RewardsStatusDict
-from msrewards.utility import config, get_safe_credentials, test_environment
+from msrewards.utility import get_config, get_safe_credentials, test_environment
 
-FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
-formatter = logging.Formatter(FORMAT)
 
-stream_level = logging.DEBUG if config["automsr"]["verbose"] else logging.INFO
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(stream_level)
+def get_logger(verbose: bool):
+    FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
+    formatter = logging.Formatter(FORMAT)
 
-file_handler = logging.FileHandler("main.log")
-file_handler.setLevel(logging.INFO)
+    stream_level = logging.DEBUG if verbose else logging.INFO
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(stream_level)
 
-file_debug_handler = logging.FileHandler("main.debug.log")
-file_debug_handler.setLevel(logging.DEBUG)
+    file_handler = logging.FileHandler("main.log")
+    file_handler.setLevel(logging.INFO)
 
-# set formatters and add handlers to main logger
-logger = logging.getLogger("msrewards")
-logger.setLevel(logging.DEBUG)
+    file_debug_handler = logging.FileHandler("main.debug.log")
+    file_debug_handler.setLevel(logging.DEBUG)
 
-handlers = (stream_handler, file_handler, file_debug_handler)
+    # set formatters and add handlers to main logger
+    logger = logging.getLogger("msrewards")
+    logger.setLevel(logging.DEBUG)
 
-for handler in handlers:
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    handlers = (stream_handler, file_handler, file_debug_handler)
+
+    for handler in handlers:
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    return logger
 
 
 def main(**kwargs):
+    # get config filepath from arguments, or defaults to automsr.cfg
+    config_fp = kwargs.get("config", "automsr.cfg")
+    config = get_config(config_fp)
+
     # get credentials filepath from config
-    credentials_fp = config["automsr"]["credentials"]
+    credentials_fp = kwargs.get("credentials", config["automsr"]["credentials"])
+
+    # get logger
+    verbose = kwargs.get("verbose", config["automsr"]["verbose"])
+    logger = get_logger(verbose=verbose)
+
+    # dry run mode, defaults to False
+    dry_run = kwargs.get("dry_run", False)
 
     # hardcoded because it should be 2 at least
     retry = 5
@@ -67,6 +82,13 @@ def main(**kwargs):
         email = credentials["email"]
         logger.info(f"Working on credentials [email={email}]")
 
+        if dry_run:
+            logger.info(
+                f"Dry run set, so a success status will be recorded for {email}"
+            )
+            status.add_success(email)
+            continue
+
         for j in range(retry):
             try:
                 MicrosoftRewards.do_every_activity(credentials=credentials)
@@ -92,4 +114,33 @@ def main(**kwargs):
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-c",
+        "--config",
+        default="automsr.cfg",
+        help="AutoMSR config filepath to use; defaults to automsr.cfg",
+    )
+    parser.add_argument(
+        "-l",
+        "--credentials",
+        default="credentials.json",
+        help="JSON credentials filepath to use; defaults to credentials.json",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Execute AutoMSR in dry-run mode"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Increase console verbosity"
+    )
+
+    args = parser.parse_args()
+    main(
+        config=args.config,
+        credentials=args.credentials,
+        dry_run=args.dry_run,
+        verbose=args.verbose,
+    )
