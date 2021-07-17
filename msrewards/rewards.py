@@ -288,7 +288,8 @@ class MicrosoftRewards:
         if missing:
             count = len(missing)
             word = runnable_type.name if count == 1 else runnable_type.name_plural
-            logger.error(f"Cannot complete {count} {word}: {missing}")
+            msg = f"Cannot complete {count} {word}: {missing}"
+            raise RuntimeError(msg)
         elif any_todos:  # no missing, found at least one to-do runnable
             logger.info(f"All {runnable_type.name_plural} completed")
         else:  # no missing, found no to-do runnable
