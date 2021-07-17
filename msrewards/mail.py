@@ -19,6 +19,24 @@ class RewardsStatus(Enum):
     SUCCESS = "SUCCESS"
 
 
+class RewardsStatusDict:
+    status_dict: Dict[str, RewardsStatus] = {}
+
+    def add(self, email: str, status: RewardsStatus):
+        if email in self.status_dict:
+            raise ValueError(f"Status already found for {email}")
+        self.status_dict[email] = status
+
+    def add_failure(self, email: str):
+        self.add(email, RewardsStatus.FAILURE)
+
+    def add_success(self, email: str):
+        self.add(email, RewardsStatus.SUCCESS)
+
+    def as_dict(self):
+        return self.status_dict
+
+
 class RewardsEmailMessage(EmailMessage):
     """An email message customized for Auto MSR"""
 

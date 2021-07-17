@@ -1,7 +1,7 @@
 import logging
 
 from msrewards import MicrosoftRewards
-from msrewards.mail import OutlookEmailConnection, RewardsStatus
+from msrewards.mail import OutlookEmailConnection, RewardsStatusDict
 from msrewards.utility import config, get_safe_credentials, test_environment
 
 FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
@@ -52,7 +52,7 @@ def main(**kwargs):
         )
 
     credentials_sender = None
-    status_dict = dict()
+    status = RewardsStatusDict()
 
     # cycle over credentials, getting points from activities
     for i, credentials in enumerate(get_safe_credentials(credentials_fp)):
@@ -77,10 +77,10 @@ def main(**kwargs):
                     logger.info("Retrying...")
                 else:
                     logger.warning("No more retries!")
-                    status_dict[credentials["email"]] = RewardsStatus.FAILURE
+                    status.add_failure(email)
             else:
                 logger.info(f"Completed execution for {email}")
-                status_dict[credentials["email"]] = RewardsStatus.SUCCESS
+                status.add_success(email)
                 break
 
     # at the end of the cycle, we'll send the email with the report status
@@ -88,7 +88,7 @@ def main(**kwargs):
     # and if recipient is set
     if send_email and credentials_sender:
         with OutlookEmailConnection(credentials_sender) as conn:
-            conn.send_status_message(status_dict)
+            conn.send_status_message(status.as_dict())
 
 
 if __name__ == "__main__":
