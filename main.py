@@ -1,5 +1,6 @@
 import logging
 
+import msrewards.utility
 from msrewards import MicrosoftRewards
 from msrewards.mail import OutlookEmailConnection, RewardsStatusDict
 from msrewards.utility import get_config, get_safe_credentials, test_environment
@@ -36,6 +37,9 @@ def main(**kwargs):
     # get config filepath from arguments, or defaults to automsr.cfg
     config_fp = kwargs.get("config", "automsr.cfg")
     config = get_config(config_fp)
+
+    # change default config used in module with this one
+    msrewards.utility.config = config
 
     # get credentials filepath from config
     credentials_fp = kwargs.get("credentials", config["automsr"]["credentials"])
@@ -116,7 +120,11 @@ def main(**kwargs):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser()
+    description = (
+        "AutoMSR is intended to show how to collect "
+        "automatically daily points for Microsoft Rewards."
+    )
+    parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument(
         "-c",
