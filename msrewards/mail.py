@@ -34,11 +34,13 @@ class RewardsStatus:
         self._set_status_and_message(RewardsStatusEnum.SUCCESS, message)
 
     def set_failure(self, message: str = ""):
-        self._set_status_and_message(RewardsStatusEnum.SUCCESS, message)
+        self._set_status_and_message(RewardsStatusEnum.FAILURE, message)
 
     def to_plain(self):
-        msg = f" - {self.message}" if self.message else ""
-        return f"{self.email} - {self.status.value}{msg}"
+        msg = f"{self.email} - {self.status.value}"
+        if self.message:
+            msg += f" - {self.message}"
+        return msg
 
     def to_html(self):
         color = "red" if self.status is RewardsStatusEnum.FAILURE else "green"
