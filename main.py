@@ -97,7 +97,9 @@ def main(**kwargs):
 
         for j in range(retry):
             try:
-                MicrosoftRewards.do_every_activity(credentials=credentials)
+                success_message = MicrosoftRewards.do_every_activity(
+                    credentials=credentials
+                )
             except Exception as e:
                 logger.warning(f"An error occurred: {e}")
                 logger.debug(e, exc_info=True)
@@ -109,7 +111,7 @@ def main(**kwargs):
                     status_list.append(status)
             else:
                 logger.info(f"Completed execution for {email}")
-                status.set_success()
+                status.set_success(success_message)
                 status_list.append(status)
                 break
 

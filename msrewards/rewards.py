@@ -129,7 +129,7 @@ class MicrosoftRewards:
         self.driver.get(self.rewards_url)
 
     @classmethod
-    def do_every_activity(cls, credentials: dict, **kwargs):
+    def do_every_activity(cls, credentials: dict, **kwargs) -> str:
         # detect what to skip
         skip_activity = (
             config["automsr"]["skip_activity"] or credentials["skip_activity"]
@@ -138,8 +138,9 @@ class MicrosoftRewards:
 
         # if both skips are true, exit function
         if skip_activity and skip_search:
-            logger.info("Skipping everything...")
-            return
+            msg = "Skipped everything"
+            logger.info(msg)
+            return msg
 
         # else get a selenium driver
         driver = get_driver(**kwargs)
@@ -176,15 +177,30 @@ class MicrosoftRewards:
             # get points after execution
             end_points_ok, end_points = rewards.get_safe_points()
 
-            if start_points_ok and end_points_ok:
-                delta = end_points - start_points
-                logger.info(f"{delta} points accumulated")
-
-            if end_points_ok:
-                logger.info(f"{rewards.get_gift_card_amounts_str(end_points)}")
-
             # quit driver
             driver.quit()
+
+            # compute the message to send via mail
+            messages = []
+
+            # if both start and end are ok, compute delta
+            if start_points_ok and end_points_ok:
+                delta = end_points - start_points
+                msg = f"{delta} points accumulated."
+                logger.info(msg)
+                messages.append(msg)
+
+            # if end is ok, compute how many (and which) gift cards you can get
+            if end_points_ok:
+                msg = f"Got {end_points} points."
+                logger.info(msg)
+                messages.append(msg)
+
+                giftcards_str = rewards.get_gift_card_amounts_str(end_points)
+                logger.info(giftcards_str)
+                messages.append(giftcards_str)
+
+            return "\n".join(messages)
 
     @staticmethod
     def get_gift_card_amounts(points: int, gift_card_prices: dict = None):
