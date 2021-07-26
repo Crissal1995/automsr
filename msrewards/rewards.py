@@ -152,7 +152,7 @@ class MicrosoftRewards:
             rewards = cls(driver, credentials=credentials)
 
             # get points at the start of execution
-            start_points = rewards.get_points()
+            start_points_ok, start_points = rewards.get_safe_points()
 
             # get retries
             retries = config["automsr"]["retry"]
@@ -174,12 +174,14 @@ class MicrosoftRewards:
                 rewards.execute_all_searches(search_type=search_type, retries=retries)
 
             # get points after execution
-            end_points = rewards.get_points()
+            end_points_ok, end_points = rewards.get_safe_points()
 
-            delta = end_points - start_points
-            logger.info(f"{delta} points accumulated")
+            if start_points_ok and end_points_ok:
+                delta = end_points - start_points
+                logger.info(f"{delta} points accumulated")
 
-            logger.info(f"{rewards.get_gift_card_amounts_str(end_points)}")
+            if end_points_ok:
+                logger.info(f"{rewards.get_gift_card_amounts_str(end_points)}")
 
             # quit driver
             driver.quit()
@@ -381,6 +383,26 @@ class MicrosoftRewards:
 
         logger.info(f"User status balance: {points}")
         return points
+
+    def get_safe_points(self, method: str = "dom", retries: int = 3) -> (bool, int):
+        """Get Rewards points in a finite number of retries.
+        If no retry is good, then zero points will be returned.
+
+        The return type is a tuple holding (FLAG, VALUE), where
+        FLAG is true if points are got correctly, false otherwise;
+        VALUE is the number of points got, or zero."""
+
+        for retry in range(retries):
+            logger.debug(f"Starting get_safe_points, retry {retry + 1}/{retries}")
+            try:
+                points = self.get_points(method)
+            except Exception as e:
+                logger.debug(f"An exception occurred: {e}")
+            else:
+                return True, points
+
+        logger.warning("Cannot parse current user's points, defaulting to 0...")
+        return False, 0
 
     def check_missing_searches(self) -> dict:
         # go to rewards page
