@@ -2,7 +2,7 @@ import logging
 
 import msrewards.utility
 from msrewards import MicrosoftRewards
-from msrewards.mail import OutlookEmailConnection, RewardsStatusDict
+from msrewards.mail import OutlookEmailConnection, RewardsStatus
 from msrewards.utility import get_config, get_safe_credentials, test_environment
 
 
@@ -71,7 +71,7 @@ def main(**kwargs):
         )
 
     credentials_sender = None
-    status = RewardsStatusDict()
+    status_list: [RewardsStatus] = []
 
     # cycle over credentials, getting points from activities
     for i, credentials in enumerate(get_safe_credentials(credentials_fp)):
@@ -85,12 +85,14 @@ def main(**kwargs):
 
         email = credentials["email"]
         logger.info(f"Working on credentials [email={email}]")
+        status = RewardsStatus(email)
 
         if dry_run:
             logger.info(
                 f"Dry run set, so a success status will be recorded for {email}"
             )
-            status.add_success(email)
+            status.set_success("Dry run")
+            status_list.append(status)
             continue
 
         for j in range(retry):
@@ -103,10 +105,12 @@ def main(**kwargs):
                     logger.info("Retrying...")
                 else:
                     logger.warning("No more retries!")
-                    status.add_failure(email)
+                    status.set_failure(str(e))
+                    status_list.append(status)
             else:
                 logger.info(f"Completed execution for {email}")
-                status.add_success(email)
+                status.set_success()
+                status_list.append(status)
                 break
 
     # at the end of the cycle, we'll send the email with the report status
@@ -114,7 +118,7 @@ def main(**kwargs):
     # and if recipient is set
     if send_email and credentials_sender:
         with OutlookEmailConnection(credentials_sender) as conn:
-            conn.send_status_message(status.as_dict())
+            conn.send_status_message(status_list)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import logging
 import smtplib
 from email.message import EmailMessage
 from enum import Enum
-from typing import Dict
+from typing import List
 
 from msrewards.utility import config
 
@@ -14,27 +14,38 @@ class MissingRecipientEmailError(Exception):
     """Error raised when no destination email is found inside config"""
 
 
-class RewardsStatus(Enum):
+class RewardsStatusEnum(Enum):
     FAILURE = "FAILURE"
     SUCCESS = "SUCCESS"
 
 
-class RewardsStatusDict:
-    status_dict: Dict[str, RewardsStatus] = {}
+class RewardsStatus:
+    def __init__(self, email: str):
+        self.email = email
 
-    def add(self, email: str, status: RewardsStatus):
-        if email in self.status_dict:
-            raise ValueError(f"Status already found for {email}")
-        self.status_dict[email] = status
+    status: RewardsStatusEnum
+    message: str = ""
 
-    def add_failure(self, email: str):
-        self.add(email, RewardsStatus.FAILURE)
+    def _set_status_and_message(self, status: RewardsStatusEnum, message: str):
+        self.status = status
+        self.message = message
 
-    def add_success(self, email: str):
-        self.add(email, RewardsStatus.SUCCESS)
+    def set_success(self, message: str = ""):
+        self._set_status_and_message(RewardsStatusEnum.SUCCESS, message)
 
-    def as_dict(self):
-        return self.status_dict
+    def set_failure(self, message: str = ""):
+        self._set_status_and_message(RewardsStatusEnum.SUCCESS, message)
+
+    def to_plain(self):
+        msg = f" - {self.message}" if self.message else ""
+        return f"{self.email} - {self.status.value}{msg}"
+
+    def to_html(self):
+        color = "red" if self.status is RewardsStatusEnum.FAILURE else "green"
+        msg = f'<p><b>{self.email} - <font color="{color}">{self.status.value}</font></b></p>'
+        if self.message:
+            msg += f"<p><b>Message:</b> {self.message}</p>"
+        return msg
 
 
 class RewardsEmailMessage(EmailMessage):
@@ -154,23 +165,18 @@ class EmailConnection:
         self.smtp.send_message(msg)
         logger.debug("Sent email to specified recipient")
 
-    def send_status_message(self, status_dict: Dict[str, RewardsStatus]):
+    def send_status_message(self, status_list: List[RewardsStatus]):
         content_list = []
         content_html_list = []
 
-        for email, status in status_dict.items():
-            success = status is RewardsStatus.SUCCESS
-            color = "green" if success else "red"
-
-            content_list.append(f"{email} - {status.value}")
-            content_html_list.append(
-                f'<p><b>{email} - <font color="{color}">{status.value}</font></b></p>'
-            )
+        for status in status_list:
+            content_list.append(status.to_plain())
+            content_html_list.append(status.to_html())
 
         content_html_br = "<br>".join(content_html_list)
         content_html = f"<html><head></head><body>{content_html_br}</body></html>"
 
-        content = "\n".join(content_list)
+        content = "\n\n".join(content_list)
 
         msg = RewardsEmailMessage.get_status_message(
             self.from_email, self.to_email, content=content, content_html=content_html
