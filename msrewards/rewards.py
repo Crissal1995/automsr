@@ -235,15 +235,17 @@ class MicrosoftRewards:
             return "Cannot redeem any gift card"
 
         # if I'm here, at least one gift card can be redeemed
-        s = ["You can redeem "]
+        buffer = ["You can redeem "]
         for eur, amount in sorted(amounts.items(), reverse=True):
             if not amount:
                 continue
 
             plural = "" if amount == 1 else "s"
-            s += [f"{amount} {eur}€ gift card{plural}"]
+            buffer += [f"{amount} {eur}€ gift card{plural}"]
 
-        return s[0] + ", ".join(s[1:])
+        total_eur = sum(x * y for (x, y) in amounts.items())
+        message = buffer[0] + ", ".join(buffer[1:]) + f". Total amount: {total_eur}€"
+        return message
 
     def execute_all_searches(self, search_type: str, retries: int = 1):
         for i in range(retries):
