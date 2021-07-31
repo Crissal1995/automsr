@@ -101,12 +101,17 @@ def main(**kwargs):
                     credentials=credentials
                 )
             except Exception as e:
-                logger.warning(f"An error occurred: {e}")
+                msg = f"An error occurred: {e}"
+                if not verbose:
+                    msg += (
+                        "\nTo see its stack enable verbose logging or check debug log."
+                    )
+                logger.warning(msg)
                 logger.debug(e, exc_info=True)
                 if j < retry - 1:
-                    logger.info("Retrying...")
+                    logger.warning("Retrying...")
                 else:
-                    logger.warning("No more retries!")
+                    logger.error("No more retries!")
                     status.set_failure(str(e))
                     status_list.append(status)
             else:
