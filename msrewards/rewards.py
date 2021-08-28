@@ -349,7 +349,10 @@ class MicrosoftRewards:
 
         self.go_to(self.login_url)
         LoginPage(self.driver, self.login_url, self.credentials).complete()
-        logger.info("Logged in")
+        if LoginPage(self.driver, self.login_url, self.credentials).check_2fa():
+            raise Exception("2FA detected, cannot complete login")
+        else:
+            logger.info("Logged in")
 
         self.go_to(self.rewards_url)
         try:

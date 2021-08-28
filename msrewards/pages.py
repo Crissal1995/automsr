@@ -74,6 +74,10 @@ class LoginPage(Page):
         time.sleep(1.5)
         self.driver.find_element_by_css_selector(psw_selector).send_keys(Keys.ENTER)
 
+    def check_2fa(self):
+        time.sleep(2)
+        return self.driver.find_elements_by_css_selector(".row.tile").__len__() == 3
+
 
 class BingLoginPage(LoginPage):
     def __init__(self, driver, login_url: str, credentials: dict, is_mobile: bool):
