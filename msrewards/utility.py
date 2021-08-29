@@ -5,7 +5,7 @@ import logging
 import os
 import pathlib
 import sys
-from typing import Union
+from typing import Tuple, Union
 
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
@@ -32,7 +32,7 @@ possible_skips = (
 )
 
 
-def activity_skip(skip_str: str) -> (bool, bool):
+def activity_skip(skip_str: str) -> Tuple[bool, bool]:
     """Function utility to know which activity,
     listed as (daily_activities, daily_searches), is
     to be skipped.

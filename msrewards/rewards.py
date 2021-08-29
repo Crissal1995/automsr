@@ -4,6 +4,7 @@ import random
 import re
 import string
 import time
+from typing import Dict, Sequence, Tuple, Type
 
 from selenium.common import exceptions
 from selenium.webdriver.common.action_chains import ActionChains
@@ -285,7 +286,7 @@ class MicrosoftRewards:
                 limit += 5
                 self.execute_searches2(search_type=search_type, limit=limit)
 
-    def _execute_todo_runnables(self, runnable_type: type(Runnable), retries: int):
+    def _execute_todo_runnables(self, runnable_type: Type[Runnable], retries: int):
         self.go_to_home()
 
         missing = None
@@ -296,7 +297,7 @@ class MicrosoftRewards:
             execute = self.execute_activities
         elif runnable_type is Punchcard:
             retrieve = self.get_free_todo_punchcards
-            execute = self.execute_punchcards
+            execute = self.execute_punchcards  # type: ignore
         else:
             raise ValueError(
                 "Invalid classtype provided! Only Activity and Punchcard supported"
@@ -389,6 +390,8 @@ class MicrosoftRewards:
         if method == "dom":
             source: str = self.driver.page_source
             match = re.search(r'"availablePoints":(\d+)', source)
+            if not match:
+                raise RuntimeError("")
             points = int(match.group(1))
         elif method == "animation":
             # wait a little bit to animation to finish
@@ -405,7 +408,9 @@ class MicrosoftRewards:
         logger.info(f"User status balance: {points}")
         return points
 
-    def get_safe_points(self, method: str = "dom", retries: int = 3) -> (bool, int):
+    def get_safe_points(
+        self, method: str = "dom", retries: int = 3
+    ) -> Tuple[bool, int]:
         """Get Rewards points in a finite number of retries.
         If no retry is good, then zero points will be returned.
 
@@ -459,16 +464,16 @@ class MicrosoftRewards:
             ]
             points = [re.search(r"(\d+) / (\d+)", text) for text in texts]
             if all(points):
-                points = [points_re.groups() for points_re in points]
+                points = [points_re.groups() for points_re in points]  # type: ignore
                 points_found = True
             else:
                 time.sleep(1)
 
-        points_dict = dict(desktop=None, mobile=None)
+        points_dict: Dict[str, Dict[str, int]] = dict(desktop={}, mobile={})
 
         for points_group, key in zip(points, points_dict):
-            current_value = int(points_group[0])
-            max_value = int(points_group[1])
+            current_value = int(points_group[0])  # type: ignore
+            max_value = int(points_group[1])  # type: ignore
             missing_value = max_value - current_value
 
             points_dict[key] = {
@@ -665,7 +670,9 @@ class MicrosoftRewards:
 
         return window
 
-    def _execute(self, runnables: [Runnable], runnable_type: str):
+    def _execute(
+        self, runnables: Sequence[Runnable], runnable_type: str
+    ) -> Sequence[Runnable]:
         """
         :param runnables: The list of Runnable objects to execute (activities or punchcards)
         :param runnable_type: The type of the runnables to execute ("activity" or "punchcard")
@@ -741,7 +748,7 @@ class MicrosoftRewards:
 
         return runnables_todo_again
 
-    def execute_activities(self, activities: [Activity]):
+    def execute_activities(self, activities: Sequence[Activity]):
         return self._execute(activities, "activity")
 
     def get_todo_activities(self, reverse: bool = False):
@@ -798,13 +805,15 @@ class MicrosoftRewards:
         logger.debug(f"Found {len(punchcards)} free punchcards")
         return punchcards
 
-    def get_free_todo_punchcards(self):
+    def get_free_todo_punchcards(self, reverse: bool = False):
         punchcards = [
             punchcard
             for punchcard in self.get_free_punchcards()
             if punchcard.status == Status.TODO
         ]
         logger.debug(f"Found {len(punchcards)} free todo punchcards")
+        if reverse:
+            punchcards = punchcards[::-1]
         return punchcards
 
     def execute_todo_punchcards(self):
@@ -813,7 +822,7 @@ class MicrosoftRewards:
     def execute_punchcard(self, punchcard: Punchcard):
         return self.execute_punchcards([punchcard])
 
-    def execute_punchcards(self, punchcards: [Punchcard]):
+    def execute_punchcards(self, punchcards: Sequence[Punchcard]):
         return self._execute(punchcards, "punchcard")
 
     def get_punchcards(self):

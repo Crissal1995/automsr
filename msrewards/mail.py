@@ -129,8 +129,6 @@ class EmailConnection:
         ssl: bool = True,
         to_address: str = None,
     ):
-        kwargs = dict(host=host, port=port)
-
         self.from_email = credentials["email"]
         to_email = to_address or config["automsr"]["email"]
 
@@ -140,7 +138,7 @@ class EmailConnection:
             raise MissingRecipientEmailError()
 
         # create the smtp connection
-        self.smtp = smtplib.SMTP(**kwargs)
+        self.smtp = smtplib.SMTP(host=host, port=port)
 
         # send an ehlo message to the server
         self.smtp.ehlo()

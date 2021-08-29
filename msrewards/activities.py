@@ -6,7 +6,7 @@ import random
 import re
 import time
 from abc import ABC
-from typing import Dict, List, Sequence, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from selenium.common import exceptions
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -41,7 +41,7 @@ class Activity(Runnable, ABC):
     name = "activity"
     name_plural = "activities"
 
-    base_header = None
+    base_header: Optional[str] = None
 
     status_selector = "mee-rewards-points > div > div > span.mee-icon"
     header_selector = "div.contentContainer > h3"
@@ -104,7 +104,7 @@ class StandardActivity(Activity):
 class QuizActivity(Activity):
     base_header = "Quiz"
     start_selector = "#rqStartQuiz"
-    answers = []
+    answers: List[str] = []
     answers_4 = [f"rqAnswerOption{i}" for i in range(4)]
     answers_8 = [f"rqAnswerOption{i}" for i in range(8)]
     quiz_rounds = 3
@@ -261,13 +261,15 @@ class ThisOrThatCSV:
     def exists(self):
         return pathlib.Path(self.name).exists()
 
-    def override_answer(self, answer: Sequence[Union[int, ThisOrThatAnswer]]):
+    def override_answer(self, answer: Tuple[int, Union[int, ThisOrThatAnswer]]):
         """Ovveride an answer in its specified position"""
         index: int = answer[0]
         validity = answer[1]
         if isinstance(validity, int):
-            validity = ThisOrThatAnswer.from_value(validity)
-        self.answers[index] = validity
+            tot_answer = ThisOrThatAnswer.from_value(validity)
+        else:
+            tot_answer = validity
+        self.answers[index] = tot_answer
 
     def get_answer(self, round_index: int) -> ThisOrThatAnswer:
         """Get an answer from a round index value"""

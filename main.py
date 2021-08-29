@@ -55,7 +55,8 @@ def main(**kwargs):
     retry = 5
 
     # test if env is correctly set
-    test_environment(**kwargs)
+    if not dry_run:
+        test_environment(**kwargs)
 
     # if the email is not null or empty string, it will be used
     send_email = bool(config["automsr"]["email"])
@@ -126,6 +127,7 @@ def main(**kwargs):
     if send_email and credentials_sender:
         with OutlookEmailConnection(credentials_sender) as conn:
             conn.send_status_message(status_list)
+        logger.info("Email sent to receipt correctly")
 
 
 if __name__ == "__main__":
