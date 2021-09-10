@@ -156,6 +156,9 @@ class MicrosoftRewards:
             # get points at the start of execution
             start_points_ok, start_points = rewards.get_safe_points()
 
+            # compute the message to send via mail
+            messages = []
+
             # get retries
             retries = config["automsr"]["retry"]
 
@@ -164,8 +167,13 @@ class MicrosoftRewards:
                 logger.warning("Skipping activity...")
             else:
                 logger.warning("Starting activity...")
-                rewards._execute_todo_runnables(Activity, retries=retries)
+                any_activity_done = rewards._execute_todo_runnables(
+                    Activity, retries=retries
+                )
                 rewards._execute_todo_runnables(Punchcard, retries=retries)
+
+                if not any_activity_done:
+                    messages.append("No activity was executed.")
 
             # execute desktop searches
             if skip_search:
@@ -180,9 +188,6 @@ class MicrosoftRewards:
 
             # quit driver
             driver.quit()
-
-            # compute the message to send via mail
-            messages = []
 
             # if both start and end are ok, compute delta
             if start_points_ok and end_points_ok:
@@ -286,7 +291,11 @@ class MicrosoftRewards:
                 limit += 5
                 self.execute_searches2(search_type=search_type, limit=limit)
 
-    def _execute_todo_runnables(self, runnable_type: Type[Runnable], retries: int):
+    def _execute_todo_runnables(
+        self, runnable_type: Type[Runnable], retries: int
+    ) -> bool:
+        """Execute todo runnables, that can be activities or punchcards.
+        Returns true if at least one runnable is executed, false otherwise"""
         self.go_to_home()
 
         missing = None
@@ -321,6 +330,11 @@ class MicrosoftRewards:
             logger.info(f"All {runnable_type.name_plural} completed")
         else:  # no missing, found no to-do runnable
             logger.info(f"No todo {runnable_type.name_plural} found")
+
+        # if false, no missing activity was found
+        # else if true, all activities are completed
+        # otherwise (L324) a runtime error is raised
+        return any_todos
 
     @classmethod
     def daily_searches(cls, credentials: dict, **kwargs):
