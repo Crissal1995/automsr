@@ -713,7 +713,7 @@ class MicrosoftRewards:
             actions.move_to_element(runnable.element).perform()
 
             # start runnable
-            runnable.button.click()
+            runnable.start()
 
             # switch to page and let it load
             window = self.get_new_window(old_windows)

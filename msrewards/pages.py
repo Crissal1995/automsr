@@ -76,7 +76,8 @@ class LoginPage(Page):
 
     def check_2fa(self):
         time.sleep(2)
-        return self.driver.find_elements_by_css_selector(".row.tile").__len__() == 3
+        elements = self.driver.find_elements_by_css_selector(".row.tile")
+        return len(elements) == 3
 
 
 class BingLoginPage(LoginPage):

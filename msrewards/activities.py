@@ -17,10 +17,10 @@ from msrewards.utility import get_date_str
 logger = logging.getLogger(__name__)
 
 
-class Status(enum.IntEnum):
-    TODO = 0
-    DONE = 1
-    INVALID = 2
+class Status(enum.Enum):
+    TODO = "TODO"
+    DONE = "DONE"
+    INVALID = "INVALID"
 
 
 class Runnable(ABC):
@@ -29,8 +29,7 @@ class Runnable(ABC):
 
     element: WebElement
 
-    @property
-    def button(self):
+    def start(self):
         raise NotImplementedError
 
     def do_it(self):
@@ -57,21 +56,16 @@ class Activity(Runnable, ABC):
                 self.status_selector
             ).get_attribute("class")
             self.status = Activity.get_status(status_class)
+            logger.debug(f"Activity status correctly got is {self.status}")
         except exceptions.NoSuchElementException:
             self.status = Status.INVALID
+            logger.debug(f"Activity status after exception is {self.status}")
 
         self.header = element.find_element_by_css_selector(self.header_selector).text
         self.text = element.find_element_by_css_selector(self.text_selector).text
-        try:
-            self._button = element.find_elements_by_css_selector(self.button_selector)[
-                -1
-            ]
-        except IndexError:
-            self.status = Status.INVALID
 
-    @property
-    def button(self):
-        return self._button
+    def start(self):
+        self.element.click()
 
     def __repr__(self):
         return f"Activity(status={self.status}, header={self.header}, text={self.text})"
@@ -441,11 +435,9 @@ class Punchcard(Runnable, ABC):
                 status = Status.TODO
         logger.debug(f"Punchcard status is {status}")
         self.status = status
-        self._button = element.find_element_by_css_selector(self.start_selector)
 
-    @property
-    def button(self):
-        return self._button
+    def start(self):
+        self.element.find_element_by_css_selector(self.start_selector).click()
 
     def __repr__(self):
         return f"Punchcard(status={self.status}, text={self.text})"
