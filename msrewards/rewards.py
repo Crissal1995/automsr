@@ -33,6 +33,7 @@ from msrewards.pages import (
 )
 from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from msrewards.search_takeout_parser import SearchTakeoutParser
+from msrewards.state import State, StateManager
 from msrewards.utility import DriverCatcher, change_user_agent, config, get_driver
 
 logger = logging.getLogger(__name__)
@@ -205,6 +206,15 @@ class MicrosoftRewards:
                 giftcards_str = rewards.get_gift_card_amounts_str(end_points)
                 logger.info(giftcards_str)
                 messages.append(giftcards_str)
+
+                # if points are ok, then we can store them into db
+                with StateManager() as sm:
+                    state = State(
+                        email=credentials["email"],
+                        points=end_points,
+                        timestamp=int(time.time()),
+                    )
+                    sm.insert_state(state)
 
             return "\n".join(messages)
 
