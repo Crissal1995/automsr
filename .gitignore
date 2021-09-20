@@ -9,7 +9,7 @@ automsr.cfg
 *.log
 *.csv
 screenshots
-
+*.sqlite
 .DS_Store
 
 /chrome_driver_/
