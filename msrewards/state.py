@@ -26,22 +26,6 @@ class State:
     # https://www.sqlite.org/datatype3.html#date_and_time_datatype
     timestamp: int
 
-    @classmethod
-    def from_tuple(cls, thetuple: tuple) -> "State":
-        if len(thetuple) != 3:
-            raise ValueError("Invalid tuple provided")
-
-        email, points, ts = thetuple
-
-        if not isinstance(email, str):
-            raise TypeError(email)
-        if not isinstance(points, int):
-            raise TypeError(points)
-        if not isinstance(ts, int):
-            raise TypeError(ts)
-
-        return cls(email, points, ts)
-
 
 class StateManager:
     def __init__(self):
