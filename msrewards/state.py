@@ -58,8 +58,11 @@ class StateManager:
         return self.cursor.fetchall()
 
     def _quit(self):
-        self.cursor.close()
-        self.conn.close()
+        try:
+            self.cursor.close()
+            self.conn.close()
+        except sqlite3.ProgrammingError:
+            pass  # already closed
 
     def __enter__(self):
         return self
