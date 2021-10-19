@@ -554,7 +554,29 @@ class MicrosoftRewards:
         # and then send the query to the input field
         selector = "#sb_form_q"
 
-        input_field = self.driver.find_element_by_css_selector(selector)
+        # safe selection of input form
+        retries = 5
+        input_field_found = False
+        input_field = None
+        last_exception = None
+
+        while not input_field_found and retries > 0:
+            try:
+                input_field = self.driver.find_element_by_css_selector(selector)
+            except exceptions.WebDriverException as e:
+                retries -= 1  # decrease retries
+                last_exception = e  # save exception
+                time.sleep(1)  # then refresh the page
+                self.driver.refresh()
+            else:
+                input_field_found = True
+
+        if not input_field:
+            raise last_exception or RuntimeError(
+                f"Cannot find input field (selector={selector})"
+            )
+
+        # if I have the input field, then proceed
         input_field.send_keys(next(generator))
         input_field.send_keys(Keys.ENTER)
 
