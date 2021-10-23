@@ -24,6 +24,15 @@ from msrewards.activities import (
     Status,
     ThisOrThatActivity,
 )
+from msrewards.exception import (
+    AutomsrException,
+    CannotCompleteActivityException,
+    CannotRetrievePointsException,
+    Detected2FAError,
+    InvalidInputError,
+    LessThanSixDailyActivitiesFoundException,
+    NoDailyActivityFoundException,
+)
 from msrewards.pages import (
     BannerCookiePage,
     BingLoginPage,
@@ -320,8 +329,9 @@ class MicrosoftRewards:
             retrieve = self.get_free_todo_punchcards
             execute = self.execute_punchcards  # type: ignore
         else:
-            raise ValueError(
-                "Invalid classtype provided! Only Activity and Punchcard supported"
+            raise InvalidInputError(
+                f"Provided class: '{runnable_type}'. "
+                f"Only 'Activity' and 'Punchcard' classes are supported"
             )
 
         for _ in range(retries):
@@ -337,7 +347,7 @@ class MicrosoftRewards:
             count = len(missing)
             word = runnable_type.name if count == 1 else runnable_type.name_plural
             msg = f"Cannot complete {count} {word}: {missing}"
-            raise RuntimeError(msg)
+            raise CannotCompleteActivityException(msg)
         elif any_todos:  # no missing, found at least one to-do runnable
             logger.info(f"All {runnable_type.name_plural} completed")
         else:  # no missing, found no to-do runnable
@@ -375,9 +385,10 @@ class MicrosoftRewards:
             logger.debug("Cannot accept cookies")
 
         self.go_to(self.login_url)
-        LoginPage(self.driver, self.login_url, self.credentials).complete()
-        if LoginPage(self.driver, self.login_url, self.credentials).check_2fa():
-            raise Exception("2FA detected, cannot complete login")
+        page = LoginPage(self.driver, self.login_url, self.credentials)
+        page.complete()
+        if page.check_2fa():
+            raise Detected2FAError("2FA detected, cannot complete login")
         else:
             logger.info("Logged in")
 
@@ -417,7 +428,9 @@ class MicrosoftRewards:
             source: str = self.driver.page_source
             match = re.search(r'"availablePoints":(\d+)', source)
             if not match:
-                raise RuntimeError("")
+                raise CannotRetrievePointsException(
+                    "Cannot find 'availablePoints' in DOM!"
+                )
             points = int(match.group(1))
         elif method == "animation":
             # wait a little bit to animation to finish
@@ -429,7 +442,9 @@ class MicrosoftRewards:
             points_str = text.split()[0]
             points = int(points_str.replace(",", "").replace(".", ""))
         else:
-            raise ValueError(f"Invalid method provided: {method}")
+            raise InvalidInputError(
+                f"Provided: '{method}'. Available methods are 'dom' and 'animation'"
+            )
 
         logger.info(f"User status balance: {points}")
         return points
@@ -531,7 +546,6 @@ class MicrosoftRewards:
             search_generator = RandomSearchGenerator()
         else:
             error_msg = "Invalid search_type provided"
-            logger.error(error_msg)
             raise ValueError(error_msg)
 
         # go the bing page
@@ -574,7 +588,7 @@ class MicrosoftRewards:
                 input_field_found = True
 
         if not input_field:
-            raise last_exception or RuntimeError(
+            raise last_exception or AutomsrException(
                 f"Cannot find input field (selector={selector})"
             )
 
@@ -617,8 +631,10 @@ class MicrosoftRewards:
         elif search_type == "random":
             self.random_searcher(limit)
         else:
-            error_msg = "Invalid search_type provided"
-            logger.error(error_msg)
+            error_msg = (
+                f"Invalid search_type provided: '{search_type}'. "
+                "Available are 'takeout' or 'random'"
+            )
             raise ValueError(error_msg)
 
     def takeout_searcher(self, limit):
@@ -826,20 +842,21 @@ class MicrosoftRewards:
         return todos
 
     def get_activities(self):
-        try:
-            dailies = self.get_daily_activities()
-        except AssertionError:
-            logger.warning("Dailies activities not found! Will skip them...")
-            dailies = []
-        return dailies + self.get_other_activities()
+        return self.get_daily_activities() + self.get_other_activities()
 
     def get_daily_activities(self):
         dailies = self._get_activities("daily")
         dailies_len = len(dailies)
-        assert dailies_len > 0, "No daily found"
-        assert dailies_len == 6, "Dailies should be 6: 3 today and 3 tomorrow sets"
-        # take first three, the current daily
-        return dailies[:3]
+        if dailies_len <= 0:
+            raise NoDailyActivityFoundException("No daily activity found")
+        elif dailies_len != 6:
+            raise LessThanSixDailyActivitiesFoundException(
+                "Daily activities should be 6:"
+                " 3 for today's set and 3 for tomorrow's set"
+            )
+        else:
+            # take first three, the current daily
+            return dailies[:3]
 
     def get_other_activities(self):
         return self._get_activities("other")
@@ -903,8 +920,8 @@ class MicrosoftRewards:
         elif activity_type == "other":
             selector = self.other_card_selector
         else:
-            raise ValueError(
-                f"Invalid activity type {activity_type}. Valids are 'daily' and 'other'"
+            raise InvalidInputError(
+                f"Provided: '{activity_type}'. Valid types are 'daily' and 'other'"
             )
 
         activities_list = []
