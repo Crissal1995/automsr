@@ -1,15 +1,18 @@
 import sqlite3
 from dataclasses import astuple, dataclass
-from typing import List, Sequence
+from typing import List, Optional, Sequence
 
 DB_NAME = "automsr.sqlite"
 
 DB_TABLE = "states"
 DB_SQL_INIT = (
     f"create table if not exists {DB_TABLE} "
-    "(email text not null, points int not null, timestamp integer not null)"
+    "(email text not null, "
+    "points int not null, "
+    "timestamp integer not null, "
+    "points_delta int not null)"
 )
-DB_SQL_INSERT = f"insert into {DB_TABLE} values (?, ?, ?)"
+DB_SQL_INSERT = f"insert into {DB_TABLE} values (?, ?, ?, ?)"
 DB_SQL_QUERY_ALL = f"select * from {DB_TABLE}"
 DB_SQL_QUERY_EMAIL = f"select * from {DB_TABLE} t where t.email = ?"
 
@@ -25,6 +28,9 @@ class State:
     # time.time() casted to int
     # https://www.sqlite.org/datatype3.html#date_and_time_datatype
     timestamp: int
+
+    # points obtained in this run
+    points_delta: Optional[int]
 
 
 class StateManager:

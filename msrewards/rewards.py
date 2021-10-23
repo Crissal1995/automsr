@@ -191,6 +191,7 @@ class MicrosoftRewards:
             driver.quit()
 
             # if both start and end are ok, compute delta
+            delta = None
             if start_points_ok and end_points_ok:
                 delta = end_points - start_points
                 msg = f"{delta} points accumulated."
@@ -212,6 +213,7 @@ class MicrosoftRewards:
                     state = State(
                         email=credentials["email"],
                         points=end_points,
+                        points_delta=delta,
                         timestamp=int(time.time()),
                     )
                     sm.insert_state(state)

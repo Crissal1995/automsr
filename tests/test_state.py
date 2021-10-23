@@ -20,7 +20,7 @@ def test0():
 def test1():
     sm = StateManager()
 
-    state = State("foo@bar.com", 42, 999)
+    state = State("foo@bar.com", 42, 1, 999)
     sm.insert_state(state)
 
     states = sm.fetch_states()
@@ -32,7 +32,7 @@ def test2():
     sm = StateManager()
 
     email = "hello@world.it"
-    state = State(email, 42, 999)
+    state = State(email, 42, 22, 999)
     sm.insert_state(state)
 
     states = sm.fetch_states_filtered(email=email)
@@ -43,8 +43,8 @@ def test2():
 def test3():
     sm = StateManager()
 
-    state1 = State("foo", 42, 999)
-    state2 = State("bar", 42, 999)
+    state1 = State("foo", 42, 34, 999)
+    state2 = State("bar", 42, 0, 999)
     sm.insert_state(state1)
     sm.insert_state(state2)
 
