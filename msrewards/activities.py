@@ -47,7 +47,7 @@ class Activity(Runnable, ABC):
     text_selector = "div.contentContainer > p"
     button_selector = "div.actionLink > a > span"
 
-    def __init__(self, driver: WebDriver, element: WebElement):
+    def __init__(self, driver: WebDriver, element: WebElement, daily_set: bool = False):
         self.driver = driver
         self.element = element
 
@@ -60,6 +60,8 @@ class Activity(Runnable, ABC):
         except exceptions.NoSuchElementException:
             self.status = Status.INVALID
             logger.debug(f"Activity status after exception is {self.status}")
+
+        self.daily_set = daily_set
 
         self.header = element.find_element_by_css_selector(self.header_selector).text
         self.text = element.find_element_by_css_selector(self.text_selector).text

@@ -915,8 +915,10 @@ class MicrosoftRewards:
         return punchcards_list
 
     def _get_activities(self, activity_type):
+        daily_set = False
         if activity_type == "daily":
             selector = self.daily_card_selector
+            daily_set = True
         elif activity_type == "other":
             selector = self.other_card_selector
         else:
@@ -934,16 +936,24 @@ class MicrosoftRewards:
 
             # cast right type to elements
             if ThisOrThatActivity.base_header in header:
-                activity = ThisOrThatActivity(driver=self.driver, element=element)
+                activity = ThisOrThatActivity(
+                    driver=self.driver, element=element, daily_set=daily_set
+                )
                 logger.debug("This or That Activity found")
             elif PollActivity.base_header in header:
-                activity = PollActivity(driver=self.driver, element=element)
+                activity = PollActivity(
+                    driver=self.driver, element=element, daily_set=daily_set
+                )
                 logger.debug("Poll Activity found")
             elif QuizActivity.base_header in header:
-                activity = QuizActivity(driver=self.driver, element=element)
+                activity = QuizActivity(
+                    driver=self.driver, element=element, daily_set=daily_set
+                )
                 logger.debug("Quiz Activity found")
             else:
-                activity = StandardActivity(driver=self.driver, element=element)
+                activity = StandardActivity(
+                    driver=self.driver, element=element, daily_set=daily_set
+                )
                 logger.debug("Standard activity found")
             logger.debug(str(activity))
 
