@@ -42,7 +42,7 @@ from msrewards.pages import (
 )
 from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from msrewards.search_takeout_parser import SearchTakeoutParser
-from msrewards.state import State, StateManager
+from msrewards.state import ActivityState, PointsState, StateManager
 from msrewards.utility import DriverCatcher, change_user_agent, config, get_driver
 
 logger = logging.getLogger(__name__)
@@ -98,6 +98,9 @@ class MicrosoftRewards:
         self.cookies_json_fp = cookies_json_fp
         self.credentials = credentials
         self.is_mobile = is_mobile
+
+        self.state_manager = StateManager()
+
         logger.info("Login started")
         self.login()
         logger.info("Login finished")
@@ -218,14 +221,13 @@ class MicrosoftRewards:
                 messages.append(giftcards_str)
 
                 # if points are ok, then we can store them into db
-                with StateManager() as sm:
-                    state = State(
-                        email=credentials["email"],
-                        points=end_points,
-                        points_delta=delta,
-                        timestamp=int(time.time()),
-                    )
-                    sm.insert_state(state)
+                state = PointsState(
+                    email=credentials["email"],
+                    points=end_points,
+                    points_delta=delta,
+                    timestamp=int(time.time()),
+                )
+                rewards.state_manager.insert_state(state)
 
             return "\n".join(messages)
 
@@ -312,6 +314,39 @@ class MicrosoftRewards:
                 limit += 5
                 self.execute_searches2(search_type=search_type, limit=limit)
 
+    def _store_activity_states(
+        self, activities: Sequence[Activity], update_if_already_inserted=True
+    ):
+        email = self.credentials["email"]
+        timestamp = int(time.time())
+
+        for activity in activities:
+            state = ActivityState(
+                email=email,
+                timestamp=timestamp,
+                daily=activity.daily_set,
+                status=activity.status,
+                title=activity.header,
+                description=activity.text,
+            )
+
+            # if this state's hash key is already found in DB, don't store it
+            fetch_states = self.state_manager.fetch_states_filter_hash(
+                "activity", state.hash  # type: ignore
+            )
+            if fetch_states:
+                # if it's found and update should be made, do it
+                if update_if_already_inserted:
+                    self.state_manager.update_states_filter_hash(
+                        "activity", state.hash, state.status  # type: ignore
+                    )
+                # otherwise skip it
+                else:
+                    pass
+            # otherwise store it
+            else:
+                self.state_manager.insert_state(state)
+
     def _execute_todo_runnables(
         self, runnable_type: Type[Runnable], retries: int
     ) -> bool:
@@ -319,29 +354,37 @@ class MicrosoftRewards:
         Returns true if at least one runnable is executed, false otherwise"""
         self.go_to_home()
 
-        missing = None
+        missing = []
         any_todos = False
 
         if runnable_type is Activity:
-            retrieve = self.get_todo_activities
-            execute = self.execute_activities
+            for _ in range(retries):
+                activities = self.get_activities()
+                self._store_activity_states(activities)
+
+                missing = self.get_todo_activities()
+                if not missing:
+                    break
+                else:
+                    any_todos = True
+                    self.execute_activities(missing)
+                    self.go_to_home()
+
         elif runnable_type is Punchcard:
-            retrieve = self.get_free_todo_punchcards
-            execute = self.execute_punchcards  # type: ignore
+            for _ in range(retries):
+                missing = self.get_free_todo_punchcards()
+                if not missing:
+                    break
+                else:
+                    any_todos = True
+                    self.execute_punchcards(missing)
+                    self.go_to_home()
+
         else:
             raise InvalidInputError(
                 f"Provided class: '{runnable_type}'. "
                 f"Only 'Activity' and 'Punchcard' classes are supported"
             )
-
-        for _ in range(retries):
-            missing = retrieve()
-            if not missing:
-                break
-            else:
-                any_todos = True
-                execute(missing)
-                self.go_to_home()
 
         if missing:
             count = len(missing)
@@ -355,7 +398,7 @@ class MicrosoftRewards:
 
         # if false, no missing activity was found
         # else if true, all activities are completed
-        # otherwise (L324) a runtime error is raised
+        # otherwise a runtime error is raised
         return any_todos
 
     @classmethod
