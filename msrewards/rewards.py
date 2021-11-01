@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import random
@@ -180,13 +181,25 @@ class MicrosoftRewards:
                 logger.warning("Skipping activity...")
             else:
                 logger.warning("Starting activity...")
-                any_activity_done = rewards._execute_todo_runnables(
-                    Activity, retries=retries
-                )
+                rewards._execute_todo_runnables(Activity, retries=retries)
                 rewards._execute_todo_runnables(Punchcard, retries=retries)
 
-                if not any_activity_done:
-                    messages.append("No activity was executed.")
+                # check if all activities are executed
+                activities = rewards.state_manager.get_missing_activities(
+                    email=credentials["email"], date=datetime.date.today()
+                )
+                if activities:
+                    n = len(activities)
+                    msg = f"{n} activities were not executed!"
+                    msg2 = " --- ".join(str(activity) for activity in activities)
+
+                    logger.error(msg)
+                    logger.error(msg2)
+                else:
+                    msg = "All activities were executed!"
+                    logger.info(msg)
+
+                messages.append(msg)
 
             # execute desktop searches
             if skip_search:
