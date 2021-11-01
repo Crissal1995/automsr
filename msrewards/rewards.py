@@ -325,7 +325,7 @@ class MicrosoftRewards:
                 email=email,
                 timestamp=timestamp,
                 daily=activity.daily_set,
-                status=activity.status,
+                status=activity.status.value,
                 title=activity.header,
                 description=activity.text,
             )
