@@ -2,6 +2,7 @@ import datetime
 import enum
 import hashlib
 import sqlite3
+import time
 from abc import ABC
 from dataclasses import astuple, dataclass
 from typing import Any, List, Optional, Sequence
@@ -120,6 +121,12 @@ class ActivityState(State):
     DB_SQL_QUERY_HASH = f"select * from {DB_TABLE} t where t.hash = ?"
     DB_SQL_UPDATE_HASH = f"update {DB_TABLE} set status = ? where hash = ?"
 
+    DB_SQL_SELECT_TODO_ACTIVITIES = (
+        f"select * from {DB_TABLE} t "
+        f"where t.email = ? and t.status = 'TODO' "
+        f"and t.timestamp between ? and ?;"
+    )
+
 
 @dataclass
 class StateFilter:
@@ -199,6 +206,19 @@ class StateManager:
         kind_cls = self._get_kind_state(kind)
         self.cursor.execute(kind_cls.DB_SQL_QUERY_ALL)
         return [kind_cls(*t) for t in self.cursor.fetchall()]
+
+    def get_missing_activities(
+        self, email: str, date: datetime.date
+    ) -> List[ActivityState]:
+        min_timestamp = time.mktime(date.timetuple())
+        max_timestamp = time.mktime((date + datetime.timedelta(days=1)).timetuple())
+
+        sfilter = StateFilter(
+            ActivityState.DB_SQL_SELECT_TODO_ACTIVITIES,
+            [email, min_timestamp, max_timestamp],
+        )
+        sfilter.execute(self.cursor)
+        return [ActivityState(*t) for t in self.cursor.fetchall()]
 
     def _raw_query(self, query: str) -> Any:
         self.cursor.execute(query)

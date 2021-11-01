@@ -1,3 +1,4 @@
+import datetime
 import random
 import sqlite3
 import time
@@ -156,3 +157,33 @@ def test9():
     assert len(s) == 1
     s = s[0]
     assert s == a
+
+
+def test10():
+    sm = StateManager()
+
+    timestamp = int(time.time())
+    thedate = datetime.date.fromtimestamp(timestamp)
+
+    names = ["foo", "bar", "baz", "pippo"]
+    emails = [f"{x}@example.org" for x in names]
+    states = [ActivityState(email, timestamp, True, "TODO") for email in emails]
+    sm.insert_states(states)
+
+    for email, state in zip(emails, states):
+        activities = sm.get_missing_activities(email, thedate)
+        assert len(activities) == 1
+        activity = activities.pop()
+        assert activity == state
+
+    NEW_VALUE = "DONE"
+    state = states[0]
+    state.status = NEW_VALUE
+    sm.update_states_filter_hash("activity", state.hash, NEW_VALUE)
+
+    fetch_states = sm.get_missing_activities(state.email, thedate)
+    assert len(fetch_states) == 0
+
+    fetch_states = sm.fetch_states_filter_hash("activity", state.hash)
+    assert len(fetch_states) == 1
+    assert fetch_states[0] == state
