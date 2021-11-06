@@ -259,11 +259,8 @@ class StateManager:
 
     def get_delta_points(self, email: str, date: datetime.date) -> int:
         """Get all obtained points (delta) for a given email and date"""
-        return sum(
-            p.points_delta
-            for p in self.get_point_states(email, date)
-            if p.points_delta is not None
-        )
+        points = [p.points for p in self.get_point_states(email, date)]
+        return max(points) - min(points)
 
     def get_final_points(self, email: str, date: datetime.date) -> int:
         """Get final points obtained for a given email and date"""

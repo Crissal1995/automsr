@@ -247,16 +247,14 @@ def test14():
     today = datetime.date.fromtimestamp(timestamp)
 
     email = "foo@bar.com"
-    points = 42
+    points_list = list(range(100, 300, 10))
+    org_delta = points_list[-1] - points_list[0]
 
-    deltas = list(range(10))
-    sum_deltas = sum(deltas)
-
-    for delta in deltas:
-        sm.insert_points(email, points, timestamp, delta)
+    for points in points_list:
+        sm.insert_points(email, points, timestamp)
     delta = sm.get_delta_points(email, today)
 
-    assert sum_deltas == delta
+    assert org_delta == delta
 
 
 def test15():
