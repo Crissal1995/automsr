@@ -43,7 +43,7 @@ from msrewards.pages import (
 )
 from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from msrewards.search_takeout_parser import SearchTakeoutParser
-from msrewards.state import ActivityState, PointsState, StateManager
+from msrewards.state import ActivityState, StateManager
 from msrewards.utility import DriverCatcher, change_user_agent, config, get_driver
 
 logger = logging.getLogger(__name__)
@@ -151,6 +151,8 @@ class MicrosoftRewards:
         )
         skip_search = config["automsr"]["skip_search"] or credentials["skip_search"]
 
+        email = credentials["email"]
+
         # if both skips are true, exit function
         if skip_activity and skip_search:
             msg = "Skipped everything"
@@ -170,6 +172,11 @@ class MicrosoftRewards:
             # get points at the start of execution
             start_points_ok, start_points = rewards.get_safe_points()
 
+            if start_points_ok:
+                rewards.state_manager.insert_points(
+                    email=email, points=start_points, timestamp=int(time.time())
+                )
+
             # compute the message to send via mail
             messages = []
 
@@ -186,12 +193,12 @@ class MicrosoftRewards:
 
                 # check if all activities are executed
                 activities = rewards.state_manager.get_missing_activities(
-                    email=credentials["email"], date=datetime.date.today()
+                    email=email, date=datetime.date.today()
                 )
                 if activities:
                     n = len(activities)
                     msg = f"{n} activities were not executed!"
-                    msg2 = " --- ".join(str(activity) for activity in activities)
+                    msg2 = ", ".join(str(activity) for activity in activities)
 
                     logger.error(msg)
                     logger.error(msg2)
@@ -219,28 +226,35 @@ class MicrosoftRewards:
             delta = None
             if start_points_ok and end_points_ok:
                 delta = end_points - start_points
-                msg = f"{delta} points accumulated."
-                logger.info(msg)
-                messages.append(msg)
 
-            # if end is ok, compute how many (and which) gift cards you can get
+            # if end points are ok, store them
             if end_points_ok:
-                msg = f"Got {end_points} points."
-                logger.info(msg)
-                messages.append(msg)
-
-                giftcards_str = rewards.get_gift_card_amounts_str(end_points)
-                logger.info(giftcards_str)
-                messages.append(giftcards_str)
-
-                # if points are ok, then we can store them into db
-                state = PointsState(
-                    email=credentials["email"],
+                rewards.state_manager.insert_points(
+                    email=email,
                     points=end_points,
-                    points_delta=delta,
                     timestamp=int(time.time()),
+                    delta_points=delta,
                 )
-                rewards.state_manager.insert_state(state)
+
+            # get true delta
+            delta = rewards.state_manager.get_delta_points(email, datetime.date.today())
+
+            msg = f"{delta} points accumulated."
+            logger.info(msg)
+            messages.append(msg)
+
+            # get true final points, and compute how many (and which) gift cards you can get
+            max_points = rewards.state_manager.get_final_points(
+                email, datetime.date.today()
+            )
+
+            msg = f"Got {max_points} points."
+            logger.info(msg)
+            messages.append(msg)
+
+            giftcards_str = rewards.get_gift_card_amounts_str(max_points)
+            logger.info(giftcards_str)
+            messages.append(giftcards_str)
 
             return "\n".join(messages)
 
