@@ -187,3 +187,89 @@ def test10():
     fetch_states = sm.fetch_states_filter_hash("activity", state.hash)
     assert len(fetch_states) == 1
     assert fetch_states[0] == state
+
+
+def test11():
+    sm = StateManager()
+
+    timestamp = int(time.time())
+    today = datetime.date.fromtimestamp(timestamp)
+
+    email = "foo@bar.com"
+    points = 42
+
+    state = PointsState(email, points, timestamp)
+
+    sm.insert_points(email, points, timestamp)
+    s = sm.get_point_states(email, today)
+
+    assert len(s) == 1
+    assert s[0] == state
+
+
+def test12():
+    sm = StateManager()
+
+    timestamp = int(time.time())
+    today = datetime.date.fromtimestamp(timestamp)
+
+    email = "foo@bar.com"
+    points = 42
+    delta = 111
+
+    state = PointsState(email, points, timestamp, delta)
+
+    sm.insert_points(email, points, timestamp, delta)
+    s = sm.get_point_states(email, today)
+
+    assert len(s) == 1
+    assert s[0] == state
+
+
+def test13():
+    sm = StateManager()
+
+    timestamp = int(time.time())
+    today = datetime.date.fromtimestamp(timestamp)
+
+    email = "foo@bar.com"
+    points = 42
+
+    sm.insert_points(email, points, timestamp)
+    delta = sm.get_delta_points(email, today)
+    assert delta == 0
+
+
+def test14():
+    sm = StateManager()
+
+    timestamp = int(time.time())
+    today = datetime.date.fromtimestamp(timestamp)
+
+    email = "foo@bar.com"
+    points = 42
+
+    deltas = list(range(10))
+    sum_deltas = sum(deltas)
+
+    for delta in deltas:
+        sm.insert_points(email, points, timestamp, delta)
+    delta = sm.get_delta_points(email, today)
+
+    assert sum_deltas == delta
+
+
+def test15():
+    sm = StateManager()
+
+    timestamp = int(time.time())
+    today = datetime.date.fromtimestamp(timestamp)
+
+    email = "foo@bar.com"
+    points = list(range(100, 300, 10))
+
+    for point in points:
+        sm.insert_points(email, point, timestamp)
+    final_points = sm.get_final_points(email, today)
+
+    assert max(points) == final_points

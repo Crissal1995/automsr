@@ -5,7 +5,7 @@ import sqlite3
 import time
 from abc import ABC
 from dataclasses import astuple, dataclass
-from typing import Any, List, Optional, Sequence
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 DB_NAME = "automsr.sqlite"
 
@@ -54,6 +54,10 @@ class PointsState(State):
     DB_SQL_INSERT = f"insert into {DB_TABLE} values (?, ?, ?, ?)"
     DB_SQL_QUERY_ALL = f"select * from {DB_TABLE}"
     DB_SQL_QUERY_EMAIL = f"select * from {DB_TABLE} t where t.email = ?"
+    DB_SQL_QUERY_EMAIL_TIMESTAMP = (
+        f"select * from {DB_TABLE} t where t.email = ? "
+        f"and t.timestamp between ? and ?;"
+    )
 
 
 @dataclass
@@ -207,11 +211,26 @@ class StateManager:
         self.cursor.execute(kind_cls.DB_SQL_QUERY_ALL)
         return [kind_cls(*t) for t in self.cursor.fetchall()]
 
+    @staticmethod
+    def _get_timestamp_boundaries(
+        date_or_timestamp: Union[int, float, datetime.date]
+    ) -> Tuple[float, float]:
+        """Get day boundaries (as timestamps) for a given timestamp."""
+        if isinstance(date_or_timestamp, (int, float)):
+            date = datetime.date.fromtimestamp(date_or_timestamp)
+        elif isinstance(date_or_timestamp, datetime.date):
+            date = date_or_timestamp
+        else:
+            raise ValueError(f"Invalid value provided: {date_or_timestamp}")
+
+        min_timestamp = time.mktime(date.timetuple())
+        max_timestamp = time.mktime((date + datetime.timedelta(days=1)).timetuple())
+        return min_timestamp, max_timestamp
+
     def get_missing_activities(
         self, email: str, date: datetime.date
     ) -> List[ActivityState]:
-        min_timestamp = time.mktime(date.timetuple())
-        max_timestamp = time.mktime((date + datetime.timedelta(days=1)).timetuple())
+        min_timestamp, max_timestamp = self._get_timestamp_boundaries(date)
 
         sfilter = StateFilter(
             ActivityState.DB_SQL_SELECT_TODO_ACTIVITIES,
@@ -219,6 +238,36 @@ class StateManager:
         )
         sfilter.execute(self.cursor)
         return [ActivityState(*t) for t in self.cursor.fetchall()]
+
+    def insert_points(
+        self, email: str, points: int, timestamp: int, delta_points: int = None
+    ):
+        sfilter = StateFilter(
+            PointsState.DB_SQL_INSERT, [email, points, timestamp, delta_points]
+        )
+        sfilter.execute(self.cursor)
+
+    def get_point_states(self, email: str, date: datetime.date) -> List[PointsState]:
+        """Get all points state for a given email and date"""
+        mint, maxt = self._get_timestamp_boundaries(date)
+
+        query = PointsState.DB_SQL_QUERY_EMAIL_TIMESTAMP
+        sfilter = StateFilter(query, [email, mint, maxt])
+        sfilter.execute(self.cursor)
+
+        return [PointsState(*t) for t in self.cursor.fetchall()]
+
+    def get_delta_points(self, email: str, date: datetime.date) -> int:
+        """Get all obtained points (delta) for a given email and date"""
+        return sum(
+            p.points_delta
+            for p in self.get_point_states(email, date)
+            if p.points_delta is not None
+        )
+
+    def get_final_points(self, email: str, date: datetime.date) -> int:
+        """Get final points obtained for a given email and date"""
+        return max(p.points for p in self.get_point_states(email, date))
 
     def _raw_query(self, query: str) -> Any:
         self.cursor.execute(query)
