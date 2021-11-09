@@ -227,7 +227,9 @@ def change_user_agent(driver, new_user_agent: str):
 
 def test_environment(**kwargs):
     """Determine if current environment is correctly set"""
-    get_driver(**kwargs).quit()
+    driver = get_driver(**kwargs)
+    driver.get("https://example.org/")
+    driver.quit()
     logger.info("Selenium driver found!")
 
 
