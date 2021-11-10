@@ -257,7 +257,7 @@ class StateManager:
             cursor.execute(query)
             return cursor.fetchall()
 
-    def _quit(self):
+    def close(self):
         try:
             self.conn.close()
         except sqlite3.ProgrammingError:
@@ -267,7 +267,7 @@ class StateManager:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._quit()
+        self.close()
 
     def __del__(self):
-        self._quit()
+        self.close()

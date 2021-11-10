@@ -106,12 +106,21 @@ class MicrosoftRewards:
         self.login()
         logger.info("Login finished")
 
-    def __del__(self):
+    def close(self):
         try:
             self.driver.quit()
         except (exceptions.WebDriverException, Exception):
-            logger.warning("Driver was already quitted")
-        logger.info("Chromedriver quitted")
+            logger.warning("Chromedriver was already quitted")
+        finally:
+            logger.info("Chromedriver quitted")
+
+        try:
+            self.state_manager.close()
+        finally:
+            logger.info("State Manager closed")
+
+    def __del__(self):
+        self.close()
 
     def go_to(self, url):
         self.driver.get(url)
@@ -219,9 +228,6 @@ class MicrosoftRewards:
             # get points after execution
             end_points_ok, end_points = rewards.get_safe_points()
 
-            # quit driver
-            driver.quit()
-
             # if both start and end are ok, compute delta
             delta = None
             if start_points_ok and end_points_ok:
@@ -247,6 +253,9 @@ class MicrosoftRewards:
             max_points = rewards.state_manager.get_final_points(
                 email, datetime.date.today()
             )
+
+            # closes rewards and resources
+            rewards.close()
 
             msg = f"Got {max_points} points."
             logger.info(msg)
@@ -377,7 +386,7 @@ class MicrosoftRewards:
     def _execute_todo_runnables(
         self, runnable_type: Type[Runnable], retries: int
     ) -> bool:
-        """Execute todo runnables, that can be activities or punchcards.
+        """Execute to-do runnables, that can be activities or punchcards.
         Returns true if at least one runnable is executed, false otherwise"""
         self.go_to_home()
 
