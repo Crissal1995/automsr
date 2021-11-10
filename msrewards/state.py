@@ -4,6 +4,7 @@ import hashlib
 import sqlite3
 import time
 from abc import ABC
+from contextlib import closing
 from dataclasses import astuple, dataclass
 from typing import Any, List, Optional, Sequence, Tuple, Union
 
@@ -131,14 +132,13 @@ class StateManager:
 
     def __init__(self):
         self.conn = sqlite3.connect(DB_NAME)
-        self.cursor = self.conn.cursor()
-
         for stateclass in self.state_classes:
-            self.cursor.execute(stateclass.DB_SQL_INIT)
-            self.conn.commit()
+            self.conn.execute(stateclass.DB_SQL_INIT)
+        self.conn.commit()
 
     def insert_state(self, state: State, commit: bool = True):
-        self.cursor.execute(state.DB_SQL_INSERT, astuple(state))
+        with closing(self.conn.cursor()) as cursor:
+            cursor.execute(state.DB_SQL_INSERT, astuple(state))
         if commit:
             self.conn.commit()
 
@@ -154,7 +154,8 @@ class StateManager:
         kind_cls = self._get_kind_state(kind)
         query = kind_cls.DB_SQL_UPDATE_HASH
         values = [new_value, hashstr]
-        self.cursor.execute(query, values)
+        with closing(self.conn.cursor()) as cursor:
+            cursor.execute(query, values)
         if commit:
             self.conn.commit()
 
@@ -169,8 +170,9 @@ class StateManager:
 
     def fetch_states_filter(self, kind: str, sfilter: StateFilter) -> List[State]:
         kind_cls = self._get_kind_state(kind)
-        sfilter.execute(cursor=self.cursor)
-        return [kind_cls(*t) for t in self.cursor.fetchall()]
+        with closing(self.conn.cursor()) as cursor:
+            sfilter.execute(cursor=cursor)
+            return [kind_cls(*t) for t in cursor.fetchall()]
 
     def fetch_states_filter_email(self, kind: str, email: str) -> List[State]:
         kind_cls = self._get_kind_state(kind)
@@ -188,8 +190,9 @@ class StateManager:
 
     def fetch_states(self, kind: str) -> List[State]:
         kind_cls = self._get_kind_state(kind)
-        self.cursor.execute(kind_cls.DB_SQL_QUERY_ALL)
-        return [kind_cls(*t) for t in self.cursor.fetchall()]
+        with closing(self.conn.cursor()) as cursor:
+            cursor.execute(kind_cls.DB_SQL_QUERY_ALL)
+            return [kind_cls(*t) for t in cursor.fetchall()]
 
     @staticmethod
     def _get_timestamp_boundaries(
@@ -216,8 +219,9 @@ class StateManager:
             ActivityState.DB_SQL_SELECT_TODO_ACTIVITIES,
             [email, min_timestamp, max_timestamp],
         )
-        sfilter.execute(self.cursor)
-        return [ActivityState(*t) for t in self.cursor.fetchall()]
+        with closing(self.conn.cursor()) as cursor:
+            sfilter.execute(cursor)
+            return [ActivityState(*t) for t in cursor.fetchall()]
 
     def insert_points(
         self, email: str, points: int, timestamp: int, delta_points: int = None
@@ -225,7 +229,8 @@ class StateManager:
         sfilter = StateFilter(
             PointsState.DB_SQL_INSERT, [email, points, timestamp, delta_points]
         )
-        sfilter.execute(self.cursor)
+        with closing(self.conn.cursor()) as cursor:
+            sfilter.execute(cursor)
 
     def get_point_states(self, email: str, date: datetime.date) -> List[PointsState]:
         """Get all points state for a given email and date"""
@@ -233,9 +238,10 @@ class StateManager:
 
         query = PointsState.DB_SQL_QUERY_EMAIL_TIMESTAMP
         sfilter = StateFilter(query, [email, mint, maxt])
-        sfilter.execute(self.cursor)
 
-        return [PointsState(*t) for t in self.cursor.fetchall()]
+        with closing(self.conn.cursor()) as cursor:
+            sfilter.execute(cursor)
+            return [PointsState(*t) for t in cursor.fetchall()]
 
     def get_delta_points(self, email: str, date: datetime.date) -> int:
         """Get all obtained points (delta) for a given email and date"""
@@ -247,15 +253,15 @@ class StateManager:
         return max(p.points for p in self.get_point_states(email, date))
 
     def _raw_query(self, query: str) -> Any:
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
+        with closing(self.conn.cursor()) as cursor:
+            cursor.execute(query)
+            return cursor.fetchall()
 
     def _quit(self):
         try:
-            self.cursor.close()
             self.conn.close()
         except sqlite3.ProgrammingError:
-            pass  # already closed
+            pass  # connection already closed
 
     def __enter__(self):
         return self
