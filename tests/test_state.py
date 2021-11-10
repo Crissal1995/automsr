@@ -6,7 +6,7 @@ import time
 import pytest
 
 import msrewards.state
-from msrewards.state import ActivityState, ExecutionState, PointsState, StateManager
+from msrewards.state import ActivityState, PointsState, StateManager
 
 # mock DB_NAME to create an in-memory database
 msrewards.state.DB_NAME = ":memory:"
@@ -57,20 +57,6 @@ def test3():
     states = sm.fetch_states_filter_email(kind="points", email="foo")
     assert len(states) == 1
     assert states[0] == state1
-
-
-def test4():
-    sm = StateManager()
-
-    email = "mickeymouse@disney.com"
-    timestamp = int(time.time())
-    s1 = ExecutionState(email, timestamp, 10)
-    sm.insert_state(s1)
-
-    states = sm.fetch_states("execution")
-    assert len(states) == 1
-    assert isinstance(states[0], ExecutionState)
-    assert states[0] == s1
 
 
 def test5():

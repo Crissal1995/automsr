@@ -60,25 +60,6 @@ class PointsState(State):
     )
 
 
-@dataclass
-class ExecutionState(State):
-    email: str
-    timestamp: int
-    activities_count: int
-
-    # override attributes
-    DB_TABLE = "execution"
-    DB_SQL_INIT = (
-        f"create table if not exists {DB_TABLE} "
-        "(email text not null, "
-        "timestamp integer not null, "
-        "activities_count int not null)"
-    )
-    DB_SQL_INSERT = f"insert into {DB_TABLE} values (?, ?, ?)"
-    DB_SQL_QUERY_ALL = f"select * from {DB_TABLE}"
-    DB_SQL_QUERY_EMAIL = f"select * from {DB_TABLE} t where t.email = ?"
-
-
 class ActivityStatusEnum(enum.Enum):
     TODO = "TODO"
     DONE = "DONE"
@@ -144,7 +125,6 @@ class StateFilter:
 class StateManager:
     state_classes_map = {
         "points": PointsState,
-        "execution": ExecutionState,
         "activity": ActivityState,
     }
     state_classes = tuple(state_classes_map.values())
