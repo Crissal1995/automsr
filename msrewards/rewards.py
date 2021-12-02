@@ -69,9 +69,7 @@ class MicrosoftRewards:
         "div > card-content > mee-rewards-more-activities-card-item > div"
     )
 
-    punchcard_selector = (
-        "#punch-cards > mee-carousel > div > div:nth-child(4) > ul > li > mee-hero-item"
-    )
+    punchcard_selector = "#punch-cards > mee-carousel > div > div:nth-child(4) > ul > li > a > mee-hero-item"
 
     edge_win_ua = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -973,10 +971,12 @@ class MicrosoftRewards:
         paid_keywords = PaidPunchcard.keywords
 
         punchcards_list = []
-
-        for element in self.driver.find_elements_by_css_selector(
+        punchcards_elements_list = self.driver.find_elements_by_css_selector(
             self.punchcard_selector
-        ):
+        )
+        logger.debug(f"Found {len(punchcards_elements_list)} punchcards")
+
+        for element in punchcards_elements_list:
             # get element text from aria-label attribute
             text = element.get_attribute("aria-label").lower()
 

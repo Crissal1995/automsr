@@ -420,7 +420,8 @@ class Punchcard(Runnable, ABC):
     def __init__(self, driver: WebDriver, element: WebElement):
         self.driver = driver
         self.element = element
-        self.text = element.get_attribute("aria-label")
+        self.title = element.find_element_by_css_selector("h1").text
+        self.text = element.find_element_by_css_selector("p").text
         checkmarks = element.find_elements_by_css_selector("span.mee-icon")
         if not checkmarks:
             logger.warning(
@@ -439,31 +440,10 @@ class Punchcard(Runnable, ABC):
         self.status = status
 
     def start(self):
-        self.element.find_element_by_css_selector(self.start_selector).click()
+        self.element.click()
 
     def __repr__(self):
-        return f"Punchcard(status={self.status}, text={self.text})"
-
-
-class PaidPunchcard(Punchcard, ABC):
-    keywords = (
-        "compra",
-        "comprare",
-        "noleggia",
-        "noleggiare",
-        "acquista",
-        "acquistare",
-        "spendi",
-        "spendere",
-    )
-
-    def __repr__(self):
-        return f"Paid{super().__repr__()}"
-
-
-class FreePunchcard(Punchcard):
-    def __repr__(self):
-        return f"Free{super().__repr__()}"
+        return f"{self.__class__.__name__}(status={self.status}, title={self.title}, text={self.text})"
 
     @staticmethod
     def is_complete(punchcard_element: WebElement):
@@ -487,3 +467,20 @@ class FreePunchcard(Punchcard):
             logger.debug(f"Punchcard action no. {i + 1} completed")
             time.sleep(2)
             self.driver.switch_to.window(home_win)
+
+
+class PaidPunchcard(Punchcard, ABC):
+    keywords = (
+        "compra",
+        "comprare",
+        "noleggia",
+        "noleggiare",
+        "acquista",
+        "acquistare",
+        "spendi",
+        "spendere",
+    )
+
+
+class FreePunchcard(Punchcard):
+    pass
