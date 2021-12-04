@@ -129,9 +129,9 @@ class MicrosoftRewards:
         try:
             sign_in_selector = "a#raf-signin-link-id"
             self.driver.find_element_by_css_selector(sign_in_selector).click()
-            logger.info("second MSR home step found")
+            logger.debug("Second MSR home step found")
         except exceptions.NoSuchElementException:
-            logger.info("No second MSR home step found")
+            logger.debug("No second MSR home step found")
         self.home = self.driver.current_window_handle
 
     def go_to_home_tab(self):
