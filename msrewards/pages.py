@@ -85,8 +85,17 @@ class BingLoginPage(LoginPage):
         super().__init__(driver, login_url, credentials)
         self.is_mobile = is_mobile
 
+    @staticmethod
+    def nologin_exit():
+        logger.info("No additional login was required")
+
     def complete(self):
         if not self.is_mobile:
+            try:
+                self.driver.find_element_by_id("id_l")
+                return self.nologin_exit()
+            except exceptions.NoSuchElementException:
+                pass
             self.driver.find_element_by_css_selector("#id_a").click()
         else:
             hamburger = "#mHamburger"
@@ -97,4 +106,4 @@ class BingLoginPage(LoginPage):
             super().complete()
             logger.warning("Bing login required another login")
         except exceptions.WebDriverException:
-            logger.info("No additional login was required")
+            return self.nologin_exit()
