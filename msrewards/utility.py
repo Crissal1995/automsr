@@ -87,6 +87,16 @@ def get_options(**kwargs):
     options.add_argument("allow-running-insecure-content")
     options.add_argument("disable-dev-shm-usage")
 
+    # https://stackoverflow.com/questions/48450594/selenium-timed-out-receiving-message-from-renderer
+    options.add_argument("start-maximized")
+    options.add_argument("start-maximized")
+    options.add_argument("enable-automation")
+    # options.add_argument("no-sandbox")
+    options.add_argument("disable-infobars")
+    # options.add_argument("disable-dev-shm-usage")
+    options.add_argument("disable-browser-side-navigation")
+    options.add_argument("disable-gpu")
+
     ua = kwargs.get("user_agent")
     if ua:
         options.add_argument(f"user-agent={ua}")
