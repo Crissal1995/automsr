@@ -883,7 +883,7 @@ class MicrosoftRewards:
             try:
                 runnable.do_it()
                 logger.info(f"{singular.title()} completed")
-            except (exceptions.WebDriverException, Exception) as e:
+            except exceptions.WebDriverException as e:
                 logger.error(f"{singular.title()} not completed - {e}")
                 runnables_todo_again.append(runnable)
 
