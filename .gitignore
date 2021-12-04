@@ -1,6 +1,8 @@
 .idea
 venv*
 .venv*
+.tox
+*.egg-info
 .env
 *driver.exe
 __pycache__
