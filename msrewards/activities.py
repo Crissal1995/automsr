@@ -107,7 +107,13 @@ class QuizActivity(Activity):
     answers_8 = [f"rqAnswerOption{i}" for i in range(8)]
     quiz_rounds = 3
 
-    def __init__(self, driver: WebDriver, element: WebElement, daily_set: bool = False, punchcard: bool = False):
+    def __init__(
+        self,
+        driver: WebDriver,
+        element: WebElement,
+        daily_set: bool = False,
+        punchcard: bool = False,
+    ):
         if not punchcard:
             super().__init__(driver, element, daily_set)
         else:
@@ -453,7 +459,10 @@ class Punchcard(Runnable, ABC):
         self.element.click()
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(status={self.status}, title={self.title}, text={self.text})"
+        return (
+            f"{self.__class__.__name__}(status={self.status}, "
+            f"title={self.title}, text={self.text})"
+        )
 
     @staticmethod
     def is_complete(punchcard_element: WebElement):
@@ -473,8 +482,12 @@ class Punchcard(Runnable, ABC):
             logger.debug(f"Retry {retry+1}/{retries}")
             self.driver.switch_to.window(home_win)
 
-            punchcards: [WebElement] = self.driver.find_elements_by_class_name("punchcard-row")
-            logger.debug(f"Found {len(punchcards)} punchcards actions inside {str(self)}")
+            punchcards: [WebElement] = self.driver.find_elements_by_class_name(
+                "punchcard-row"
+            )
+            logger.debug(
+                f"Found {len(punchcards)} punchcards actions inside {str(self)}"
+            )
 
             todo_punchcards: [WebElement] = [
                 punchcard for punchcard in punchcards if not self.is_complete(punchcard)
@@ -494,7 +507,7 @@ class Punchcard(Runnable, ABC):
                 actions.move_to_element(punchcard).perform()
 
                 punchcard.find_element_by_css_selector("a.offer-cta button").click()
-                time.sleep(.5)
+                time.sleep(0.5)
                 if self.driver.current_window_handle == home_win:
                     logger.warning("Cannot enter punchcard offer!")
                     continue
@@ -521,7 +534,9 @@ class Punchcard(Runnable, ABC):
                     pass
 
                 if not completed:
-                    raise CannotCompleteActivityException("Cannot complete punchcard action!")
+                    raise CannotCompleteActivityException(
+                        "Cannot complete punchcard action!"
+                    )
 
                 # closing all new windows opened
                 new_windows = set(self.driver.window_handles) - windows

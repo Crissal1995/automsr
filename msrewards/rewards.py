@@ -69,7 +69,10 @@ class MicrosoftRewards:
         "div > card-content > mee-rewards-more-activities-card-item > div"
     )
 
-    punchcard_selector = "#punch-cards > mee-carousel > div > div:nth-child(4) > ul > li > a > mee-hero-item"
+    punchcard_selector = (
+        "#punch-cards > mee-carousel > div >"
+        " div:nth-child(4) > ul > li > a > mee-hero-item"
+    )
 
     edge_win_ua = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
