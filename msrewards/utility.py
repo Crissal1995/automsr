@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import pathlib
-import sys
 from typing import Tuple, Union
 
 from selenium.webdriver import Chrome, Remote
@@ -86,16 +85,15 @@ def get_options(**kwargs):
     options.add_argument("ignore-certificate-errors")
     options.add_argument("allow-running-insecure-content")
     options.add_argument("disable-dev-shm-usage")
-
-    # https://stackoverflow.com/questions/48450594/selenium-timed-out-receiving-message-from-renderer
-    options.add_argument("start-maximized")
-    options.add_argument("start-maximized")
-    options.add_argument("enable-automation")
-    # options.add_argument("no-sandbox")
-    options.add_argument("disable-infobars")
-    # options.add_argument("disable-dev-shm-usage")
-    options.add_argument("disable-browser-side-navigation")
     options.add_argument("disable-gpu")
+
+    profile_root = kwargs.get("profile_root") or config["selenium"]["profile_root"]
+    profile_dir = kwargs.get("profile_dir")
+
+    if profile_root and profile_dir:
+        logger.info(f"Using profile '{profile_dir}' (root: {profile_root})")
+        options.add_argument(f"--user-data-dir={profile_root}")
+        options.add_argument(f"--profile-directory={profile_dir}")
 
     ua = kwargs.get("user_agent")
     if ua:
@@ -103,9 +101,6 @@ def get_options(**kwargs):
 
     if kwargs.get("headless") or config["selenium"]["headless"]:
         options.add_argument("headless")
-        if sys.platform in ("win32", "cygwin"):
-            # fix for windows platforms
-            options.add_argument("disable-gpu")
 
     if not config["selenium"]["enable_logging"]:
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
@@ -128,6 +123,7 @@ _default_config = {
         "url": "http://selenium-hub:4444/wd/hub",
         "headless": True,
         "logging": True,
+        "profile_root": "",
     },
 }
 
@@ -150,6 +146,7 @@ def get_config(cfg_fp):
     url = parser.get("selenium", "url")
     headless = parser.getboolean("selenium", "headless")
     enable_logging = parser.getboolean("selenium", "logging")
+    profile_root = parser.get("selenium", "profile_root")
 
     # get automsr options
     skip = parser.get("automsr", "skip").lower()
@@ -188,6 +185,7 @@ def get_config(cfg_fp):
             url=url,
             headless=headless,
             enable_logging=enable_logging,
+            profile_root=profile_root,
         ),
     }
 
@@ -362,6 +360,10 @@ class DriverCatcher:
         """Manage possible exceptions with the if-else branch.
         If the return is True, the exception is suppressed;
         otherwise is propagated."""
+
+        # closes driver
+        self.driver.quit()
+
         if exc_type is None:
             return True
         else:

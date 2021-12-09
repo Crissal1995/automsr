@@ -92,6 +92,7 @@ class MicrosoftRewards:
         is_mobile=False,
         implicitly_wait=7,
         cookies_json_fp=default_cookies_json_fp,
+        profile_dir_in_use=False,
     ):
         assert implicitly_wait > 0
         driver.implicitly_wait(implicitly_wait)
@@ -103,9 +104,12 @@ class MicrosoftRewards:
 
         self.state_manager = StateManager()
 
-        logger.info("Login started")
-        self.login()
-        logger.info("Login finished")
+        if not profile_dir_in_use:
+            logger.info("Login started")
+            self.login()
+            logger.info("Login finished")
+        else:
+            logger.info("Profile provided, I assume you're already logged in there")
 
     def close(self):
         try:
@@ -169,7 +173,13 @@ class MicrosoftRewards:
             logger.info(msg)
             return msg
 
-        # else get a selenium driver
+        # get chromium profile to use;
+        # if missing, use selenium's default profile
+        profile_dir = credentials.get("profile_dir")
+        if profile_dir:
+            kwargs.update(dict(profile_dir=profile_dir))
+
+        # get a selenium driver
         driver = get_driver(**kwargs)
 
         with DriverCatcher(driver):
@@ -177,7 +187,9 @@ class MicrosoftRewards:
             change_user_agent(driver, cls.edge_win_ua)
 
             # create a rewards object
-            rewards = cls(driver, credentials=credentials)
+            rewards = cls(
+                driver, credentials=credentials, profile_dir_in_use=bool(profile_dir)
+            )
 
             # get points at the start of execution
             start_points_ok, start_points = rewards.get_safe_points()
