@@ -1,5 +1,7 @@
 import logging
 
+import selenium.common.exceptions
+
 import msrewards.utility
 from msrewards import MicrosoftRewards
 from msrewards.mail import OutlookEmailConnection, RewardsStatus
@@ -101,6 +103,12 @@ def main(**kwargs):
                 success_message = MicrosoftRewards.do_every_activity(
                     credentials=credentials
                 )
+            except selenium.common.exceptions.InvalidArgumentException as e:
+                logger.error(
+                    "Error caught with Chromium profiles! "
+                    "Maybe you need to close all open windows and retry"
+                )
+                raise e from None
             except Exception as e:
                 msg = f"An error occurred: {e}"
                 if not verbose:
