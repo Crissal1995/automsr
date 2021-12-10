@@ -50,35 +50,35 @@ logger = logging.getLogger(__name__)
 
 
 class MicrosoftRewards:
-    rewards_url = "https://account.microsoft.com/rewards/"
-    bing_url = "https://www.bing.com/"
-    login_url = "https://login.live.com/login.srf"
-    bing_searched_url = "https://www.bing.com/search?q=google"
+    # URLs section
+    url_rewards = "https://account.microsoft.com/rewards/"
+    url_rewards_alt = "https://rewards.microsoft.com/"
+    url_bing = "https://www.bing.com/"
+    url_login = "https://login.live.com/login.srf"
+    url_bing_searched = "https://www.bing.com/search?q=google"
 
-    default_cookies_json_fp = "cookies.json"
-
-    daily_card_selector = (
+    # Selectors section
+    selector_daily_cards = (
         "#daily-sets > "
         "mee-card-group > div > mee-card > "
         "div > card-content > mee-rewards-daily-set-item-content > div"
     )
-
-    other_card_selector = (
+    selector_other_cards = (
         "#more-activities > "
         "div > mee-card.ng-scope.ng-isolate-scope.c-card > "
         "div > card-content > mee-rewards-more-activities-card-item > div"
     )
-
-    punchcard_selector = (
+    selector_punchcards = (
         "#punch-cards > mee-carousel > div >"
         " div:nth-child(4) > ul > li > a > mee-hero-item"
     )
 
-    edge_win_ua = (
+    # User Agents section
+    useragent_edge_win = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36 Edg/90.0.818.49"
     )
-    chrome_android_ua = (
+    useragent_chrome_android = (
         "Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011; wv) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.157"
         " Mobile Safari/537.36"
@@ -109,11 +109,11 @@ class MicrosoftRewards:
         else:
             logger.info("Profile provided, I assume you're already logged in there")
 
+        self.go_to_home()
+
     def close(self):
         try:
             self.driver.quit()
-        except (exceptions.WebDriverException, Exception):
-            logger.warning("Chromedriver was already quitted")
         finally:
             logger.info("Chromedriver quitted")
 
@@ -126,11 +126,11 @@ class MicrosoftRewards:
         self.close()
 
     def go_to(self, url):
+        logger.debug(f"Go to URL: {url}")
         self.driver.get(url)
-        logger.debug(f"Driver GET {url}")
 
     def go_to_home(self):
-        self.driver.get(self.rewards_url)
+        self.driver.get(self.url_rewards_alt)
         try:
             sign_in_selector = "a#raf-signin-link-id"
             self.driver.find_element_by_css_selector(sign_in_selector).click()
@@ -176,7 +176,7 @@ class MicrosoftRewards:
 
         with DriverCatcher(driver):
             # set its user agent to edge
-            change_user_agent(driver, cls.edge_win_ua)
+            change_user_agent(driver, cls.useragent_edge_win)
 
             # create a rewards object
             rewards = cls(
@@ -322,7 +322,7 @@ class MicrosoftRewards:
             logger.debug(f"Searches retry {i+1} / {retries}")
 
             # change user agent to desktop
-            change_user_agent(self.driver, self.edge_win_ua)
+            change_user_agent(self.driver, self.useragent_edge_win)
             self.is_mobile = False
 
             # get points dict
@@ -343,7 +343,7 @@ class MicrosoftRewards:
                 self.execute_searches2(search_type=search_type, limit=limit)
 
             # change user agent to mobile
-            change_user_agent(self.driver, self.chrome_android_ua)
+            change_user_agent(self.driver, self.useragent_chrome_android)
             self.is_mobile = True
 
             # and execute mobile searches
@@ -403,7 +403,11 @@ class MicrosoftRewards:
                 activities = self.get_activities()
                 self._store_activity_states(activities)
 
-                missing = self.get_todo_activities()
+                missing = [
+                    activity
+                    for activity in activities
+                    if activity.status == Status.TODO
+                ]
                 if not missing:
                     break
                 else:
@@ -442,54 +446,39 @@ class MicrosoftRewards:
         # otherwise a runtime error is raised
         return any_todos
 
-    @classmethod
-    def daily_searches(cls, credentials: dict, **kwargs):
-        user_agents = [
-            dict(value=cls.edge_win_ua, is_mobile=False),
-            dict(value=cls.chrome_android_ua, is_mobile=True),
-        ]
-
-        for user_agent in user_agents:
-            kwargs.update(user_agent=user_agent["value"])
-            driver = get_driver(**kwargs)
-            rewards = cls(driver, credentials, is_mobile=user_agent["is_mobile"])
-            search_type = config["automsr"]["search_type"]
-            rewards.execute_searches(search_type=search_type)
-            driver.quit()
-
     def execute_activity(self, activity: Activity):
         return self.execute_activities([activity])
 
     def login(self):
-        self.go_to(self.bing_url)
+        self.go_to(self.url_bing)
         try:
             CookieAcceptPage(self.driver).complete()
             logger.debug("Cookies accepted")
         except exceptions.NoSuchElementException:
             logger.debug("Cannot accept cookies")
 
-        self.go_to(self.login_url)
-        page = LoginPage(self.driver, self.login_url, self.credentials)
+        self.go_to(self.url_login)
+        page = LoginPage(self.driver, self.url_login, self.credentials)
         page.complete()
         if page.check_2fa():
             raise Detected2FAError("2FA detected, cannot complete login")
         else:
             logger.info("Logged in")
 
-        self.go_to(self.rewards_url)
+        self.go_to(self.url_rewards)
         try:
             BannerCookiePage(self.driver).complete()
             logger.debug("Banner cookies accepted")
         except exceptions.WebDriverException:
             logger.debug("Cannot accept banner cookies")
 
-        self.go_to(self.bing_searched_url)
+        self.go_to(self.url_bing_searched)
         BingLoginPage(
-            self.driver, self.login_url, self.credentials, self.is_mobile
+            self.driver, self.url_login, self.credentials, self.is_mobile
         ).complete()
         logger.info("Login made on bing webpage")
 
-        self.go_to(self.bing_searched_url)
+        self.go_to(self.url_bing_searched)
         TryMicrosoftBrowserPage(self.driver).complete()
 
         time.sleep(1.5)
@@ -633,19 +622,19 @@ class MicrosoftRewards:
             raise ValueError(error_msg)
 
         # go the bing page
-        self.go_to(self.bing_url)
+        self.go_to(self.url_bing)
 
         # try to complete its login
         try:
             BingLoginPage(
-                self.driver, self.login_url, self.credentials, self.is_mobile
+                self.driver, self.url_login, self.credentials, self.is_mobile
             ).complete()
             logger.debug("Succesfully authenticated on BingPage")
         except exceptions.WebDriverException:
             logger.debug("Was already authenticated on BingPage")
 
         # ensure we're on bing search again
-        self.go_to(self.bing_url)
+        self.go_to(self.url_bing)
 
         # take generator from search_generator
         # tts is not took as var because it's value can change
@@ -725,7 +714,7 @@ class MicrosoftRewards:
         for _ in tqdm(range(limit)):
             try:
                 BingLoginPage(
-                    self.driver, self.login_url, self.credentials, self.is_mobile
+                    self.driver, self.url_login, self.credentials, self.is_mobile
                 ).complete()
                 logger.debug("Succesfully authenticated on BingPage")
             except exceptions.NoSuchElementException:
@@ -738,7 +727,7 @@ class MicrosoftRewards:
 
             logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
 
-            self.go_to(self.bing_url)
+            self.go_to(self.url_bing)
 
             input_field = self.driver.find_element_by_css_selector("#sb_form_q")
             input_field.send_keys(word)
@@ -759,19 +748,19 @@ class MicrosoftRewards:
         logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
 
         # go the bing page
-        self.go_to(self.bing_url)
+        self.go_to(self.url_bing)
 
         # try to complete its login
         try:
             BingLoginPage(
-                self.driver, self.login_url, self.credentials, self.is_mobile
+                self.driver, self.url_login, self.credentials, self.is_mobile
             ).complete()
             logger.debug("Succesfully authenticated on BingPage")
         except exceptions.WebDriverException:
             logger.debug("Was already authenticated on BingPage")
 
         # ensure we're on bing search again
-        self.go_to(self.bing_url)
+        self.go_to(self.url_bing)
 
         # and then send entire word
         selector = "#sb_form_q"
@@ -811,10 +800,10 @@ class MicrosoftRewards:
         # opened in current window handle
         try:
             window = new_windows.difference(old_windows).pop()
-            logger.debug("Link opened in new window")
+            logger.debug("Link was opened in new window")
         except KeyError:
             window = self.driver.current_window_handle
-            logger.debug("Link opened in same window")
+            logger.debug("Link was opened in same window")
 
         return window
 
@@ -845,7 +834,7 @@ class MicrosoftRewards:
         # try to dismiss bottom span once for every execution
         TryMicrosoftBrowserPage(self.driver).complete()
 
-        # create action chainst
+        # create action chain
         actions = ActionChains(self.driver)
 
         for i, runnable in enumerate(runnables):
@@ -867,24 +856,11 @@ class MicrosoftRewards:
             window = self.get_new_window(old_windows)
             self.driver.switch_to.window(window)
 
-            # try to log in via bing
-            try:
-                BingLoginPage(
-                    self.driver, self.login_url, self.credentials, self.is_mobile
-                ).complete()
-                logger.warning("Bing login was required, but is done.")
-
-                # add the runnable to the ones to do again
-                runnables_todo_again.append(runnable)
-                continue
-            except exceptions.WebDriverException:
-                logger.debug("No bing login required")
-
             # refresh tab for some activities that don't always load
             self.driver.refresh()
 
             # let page load
-            time.sleep(3)
+            time.sleep(1)
 
             # execute the activity
             try:
@@ -979,7 +955,7 @@ class MicrosoftRewards:
 
         punchcards_list = []
         punchcards_elements_list = self.driver.find_elements_by_css_selector(
-            self.punchcard_selector
+            self.selector_punchcards
         )
         logger.debug(f"Found {len(punchcards_elements_list)} punchcards")
 
@@ -1003,10 +979,10 @@ class MicrosoftRewards:
     def _get_activities(self, activity_type):
         daily_set = False
         if activity_type == "daily":
-            selector = self.daily_card_selector
+            selector = self.selector_daily_cards
             daily_set = True
         elif activity_type == "other":
-            selector = self.other_card_selector
+            selector = self.selector_other_cards
         else:
             raise InvalidInputError(
                 f"Provided: '{activity_type}'. Valid types are 'daily' and 'other'"
@@ -1016,22 +992,25 @@ class MicrosoftRewards:
 
         for element in self.driver.find_elements_by_css_selector(selector):
             # find card header of element
-            header = element.find_element_by_css_selector(Activity.header_selector).text
+            header: str = element.find_element_by_css_selector(
+                Activity.header_selector
+            ).text
+            logger.debug(f"Activity header text is: {header}")
 
-            logger.debug(f"Activity header found: {header}")
+            header_cmp = header.lower().strip()
 
             # cast right type to elements
-            if ThisOrThatActivity.base_header in header:
+            if ThisOrThatActivity.base_header.lower() in header_cmp:
                 activity = ThisOrThatActivity(
                     driver=self.driver, element=element, daily_set=daily_set
                 )
                 logger.debug("This or That Activity found")
-            elif PollActivity.base_header in header:
+            elif PollActivity.base_header.lower() in header_cmp:
                 activity = PollActivity(
                     driver=self.driver, element=element, daily_set=daily_set
                 )
                 logger.debug("Poll Activity found")
-            elif QuizActivity.base_header in header:
+            elif QuizActivity.base_header.lower() in header_cmp:
                 activity = QuizActivity(
                     driver=self.driver, element=element, daily_set=daily_set
                 )

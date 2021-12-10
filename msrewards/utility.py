@@ -329,12 +329,18 @@ def get_safe_credentials(credentials_fp):
 
 class DriverCatcher:
     """A context manager wrapper for selenium driver,
-    used to catch exceptions and store informations about it"""
+    used to catch exceptions and store information about it"""
 
-    def __init__(self, driver: Remote, propagate_exception: bool = True):
+    def __init__(
+        self,
+        driver: Remote,
+        propagate_exception: bool = True,
+        take_screenshot_on_exception: bool = True,
+    ):
         self.driver = driver
         self.screen_dir = pathlib.Path("screenshots")
         self.propagate = propagate_exception
+        self.take_screenshot = take_screenshot_on_exception
 
     def store_information_as_screenshot(self, fname: str = None):
         """Store the current driver screenshot in root dir with
@@ -363,7 +369,8 @@ class DriverCatcher:
         return path
 
     def __enter__(self):
-        os.makedirs(self.screen_dir, exist_ok=True)
+        if self.take_screenshot:
+            os.makedirs(self.screen_dir, exist_ok=True)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Manage possible exceptions with the if-else branch.
@@ -379,7 +386,8 @@ class DriverCatcher:
             logger.warning(
                 f"An exception occurred! exc_type: {exc_type}, exc_val: {exc_val}"
             )
-            path = self.store_information_as_screenshot()
-            logger.warning(f"A screenshot was saved in {path}")
+            if self.take_screenshot:
+                path = self.store_information_as_screenshot()
+                logger.warning(f"A screenshot was saved in {path}")
 
             return not self.propagate
