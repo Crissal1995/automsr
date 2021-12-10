@@ -112,4 +112,13 @@ Enable or disable Selenium server logging.
 
 Defaults to `true`.
 
+#### profile_root
+Root of the Chromium User Data directory (i.e. where Profiles are stored).
+An example is:
+```
+C:\Users\<USER>\AppData\Local\Google\Chrome\User Data
+```
+
+Defaults to null.
+
 [1]: https://www.microsoft.com/servicesagreement
