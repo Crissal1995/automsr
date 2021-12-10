@@ -259,7 +259,7 @@ class MicrosoftRewards:
                 email, datetime.date.today()
             )
 
-            # closes rewards and resources
+            # close rewards and resources
             rewards.close()
 
             msg = f"Got {max_points} points."
@@ -278,9 +278,9 @@ class MicrosoftRewards:
         Return the amount of gift cards that can be redeemed on Microsoft Rewards.
         If no gift_card_prices is given, it will be used the default one
         for level 2 members, so:
-           1860 points for a 2€ gift card,
-           4650 points for a 5€ gift card,
-           9300 points for a 10€ gift card.
+           1860 points for a 2 € gift card,
+           4650 points for a 5 € gift card,
+           9300 points for a 10 € gift card.
         """
         gift_card_prices = gift_card_prices or {2: 1860, 5: 4650, 10: 9300}
         gift_card_amounts = {k: 0 for k in gift_card_prices}
@@ -381,10 +381,10 @@ class MicrosoftRewards:
                     self.state_manager.update_states_filter_hash(
                         "activity", state.hash, state.status  # type: ignore
                     )
-                # otherwise skip it
+                # , otherwise skip it
                 else:
                     pass
-            # otherwise store it
+            # , otherwise store it
             else:
                 self.state_manager.insert_state(state)
 
@@ -494,7 +494,7 @@ class MicrosoftRewards:
         # go to rewards home
         self.go_to_home()
 
-        # wait a little bit to let the page load
+        # wait a little to let the page load
         time.sleep(1)
 
         if method == "dom":
@@ -506,7 +506,7 @@ class MicrosoftRewards:
                 )
             points = int(match.group(1))
         elif method == "animation":
-            # wait a little bit to animation to finish
+            # wait a little to animation to finish
             time.sleep(3)
             text: str = self.driver.find_element_by_tag_name(
                 "mee-rewards-user-status-balance"
@@ -811,8 +811,8 @@ class MicrosoftRewards:
         self, runnables: Sequence[Runnable], runnable_type: str
     ) -> Sequence[Runnable]:
         """
-        :param runnables: The list of Runnable objects to execute (activities or punchcards)
-        :param runnable_type: The type of the runnables to execute ("activity" or "punchcard")
+        runnables: The list of Runnable objects to execute (activities or punchcards)
+        runnable_type: The type of the runnables to execute ("activity" or "punchcard")
         :return: The list of runnables not completed
         """
         assert runnable_type in ("activity", "punchcard"), "Wrong runnable provided"
@@ -879,7 +879,8 @@ class MicrosoftRewards:
         """
         Return the to-do activities of the day,
         ordered from the first daily to the last other.
-        :param reverse: If True, activities will be performed
+
+        reverse: If True, activities will be performed
         from last other to first daily. If False, default order.
         :return: The to-do activities of the day.
         """
