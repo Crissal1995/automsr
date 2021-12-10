@@ -59,6 +59,11 @@ def activity_skip(skip_str: str) -> Tuple[bool, bool]:
         raise ValueError(f"Invalid skip value provided: {skip_str}")
 
 
+def is_profile_used(profile_root: str, profile_dir: str) -> bool:
+    """Determines if the chrome profile should be used"""
+    return bool(profile_root) and bool(profile_dir)
+
+
 def get_datetime_str(
     datetime_obj: Union[datetime.datetime, datetime.date] = None, time: bool = False
 ):
@@ -94,6 +99,10 @@ def get_options(**kwargs):
         logger.info(f"Using profile '{profile_dir}' (root: {profile_root})")
         options.add_argument(f"--user-data-dir={profile_root}")
         options.add_argument(f"--profile-directory={profile_dir}")
+    elif profile_dir:  # ignore only profile_root set
+        raise ValueError(
+            "Cannot use Chrome profile without 'profile_root' variable set in configuration"
+        )
 
     ua = kwargs.get("user_agent")
     if ua:

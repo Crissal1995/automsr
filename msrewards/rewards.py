@@ -1,5 +1,4 @@
 import datetime
-import json
 import logging
 import random
 import re
@@ -45,6 +44,7 @@ from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from msrewards.search_takeout_parser import SearchTakeoutParser
 from msrewards.state import ActivityState, StateManager
 from msrewards.utility import DriverCatcher, change_user_agent, config, get_driver
+from msrewards.utility import is_profile_used as ipu
 
 logger = logging.getLogger(__name__)
 
@@ -90,21 +90,19 @@ class MicrosoftRewards:
         credentials: dict,
         *,
         is_mobile=False,
-        implicitly_wait=7,
-        cookies_json_fp=default_cookies_json_fp,
-        profile_dir_in_use=False,
+        implicitly_wait=3,
+        is_profile_used=False,
     ):
         assert implicitly_wait > 0
         driver.implicitly_wait(implicitly_wait)
         self.driver = driver
         self.home = None
-        self.cookies_json_fp = cookies_json_fp
         self.credentials = credentials
         self.is_mobile = is_mobile
 
         self.state_manager = StateManager()
 
-        if not profile_dir_in_use:
+        if not is_profile_used:
             logger.info("Login started")
             self.login()
             logger.info("Login finished")
@@ -147,16 +145,6 @@ class MicrosoftRewards:
         else:
             self.go_to_home()
 
-    def save_cookies(self, cookies_json_fp=default_cookies_json_fp):
-        json.dump(self.driver.get_cookies(), open(cookies_json_fp, "w"))
-
-    def restore_cookies(self, cookies_json_fp=default_cookies_json_fp):
-        cookies_json = json.load(open(cookies_json_fp))
-        self.driver.delete_all_cookies()
-        for cookie in cookies_json:
-            self.driver.add_cookie(cookie)
-        self.driver.get(self.rewards_url)
-
     @classmethod
     def do_every_activity(cls, credentials: dict, **kwargs) -> str:
         # detect what to skip
@@ -179,6 +167,10 @@ class MicrosoftRewards:
         if profile_dir:
             kwargs.update(dict(profile_dir=profile_dir))
 
+        # get to know if profile login should be used
+        profile_root = config["selenium"]["profile_root"]
+        is_profile_used = ipu(profile_root, profile_dir)
+
         # get a selenium driver
         driver = get_driver(**kwargs)
 
@@ -188,7 +180,7 @@ class MicrosoftRewards:
 
             # create a rewards object
             rewards = cls(
-                driver, credentials=credentials, profile_dir_in_use=bool(profile_dir)
+                driver, credentials=credentials, is_profile_used=is_profile_used
             )
 
             # get points at the start of execution
