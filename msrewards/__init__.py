@@ -1,4 +1,4 @@
 from msrewards.rewards import MicrosoftRewards
 
-version = "5.9"
+__version__ = "6.3.1"
 __all__ = ["MicrosoftRewards"]
