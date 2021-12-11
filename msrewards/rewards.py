@@ -43,7 +43,7 @@ from msrewards.pages import (
 from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from msrewards.search_takeout_parser import SearchTakeoutParser
 from msrewards.state import ActivityState, StateManager
-from msrewards.utility import DriverCatcher, change_user_agent, config, get_driver
+from msrewards.utility import DriverCatcher, change_user_agent, config, get_driver, get_value_from_dictionary
 from msrewards.utility import is_profile_used as ipu
 
 logger = logging.getLogger(__name__)
@@ -163,7 +163,7 @@ class MicrosoftRewards:
 
         # get chromium profile to use;
         # if missing, use selenium's default profile
-        profile_dir = credentials.get("profile_dir")
+        profile_dir = get_value_from_dictionary(credentials, ("profile_dir", "profile"))
         if profile_dir:
             kwargs.update(dict(profile_dir=profile_dir))
 
