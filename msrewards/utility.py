@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import pathlib
-from typing import Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
@@ -62,6 +62,27 @@ def activity_skip(skip_str: str) -> Tuple[bool, bool]:
 def is_profile_used(profile_root: str, profile_dir: str) -> bool:
     """Determines if the chrome profile should be used"""
     return bool(profile_root) and bool(profile_dir)
+
+
+def get_value_from_dictionary(
+    thedict: dict, keywords: Sequence[str], *, strict_non_false_value=False
+) -> Optional[Any]:
+    """Get value from dictionary, specifying a list of
+    keywords that can be used to parse this value.
+    If two or more keywords are provided, the first that matches
+    a value will be used.
+
+    Returns None if no keyword is found, else its value."""
+    if isinstance(keywords, str):
+        keywords = [keywords]
+
+    for keyword in keywords:
+        value = thedict.get(keyword)
+        if strict_non_false_value and not value:
+            continue
+        if not strict_non_false_value and value is not None:
+            return value
+    return None
 
 
 def get_datetime_str(
