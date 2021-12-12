@@ -16,17 +16,17 @@ def get_logger(verbose: bool):
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(stream_level)
 
-    file_handler = logging.FileHandler("main.log")
-    file_handler.setLevel(logging.INFO)
+    # file_handler = logging.FileHandler("main.log")
+    # file_handler.setLevel(logging.INFO)
 
-    file_debug_handler = logging.FileHandler("main.debug.log")
-    file_debug_handler.setLevel(logging.DEBUG)
+    # file_debug_handler = logging.FileHandler("main.debug.log")
+    # file_debug_handler.setLevel(logging.DEBUG)
 
     # set formatters and add handlers to main logger
     logger = logging.getLogger("msrewards")
     logger.setLevel(logging.DEBUG)
 
-    handlers = (stream_handler, file_handler, file_debug_handler)
+    handlers = (stream_handler,)
 
     for handler in handlers:
         handler.setFormatter(formatter)
