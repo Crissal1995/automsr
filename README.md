@@ -29,10 +29,6 @@ section _Microsoft Rewards_.
 2. Create your `credentials.json` following the example file
 3. Install requirements
 4. Run `python main.py`
-### Docker
-1. Set the environment as `remote` ([refers to Selenium section](#selenium))
-2. Build the image with `docker-compose build`
-3. Run the containers with `docker-compose up`
 
 ## Configuration
 The behaviour of the tool can be configured within `automsr.cfg`.
@@ -88,8 +84,6 @@ Defaults to `False`.
 Wether the environment is using a chromedriver executable found in PATH (`local`), 
 or a Selenium hub listening on a port, default 4444 (`remote`).
 
-On a Docker setup, the environment should be `remote`.
-
 Defaults to `local`.
 
 #### headless
@@ -105,7 +99,7 @@ If missing, Selenium will search for the chromedriver in the PATH.
 #### url
 Ignored when `env` is `local`. Override of the url of the Selenium hub.
 
-Defaults to `http://selenium-hub:4444/wd/hub` (convenience url for Docker setup).
+Defaults to `http://localhost:4444/wd/hub`.
 
 #### logging
 Enable or disable Selenium server logging.

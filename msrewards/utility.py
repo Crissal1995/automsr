@@ -150,7 +150,7 @@ _default_config = {
     "selenium": {
         "env": "local",
         "path": "chromedriver",
-        "url": "http://selenium-hub:4444/wd/hub",
+        "url": "http://localhost:4444/wd/hub",
         "headless": True,
         "logging": True,
         "profile_root": "",
