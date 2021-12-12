@@ -3,8 +3,8 @@ name: Linters
 on: [push, pull_request]
 
 jobs:
-  pre-commit:
-    name: pre-commit hooks
+  linters:
+    name: linters hook
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
