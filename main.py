@@ -2,10 +2,10 @@ import logging
 
 import selenium.common.exceptions
 
-import msrewards.utility
-from msrewards import MicrosoftRewards
-from msrewards.mail import OutlookEmailConnection, RewardsStatus
-from msrewards.utility import get_config, get_safe_credentials, test_environment
+import automsr.utility
+from automsr import MicrosoftRewards
+from automsr.mail import OutlookEmailConnection, RewardsStatus
+from automsr.utility import get_config, get_safe_credentials, test_environment
 
 
 def get_logger(verbose: bool):
@@ -23,7 +23,7 @@ def get_logger(verbose: bool):
     # file_debug_handler.setLevel(logging.DEBUG)
 
     # set formatters and add handlers to main logger
-    logger = logging.getLogger("msrewards")
+    logger = logging.getLogger("automsr")
     logger.setLevel(logging.DEBUG)
 
     handlers = (stream_handler,)
@@ -41,7 +41,7 @@ def main(**kwargs):
     config = get_config(config_fp)
 
     # change default config used in module with this one
-    msrewards.utility.config = config
+    automsr.utility.config = config
 
     # get credentials filepath from config
     credentials_fp = kwargs.get("credentials", config["automsr"]["credentials"])

@@ -12,7 +12,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 from tqdm import tqdm
 
-from msrewards.activities import (
+from automsr.activities import (
     Activity,
     FreePunchcard,
     PaidPunchcard,
@@ -24,7 +24,7 @@ from msrewards.activities import (
     Status,
     ThisOrThatActivity,
 )
-from msrewards.exception import (
+from automsr.exception import (
     AutomsrException,
     CannotCompleteActivityException,
     CannotRetrievePointsException,
@@ -33,18 +33,24 @@ from msrewards.exception import (
     LessThanSixDailyActivitiesFoundException,
     NoDailyActivityFoundException,
 )
-from msrewards.pages import (
+from automsr.pages import (
     BannerCookiePage,
     BingLoginPage,
     CookieAcceptPage,
     LoginPage,
     TryMicrosoftBrowserPage,
 )
-from msrewards.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
-from msrewards.search_takeout_parser import SearchTakeoutParser
-from msrewards.state import ActivityState, StateManager
-from msrewards.utility import DriverCatcher, change_user_agent, config, get_driver, get_value_from_dictionary
-from msrewards.utility import is_profile_used as ipu
+from automsr.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
+from automsr.search_takeout_parser import SearchTakeoutParser
+from automsr.state import ActivityState, StateManager
+from automsr.utility import (
+    DriverCatcher,
+    change_user_agent,
+    config,
+    get_driver,
+    get_value_from_dictionary,
+)
+from automsr.utility import is_profile_used as ipu
 
 logger = logging.getLogger(__name__)
 

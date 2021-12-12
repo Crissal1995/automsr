@@ -1,4 +1,4 @@
-from msrewards.utility import get_value_from_dictionary
+from automsr.utility import get_value_from_dictionary
 
 
 def test0():
