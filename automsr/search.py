@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 from selenium.webdriver.common.keys import Keys
 
-from msrewards.utility import config
+from automsr.utility import config
 
 logger = logging.getLogger(__name__)
 

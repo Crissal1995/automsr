@@ -13,6 +13,7 @@ automsr.cfg
 *.csv
 screenshots
 *.sqlite
+*.sqlite-journal
 .DS_Store
 
 /chrome_driver_/

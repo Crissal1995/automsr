@@ -5,11 +5,11 @@ import time
 
 import pytest
 
-import msrewards.state
-from msrewards.state import ActivityState, PointsState, StateManager
+import automsr.state
+from automsr.state import ActivityState, PointsState, StateManager
 
 # mock DB_NAME to create an in-memory database
-msrewards.state.DB_NAME = ":memory:"
+automsr.state.DB_NAME = ":memory:"
 
 
 def test0():

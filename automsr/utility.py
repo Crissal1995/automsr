@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import pathlib
-from typing import Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
@@ -59,6 +59,32 @@ def activity_skip(skip_str: str) -> Tuple[bool, bool]:
         raise ValueError(f"Invalid skip value provided: {skip_str}")
 
 
+def is_profile_used(profile_root: str, profile_dir: str) -> bool:
+    """Determines if the chrome profile should be used"""
+    return bool(profile_root) and bool(profile_dir)
+
+
+def get_value_from_dictionary(
+    thedict: dict, keywords: Sequence[str], *, strict_non_false_value=False
+) -> Optional[Any]:
+    """Get value from dictionary, specifying a list of
+    keywords that can be used to parse this value.
+    If two or more keywords are provided, the first that matches
+    a value will be used.
+
+    Returns None if no keyword is found, else its value."""
+    if isinstance(keywords, str):
+        keywords = [keywords]
+
+    for keyword in keywords:
+        value = thedict.get(keyword)
+        if strict_non_false_value and not value:
+            continue
+        if not strict_non_false_value and value is not None:
+            return value
+    return None
+
+
 def get_datetime_str(
     datetime_obj: Union[datetime.datetime, datetime.date] = None, time: bool = False
 ):
@@ -94,6 +120,10 @@ def get_options(**kwargs):
         logger.info(f"Using profile '{profile_dir}' (root: {profile_root})")
         options.add_argument(f"--user-data-dir={profile_root}")
         options.add_argument(f"--profile-directory={profile_dir}")
+    elif profile_dir:  # ignore only profile_root set
+        raise ValueError(
+            "Cannot use Chrome profile without 'profile_root' variable set in configuration"
+        )
 
     ua = kwargs.get("user_agent")
     if ua:
@@ -120,7 +150,7 @@ _default_config = {
     "selenium": {
         "env": "local",
         "path": "chromedriver",
-        "url": "http://selenium-hub:4444/wd/hub",
+        "url": "http://localhost:4444/wd/hub",
         "headless": True,
         "logging": True,
         "profile_root": "",
@@ -320,12 +350,18 @@ def get_safe_credentials(credentials_fp):
 
 class DriverCatcher:
     """A context manager wrapper for selenium driver,
-    used to catch exceptions and store informations about it"""
+    used to catch exceptions and store information about it"""
 
-    def __init__(self, driver: Remote, propagate_exception: bool = True):
+    def __init__(
+        self,
+        driver: Remote,
+        propagate_exception: bool = True,
+        take_screenshot_on_exception: bool = True,
+    ):
         self.driver = driver
         self.screen_dir = pathlib.Path("screenshots")
         self.propagate = propagate_exception
+        self.take_screenshot = take_screenshot_on_exception
 
     def store_information_as_screenshot(self, fname: str = None):
         """Store the current driver screenshot in root dir with
@@ -354,7 +390,8 @@ class DriverCatcher:
         return path
 
     def __enter__(self):
-        os.makedirs(self.screen_dir, exist_ok=True)
+        if self.take_screenshot:
+            os.makedirs(self.screen_dir, exist_ok=True)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Manage possible exceptions with the if-else branch.
@@ -370,7 +407,8 @@ class DriverCatcher:
             logger.warning(
                 f"An exception occurred! exc_type: {exc_type}, exc_val: {exc_val}"
             )
-            path = self.store_information_as_screenshot()
-            logger.warning(f"A screenshot was saved in {path}")
+            if self.take_screenshot:
+                path = self.store_information_as_screenshot()
+                logger.warning(f"A screenshot was saved in {path}")
 
             return not self.propagate

@@ -13,8 +13,8 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from msrewards.exception import CannotCompleteActivityException
-from msrewards.utility import get_date_str
+from automsr.exception import CannotCompleteActivityException
+from automsr.utility import get_date_str
 
 logger = logging.getLogger(__name__)
 
