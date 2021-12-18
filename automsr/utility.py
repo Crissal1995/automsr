@@ -296,21 +296,20 @@ def get_credentials(credentials_fp):
     for i, creds in enumerate(creds_list):
         creds_errmsg = f"{errmsg} - credentials no. {i}"
         if not isinstance(creds, dict):
-            logger.error("Credentials must be object type")
-            raise InvalidCredentialsError(creds_errmsg)
+            msg = f"{creds_errmsg} - Credentials must be object type"
+            raise InvalidCredentialsError(msg)
 
         email = creds.get("email")
         password = creds.get("password")
+        profile = get_value_from_dictionary(creds, ("profile", "profile_dir"))
         skip = creds.get("skip")
 
         if not email:
             msg = f"{creds_errmsg} - Missing email"
-            logger.error(msg)
             raise InvalidCredentialsError(msg)
 
-        if not password:
-            msg = f"{creds_errmsg} - Missing password"
-            logger.error(msg)
+        if not password and not profile:
+            msg = f"{creds_errmsg} - Missing password and profile!"
             raise InvalidCredentialsError(msg)
 
         skip_error = (
