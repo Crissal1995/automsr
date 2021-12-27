@@ -9,11 +9,9 @@ from abc import ABC
 from typing import Dict, List, Optional, Tuple, Union
 
 from selenium.common import exceptions
-from selenium.webdriver import ActionChains
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 
-from automsr.exception import CannotCompleteActivityException
 from automsr.utility import get_date_str
 
 logger = logging.getLogger(__name__)
@@ -110,7 +108,7 @@ class QuizActivity(Activity):
     def __init__(
         self,
         driver: WebDriver,
-        element: WebElement,
+        element: Optional[WebElement],
         daily_set: bool = False,
         punchcard: bool = False,
     ):
@@ -118,7 +116,6 @@ class QuizActivity(Activity):
             super().__init__(driver, element, daily_set)
         else:
             self.driver = driver
-            self.element = element
             self.daily_set = daily_set
 
     def __repr__(self):
@@ -184,13 +181,21 @@ class QuizActivity(Activity):
         # finally execute quiz
         self._do_it()
 
-    def _do_it(self):
-        # rounds = self.get_rounds()
-        rounds = self.quiz_rounds
-        one_round_complete = False
+    def is_quiz_over(self) -> bool:
+        """Returns True if the quiz complete container is
+        displayed, and so the quiz is over"""
+        try:
+            el: WebElement = self.driver.find_element_by_id("quizCompleteContainer")
+            return el.is_displayed()
+        except exceptions.NoSuchElementException:
+            return False
 
-        for quiz_round in range(rounds):
-            logger.info(f"Round {quiz_round + 1}/{rounds} started")
+    def _do_it(self):
+        one_round_complete = False
+        i = 0
+
+        while not self.is_quiz_over():
+            logger.info(f"Round {i+1} started")
 
             for answer_id in self.answers:
                 time.sleep(1)
@@ -206,6 +211,7 @@ class QuizActivity(Activity):
                     else:
                         continue
 
+            i += 1
             one_round_complete = True
 
 
@@ -431,32 +437,25 @@ class Punchcard(Runnable, ABC):
     name = "punchcard"
     name_plural = "punchcards"
 
-    start_selector = "section > div > div > div > a"
-
-    def __init__(self, driver: WebDriver, element: WebElement):
+    def __init__(
+        self,
+        driver: WebDriver,
+        destination: str,
+        types: List[str],
+        complete: bool,
+        title: Optional[str],
+        text: Optional[str],
+    ):
         self.driver = driver
-        self.element = element
-        self.title = element.find_element_by_css_selector("h1").text
-        self.text = element.find_element_by_css_selector("p").text
-        checkmarks = element.find_elements_by_css_selector("span.mee-icon")
-        if not checkmarks:
-            logger.warning(
-                f"No checkmarks found for punchcard. Is it valid? (text={self.text})."
-            )
-            status = Status.INVALID
-        else:
-            if all(
-                "checkmark" in checkmark.get_attribute("class")
-                for checkmark in checkmarks
-            ):
-                status = Status.DONE
-            else:
-                status = Status.TODO
-        logger.debug(f"Punchcard status is {status}")
-        self.status = status
+        self.destination = destination
+        self.sub_punchcards_types = types
+
+        self.status = Status.DONE if complete else Status.TODO
+        self.title = title
+        self.text = text
 
     def start(self):
-        self.element.click()
+        self.driver.get(self.destination)
 
     def __repr__(self):
         return (
@@ -471,53 +470,50 @@ class Punchcard(Runnable, ABC):
         return "punchcard-complete" in spanclass
 
     def do_inner_quiz(self):
-        QuizActivity(self.driver, self.element, punchcard=True).do_it()
+        QuizActivity(self.driver, None, punchcard=True).do_it()
 
     def do_it(self):
-        home_win = self.driver.current_window_handle
-        windows = set(self.driver.window_handles)
-
         retries = 3
+
+        # store punchcard homepage
+        root_url = self.driver.current_url
+
+        punchcards: [WebElement] = self.driver.find_elements_by_class_name(
+            "punchcard-row"
+        )
+        logger.debug(f"Found {len(punchcards)} punchcards actions inside {str(self)}")
+
+        todo_punchcards: List[WebElement] = [
+            punchcard for punchcard in punchcards if not self.is_complete(punchcard)
+        ]
+        logger.debug(
+            f"Found {len(todo_punchcards)} todo punchcards actions inside {str(self)}"
+        )
+
+        if not todo_punchcards:
+            return
+
+        todo_punchcards_urls = [
+            p.find_element_by_tag_name("a").get_attribute("href")
+            for p in todo_punchcards
+        ]
+
+        missing_punchcards_urls = []
         for retry in range(retries):
             logger.debug(f"Retry {retry+1}/{retries}")
-            self.driver.switch_to.window(home_win)
 
-            punchcards: [WebElement] = self.driver.find_elements_by_class_name(
-                "punchcard-row"
-            )
-            logger.debug(
-                f"Found {len(punchcards)} punchcards actions inside {str(self)}"
-            )
+            for i, url in enumerate(todo_punchcards_urls):
+                logger.info(
+                    f"Executing punchcard element {i+1}/{len(todo_punchcards_urls)}"
+                )
 
-            todo_punchcards: [WebElement] = [
-                punchcard for punchcard in punchcards if not self.is_complete(punchcard)
-            ]
-            logger.debug(
-                f"Found {len(todo_punchcards)} todo punchcards actions inside {str(self)}"
-            )
-
-            if not todo_punchcards:
-                break
-
-            # create action chains
-            actions = ActionChains(self.driver)
-
-            for i, punchcard in enumerate(todo_punchcards):
-                logger.debug("Moving to punchcard element...")
-                actions.move_to_element(punchcard).perform()
-
-                punchcard.find_element_by_css_selector("a.offer-cta button").click()
-                time.sleep(0.5)
-                if self.driver.current_window_handle == home_win:
-                    logger.warning("Cannot enter punchcard offer!")
-                    continue
-
-                time.sleep(2)
+                self.driver.get(url)
+                time.sleep(1.5)
                 completed = False
 
                 # handles quiz punchcard action
                 try:
-                    self.driver.find_element_by_id("rqStartQuiz")
+                    self.driver.find_element_by_id("QuizContainerWrapper")
                     logger.info("Found quiz punchcard action")
                     self.do_inner_quiz()
                     logger.info(f"Completed quiz punchcard action {i + 1}")
@@ -534,33 +530,20 @@ class Punchcard(Runnable, ABC):
                     pass
 
                 if not completed:
-                    raise CannotCompleteActivityException(
-                        "Cannot complete punchcard action!"
-                    )
+                    logger.error("Cannot complete punchcard action!")
+                    missing_punchcards_urls.append(url)
 
-                # closing all new windows opened
-                new_windows = set(self.driver.window_handles) - windows
-                for window in new_windows:
-                    self.driver.switch_to.window(window)
-                    self.driver.close()
+                # go back to punchcard homepage
+                self.driver.get(root_url)
 
-                # going back to home window (punchcard actions root)
-                # and refresh page
-                self.driver.switch_to.window(home_win)
-                self.driver.refresh()
+            todo_punchcards_urls = missing_punchcards_urls
+
+        if todo_punchcards_urls:
+            logger.error("Cannot complete punchcard")
 
 
-class PaidPunchcard(Punchcard, ABC):
-    keywords = (
-        "compra",
-        "comprare",
-        "noleggia",
-        "noleggiare",
-        "acquista",
-        "acquistare",
-        "spendi",
-        "spendere",
-    )
+class PaidPunchcard(Punchcard):
+    pass
 
 
 class FreePunchcard(Punchcard):

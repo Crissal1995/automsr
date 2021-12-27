@@ -163,6 +163,10 @@ class MicrosoftRewards:
         )
         skip_search = config["automsr"]["skip_search"] or credentials["skip_search"]
 
+        logger.debug(f"{skip_activity=}")
+        logger.debug(f"{skip_punchcard=}")
+        logger.debug(f"{skip_search=}")
+
         email = credentials["email"]
 
         # if both skips are true, exit function
@@ -180,6 +184,10 @@ class MicrosoftRewards:
         # get to know if profile login should be used
         profile_root = config["selenium"]["profile_root"]
         is_profile_used = ipu(profile_root, profile_dir)
+
+        logger.debug(f"{profile_dir=}")
+        logger.debug(f"{profile_root=}")
+        logger.debug(f"{is_profile_used=}")
 
         # get a selenium driver
         driver = get_driver(**kwargs)
@@ -846,8 +854,9 @@ class MicrosoftRewards:
             # get old windows
             old_windows = set(self.driver.window_handles)
 
-            # move to runnable element
-            actions.move_to_element(runnable.element).perform()
+            # move to runnable element if is activity
+            if runnable_type == "activity":
+                actions.move_to_element(runnable.element).perform()
 
             # start runnable
             runnable.start()
@@ -952,30 +961,43 @@ class MicrosoftRewards:
         return self._execute(punchcards, "punchcard")
 
     def get_punchcards(self):
-        paid_keywords = PaidPunchcard.keywords
+        """Get punchcards via object embedded
+        in MS Rewards home page, i.e. dashboard"""
+        self.go_to_home_tab()
 
-        punchcards_list = []
-        punchcards_elements_list = self.driver.find_elements_by_css_selector(
-            self.selector_punchcards
-        )
-        logger.debug(f"Found {len(punchcards_elements_list)} punchcards")
+        punchcards_model = []
+        punchcards = self.driver.execute_script("return dashboard.punchCards")
+        logger.debug(f"Found {len(punchcards)} punchcards")
 
-        for element in punchcards_elements_list:
-            # get element text from aria-label attribute
-            text = element.get_attribute("aria-label").lower()
+        for punchcard in punchcards:
+            promotion = punchcard.get("parentPromotion")
+            if not promotion or not isinstance(promotion, dict):
+                continue
+            complete = promotion["complete"]
 
-            # check from text if the punchcard is free or paid
-            # TODO is there a better way?
-            if any(word in text for word in paid_keywords):
-                logger.debug("Paid punchcard found")
-                punchcard = PaidPunchcard(driver=self.driver, element=element)
+            attrs = promotion["attributes"]
+            title = attrs.get("classification.TitleText")
+            text = attrs.get("description")
+            dest = attrs["destination"]
+            types = attrs["type"].split(",")
+
+            kwargs = dict(
+                driver=self.driver,
+                destination=dest,
+                types=types,
+                complete=complete,
+                title=title,
+                text=text,
+            )
+
+            if "appstore" in types:
+                punchcard_model = PaidPunchcard(**kwargs)
             else:
-                logger.debug("Free punchcard found")
-                punchcard = FreePunchcard(driver=self.driver, element=element)
+                punchcard_model = FreePunchcard(**kwargs)
+            punchcards_model.append(punchcard_model)
 
-            punchcards_list.append(punchcard)
-
-        return punchcards_list
+        logger.debug(f"Parsed {len(punchcards_model)} punchcards' models")
+        return punchcards_model
 
     def _get_activities(self, activity_type):
         daily_set = False

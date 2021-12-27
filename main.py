@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import selenium.common.exceptions
 
@@ -108,7 +109,8 @@ def main(**kwargs):
                     "Error caught with Chromium profiles! "
                     "Maybe you need to close all open windows and retry"
                 )
-                raise e from None
+                logger.error(e)
+                sys.exit(1)
             except Exception as e:
                 msg = f"An error occurred: {e}"
                 if not verbose:

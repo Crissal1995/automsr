@@ -145,14 +145,16 @@ _default_config = {
 }
 
 
-def get_config(cfg_fp):
+def get_config(cfg_fp: str = ""):
     parser = configparser.ConfigParser()
 
     # read defaults
     parser.read_dict(_default_config)
 
     # read file (can also be not found)
-    if not parser.read(cfg_fp):
+    if not cfg_fp:
+        logger.warning("No config provided! Defaults will be used.")
+    elif not parser.read(cfg_fp):
         logger.warning(f"Cannot read config from {cfg_fp}. Defaults will be used.")
 
     valid_selenium_envs = ("local", "remote")
@@ -209,7 +211,7 @@ def get_config(cfg_fp):
 
 
 # read one time and then use it
-config = get_config("automsr.cfg")
+config = get_config()
 
 
 def get_driver(**kwargs):
@@ -394,9 +396,6 @@ class DriverCatcher:
         If the return is True, the exception is suppressed;
         otherwise is propagated."""
 
-        # closes driver
-        self.driver.quit()
-
         if exc_type is None:
             return True
         else:
@@ -406,5 +405,8 @@ class DriverCatcher:
             if self.take_screenshot:
                 path = self.store_information_as_screenshot()
                 logger.warning(f"A screenshot was saved in {path}")
+
+            # closes driver after screenshot is possibly taken
+            self.driver.quit()
 
             return not self.propagate
