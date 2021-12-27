@@ -1,20 +1,28 @@
-echo
-echo "**********************************"
-echo "****** STARTING RUN_AUTOMSR ******"
-echo "**********************************"
+#!/bin/bash
 
-date
-TS=$(date +%F)
+MAX_HOURS_TO_DELAY=2
 
-# sleep at most 15 minutes
-MAX_TIME=$(expr 15 \* 60)
-RAND_NUM=$(awk -v min=0 -v max=$MAX_TIME 'BEGIN{srand(); print int(min+rand()*(max-min+1))}')
+DELAY_TIME_M=$((1 + $RANDOM % ($MAX_HOURS_TO_DELAY * 60)))
+#DELAY_TIME_M=1
+DELAY_TIME_S=$(($DELAY_TIME_M * 60))
+#DELAY_TIME_S=1
 
-echo "Sleep $RAND_NUM seconds..."
-sleep $RAND_NUM
-echo "Running automsr!"
-date
+if [ $# -gt 0 ]
+then
+	echo "Time provided: $1"
+	DELAY_TIME_S=$1
+fi
 
-cd $HOME/auto_msrewards
-mkdir -p logs
-venv/bin/python main.py $@ 2>&1 | tee -a "logs/automsr-$TS.log"
+cd /home/jiin995/auto_msrewards
+
+echo "[$(date)] Wait $DELAY_TIME_M minutes before run automsr"
+
+sleep $DELAY_TIME_S
+
+echo "[$(date)] Ready to start automsr"
+
+source venv/bin/activate
+
+DISPLAY=:0 python3 main.py
+
+#sudo poweroff -f
