@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo "**********************************"
+echo "******** STARTING AUTOMSR ********"
+echo "**********************************"
+
 MAX_HOURS_TO_DELAY=2
 
 DELAY_TIME_M=$((1 + $RANDOM % ($MAX_HOURS_TO_DELAY * 60)))
@@ -23,6 +27,9 @@ echo "[$(date)] Ready to start automsr"
 
 source venv/bin/activate
 
-DISPLAY=:0 python3 main.py
+mkdir -p logs
 
+DISPLAY=:0 python3 main.py  2>&1 | tee -a "logs/automsr-$TS.log"
+ 
 #sudo poweroff -f
+

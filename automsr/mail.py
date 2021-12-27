@@ -5,7 +5,7 @@ from email.message import EmailMessage
 from enum import Enum
 from typing import List
 
-from msrewards.utility import config
+from automsr.utility import config
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import pathlib
-from typing import Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
@@ -18,45 +18,58 @@ class InvalidCredentialsError(Exception):
     """Error class for invalid Credentials objects"""
 
 
-possible_skips = (
-    "no",
-    "false",
-    "all",
-    "yes",
-    "true",
-    "search",
-    "searches",
-    "activity",
-    "activities",
-)
-
-
-def activity_skip(skip_str: str) -> Tuple[bool, bool]:
+def activity_skip(skip_str: str) -> Tuple[bool, ...]:
     """Function utility to know which activity,
-    listed as (daily_activities, daily_searches), is
+    listed as (activities, punchcards, searches), is
     to be skipped.
     False means the activity should not be skipped,
     True otherwise.
     """
-    skip_dict = {
-        "activity": (True, False),
-        "search": (False, True),
-        "yes": (True, True),
-        "no": (False, False),
-    }
-    skip_dict["activities"] = skip_dict["activity"]
-    skip_dict["searches"] = skip_dict["search"]
-    skip_dict["all"] = skip_dict["yes"]
-    skip_dict["true"] = skip_dict["yes"]
-    skip_dict["false"] = skip_dict["no"]
 
-    if any(kw not in skip_dict for kw in possible_skips):
-        raise KeyError(f"Fix skip_dict! Missing some keys from {possible_skips}")
+    skip_str = skip_str.lower().strip()
 
-    try:
-        return skip_dict[skip_str]
-    except KeyError:
-        raise ValueError(f"Invalid skip value provided: {skip_str}")
+    if skip_str in ("yes", "all", "true"):
+        return True, True, True
+    if skip_str in ("no", "false"):
+        return False, False, False
+
+    skip_tuple = [False, False, False]
+    skip_elems = [e.strip() for e in skip_str.split(",")]
+
+    if any(kw in skip_elems for kw in ("activity", "activities")):
+        skip_tuple[0] = True
+    if any(kw in skip_elems for kw in ("punchcard", "punchcards")):
+        skip_tuple[1] = True
+    if any(kw in skip_elems for kw in ("search", "searches")):
+        skip_tuple[2] = True
+
+    return tuple(skip_tuple)
+
+
+def is_profile_used(profile_root: str, profile_dir: str) -> bool:
+    """Determines if the chrome profile should be used"""
+    return bool(profile_root) and bool(profile_dir)
+
+
+def get_value_from_dictionary(
+    thedict: dict, keywords: Sequence[str], *, strict_non_false_value=False
+) -> Optional[Any]:
+    """Get value from dictionary, specifying a list of
+    keywords that can be used to parse this value.
+    If two or more keywords are provided, the first that matches
+    a value will be used.
+
+    Returns None if no keyword is found, else its value."""
+    if isinstance(keywords, str):
+        keywords = [keywords]
+
+    for keyword in keywords:
+        value = thedict.get(keyword)
+        if strict_non_false_value and not value:
+            continue
+        if not strict_non_false_value and value is not None:
+            return value
+    return None
 
 
 def get_datetime_str(
@@ -94,6 +107,10 @@ def get_options(**kwargs):
         logger.info(f"Using profile '{profile_dir}' (root: {profile_root})")
         options.add_argument(f"--user-data-dir={profile_root}")
         options.add_argument(f"--profile-directory={profile_dir}")
+    elif profile_dir:  # ignore only profile_root set
+        raise ValueError(
+            "Cannot use Chrome profile without 'profile_root' variable set in configuration"
+        )
 
     ua = kwargs.get("user_agent")
     if ua:
@@ -120,7 +137,7 @@ _default_config = {
     "selenium": {
         "env": "local",
         "path": "chromedriver",
-        "url": "http://selenium-hub:4444/wd/hub",
+        "url": "http://localhost:4444/wd/hub",
         "headless": True,
         "logging": True,
         "profile_root": "",
@@ -150,7 +167,7 @@ def get_config(cfg_fp):
 
     # get automsr options
     skip = parser.get("automsr", "skip").lower()
-    skip_activity, skip_search = activity_skip(skip)
+    skip_activity, skip_punchcard, skip_search = activity_skip(skip)
 
     retry = parser.getint("automsr", "retry")
     credentials = parser.get("automsr", "credentials")
@@ -172,6 +189,7 @@ def get_config(cfg_fp):
         "automsr": dict(
             skip=skip,
             skip_activity=skip_activity,
+            skip_punchcard=skip_punchcard,
             skip_search=skip_search,
             retry=retry,
             credentials=credentials,
@@ -266,41 +284,31 @@ def get_credentials(credentials_fp):
     for i, creds in enumerate(creds_list):
         creds_errmsg = f"{errmsg} - credentials no. {i}"
         if not isinstance(creds, dict):
-            logger.error("Credentials must be object type")
-            raise InvalidCredentialsError(creds_errmsg)
+            msg = f"{creds_errmsg} - Credentials must be object type"
+            raise InvalidCredentialsError(msg)
 
         email = creds.get("email")
         password = creds.get("password")
+        profile = get_value_from_dictionary(creds, ("profile", "profile_dir"))
         skip = creds.get("skip")
 
         if not email:
             msg = f"{creds_errmsg} - Missing email"
-            logger.error(msg)
             raise InvalidCredentialsError(msg)
 
-        if not password:
-            msg = f"{creds_errmsg} - Missing password"
-            logger.error(msg)
+        if not password and not profile:
+            msg = f"{creds_errmsg} - Missing password and profile!"
             raise InvalidCredentialsError(msg)
-
-        skip_error = (
-            f"{creds_errmsg} - Invalid skip provided. "
-            f"Possible values are {possible_skips}"
-        )
 
         if not skip:
             logger.warning("Skip value missing, defaults to 'no'")
             skip = "no"
 
-        if skip not in possible_skips:
-            logger.error(skip_error)
-            logger.warning("Wrong skip value, defaults to 'no'")
-            skip = "no"
-
         creds.update(skip=skip)
 
-        skip_activity, skip_search = activity_skip(skip)
+        skip_activity, skip_punchcard, skip_search = activity_skip(skip)
         creds.update(skip_activity=skip_activity)
+        creds.update(skip_punchcard=skip_punchcard)
         creds.update(skip_search=skip_search)
 
         yield creds
@@ -318,14 +326,38 @@ def get_safe_credentials(credentials_fp):
             break
 
 
+def get_new_window(driver: Remote, old_windows):
+    # get new windows
+    new_windows = set(driver.window_handles)
+
+    # get window as diff between new and old windows
+    # if the set is empty (pop fails), then the button
+    # opened in current window handle
+    try:
+        window = new_windows.difference(old_windows).pop()
+        logger.debug("Link was opened in new window")
+    except KeyError:
+        window = driver.current_window_handle
+        logger.debug("Link was opened in same window")
+
+    return window
+
+
 class DriverCatcher:
     """A context manager wrapper for selenium driver,
-    used to catch exceptions and store informations about it"""
+    used to catch exceptions and store information about it"""
 
-    def __init__(self, driver: Remote, propagate_exception: bool = True):
+    def __init__(
+        self,
+        driver: Remote,
+        *,
+        propagate_exception: bool = True,
+        take_screenshot_on_exception: bool = True,
+    ):
         self.driver = driver
         self.screen_dir = pathlib.Path("screenshots")
         self.propagate = propagate_exception
+        self.take_screenshot = take_screenshot_on_exception
 
     def store_information_as_screenshot(self, fname: str = None):
         """Store the current driver screenshot in root dir with
@@ -354,7 +386,8 @@ class DriverCatcher:
         return path
 
     def __enter__(self):
-        os.makedirs(self.screen_dir, exist_ok=True)
+        if self.take_screenshot:
+            os.makedirs(self.screen_dir, exist_ok=True)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Manage possible exceptions with the if-else branch.
@@ -370,7 +403,8 @@ class DriverCatcher:
             logger.warning(
                 f"An exception occurred! exc_type: {exc_type}, exc_val: {exc_val}"
             )
-            path = self.store_information_as_screenshot()
-            logger.warning(f"A screenshot was saved in {path}")
+            if self.take_screenshot:
+                path = self.store_information_as_screenshot()
+                logger.warning(f"A screenshot was saved in {path}")
 
             return not self.propagate

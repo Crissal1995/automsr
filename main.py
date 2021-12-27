@@ -1,9 +1,11 @@
 import logging
 
-import msrewards.utility
-from msrewards import MicrosoftRewards
-from msrewards.mail import OutlookEmailConnection, RewardsStatus
-from msrewards.utility import get_config, get_safe_credentials, test_environment
+import selenium.common.exceptions
+
+import automsr.utility
+from automsr import MicrosoftRewards
+from automsr.mail import OutlookEmailConnection, RewardsStatus
+from automsr.utility import get_config, get_safe_credentials, test_environment
 
 
 def get_logger(verbose: bool):
@@ -14,17 +16,17 @@ def get_logger(verbose: bool):
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(stream_level)
 
-    file_handler = logging.FileHandler("main.log")
-    file_handler.setLevel(logging.INFO)
+    # file_handler = logging.FileHandler("main.log")
+    # file_handler.setLevel(logging.INFO)
 
-    file_debug_handler = logging.FileHandler("main.debug.log")
-    file_debug_handler.setLevel(logging.DEBUG)
+    # file_debug_handler = logging.FileHandler("main.debug.log")
+    # file_debug_handler.setLevel(logging.DEBUG)
 
     # set formatters and add handlers to main logger
-    logger = logging.getLogger("msrewards")
+    logger = logging.getLogger("automsr")
     logger.setLevel(logging.DEBUG)
 
-    handlers = (stream_handler, file_handler, file_debug_handler)
+    handlers = (stream_handler,)
 
     for handler in handlers:
         handler.setFormatter(formatter)
@@ -39,7 +41,7 @@ def main(**kwargs):
     config = get_config(config_fp)
 
     # change default config used in module with this one
-    msrewards.utility.config = config
+    automsr.utility.config = config
 
     # get credentials filepath from config
     credentials_fp = kwargs.get("credentials", config["automsr"]["credentials"])
@@ -101,6 +103,12 @@ def main(**kwargs):
                 success_message = MicrosoftRewards.do_every_activity(
                     credentials=credentials
                 )
+            except selenium.common.exceptions.InvalidArgumentException as e:
+                logger.error(
+                    "Error caught with Chromium profiles! "
+                    "Maybe you need to close all open windows and retry"
+                )
+                raise e from None
             except Exception as e:
                 msg = f"An error occurred: {e}"
                 if not verbose:
