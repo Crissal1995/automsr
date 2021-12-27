@@ -184,7 +184,7 @@ class MicrosoftRewards:
         # get a selenium driver
         driver = get_driver(**kwargs)
 
-        with DriverCatcher(driver):
+        with DriverCatcher(driver, take_screenshot_on_exception=False):
             # set its user agent to edge
             change_user_agent(driver, cls.useragent_edge_win)
 
