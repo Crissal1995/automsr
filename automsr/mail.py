@@ -5,7 +5,7 @@ from email.message import EmailMessage
 from enum import Enum
 from typing import List
 
-from automsr.utility import config
+import automsr.utility
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +130,7 @@ class EmailConnection:
         to_address: str = None,
     ):
         self.from_email = credentials["email"]
-        to_email = to_address or config["automsr"]["email"]
+        to_email = to_address or automsr.utility.config["automsr"]["email"]
 
         if to_email:
             self.to_email = to_email

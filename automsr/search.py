@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 from selenium.webdriver.common.keys import Keys
 
-from automsr.utility import config
+import automsr.utility
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class GoogleTakeoutSearchGenerator(SearchGenerator):
 
     def __init__(self):
         super().__init__()
-        takeout_json = pathlib.Path(config["automsr"]["takeout"])
+        takeout_json = pathlib.Path(automsr.utility.config["automsr"]["takeout"])
         if not takeout_json.exists():
             msg = f"Takeout json file doesn't exist! Path provided: {takeout_json}"
             logger.error(msg)

@@ -12,6 +12,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webdriver import WebDriver
 from tqdm import tqdm
 
+import automsr.utility
 from automsr.activities import (
     Activity,
     FreePunchcard,
@@ -46,7 +47,6 @@ from automsr.state import ActivityState, StateManager
 from automsr.utility import (
     DriverCatcher,
     change_user_agent,
-    config,
     get_driver,
     get_new_window,
     get_value_from_dictionary,
@@ -156,12 +156,17 @@ class MicrosoftRewards:
     def do_every_activity(cls, credentials: dict, **kwargs) -> str:
         # detect what to skip
         skip_activity = (
-            config["automsr"]["skip_activity"] or credentials["skip_activity"]
+            automsr.utility.config["automsr"]["skip_activity"]
+            or credentials["skip_activity"]
         )
         skip_punchcard = (
-            config["automsr"]["skip_punchcard"] or credentials["skip_punchcard"]
+            automsr.utility.config["automsr"]["skip_punchcard"]
+            or credentials["skip_punchcard"]
         )
-        skip_search = config["automsr"]["skip_search"] or credentials["skip_search"]
+        skip_search = (
+            automsr.utility.config["automsr"]["skip_search"]
+            or credentials["skip_search"]
+        )
 
         logger.debug(f"{skip_activity=}")
         logger.debug(f"{skip_punchcard=}")
@@ -182,7 +187,7 @@ class MicrosoftRewards:
             kwargs.update(dict(profile_dir=profile_dir))
 
         # get to know if profile login should be used
-        profile_root = config["selenium"]["profile_root"]
+        profile_root = automsr.utility.config["selenium"]["profile_root"]
         is_profile_used = ipu(profile_root, profile_dir)
 
         logger.debug(f"{profile_dir=}")
@@ -213,7 +218,7 @@ class MicrosoftRewards:
             messages = []
 
             # get retries
-            retries = config["automsr"]["retry"]
+            retries = automsr.utility.config["automsr"]["retry"]
 
             # execute activities
             if skip_activity:
@@ -251,7 +256,7 @@ class MicrosoftRewards:
                 logger.warning("Skipping daily search...")
             else:
                 logger.warning("Starting daily search...")
-                search_type = config["automsr"]["search_type"]
+                search_type = automsr.utility.config["automsr"]["search_type"]
                 rewards.execute_all_searches(search_type=search_type, retries=retries)
 
             # get points after execution

@@ -45,10 +45,12 @@ def main(**kwargs):
     automsr.utility.config = config
 
     # get credentials filepath from config
-    credentials_fp = kwargs.get("credentials", config["automsr"]["credentials"])
+    credentials_fp = kwargs.get(
+        "credentials", automsr.utility.config["automsr"]["credentials"]
+    )
 
     # get logger
-    verbose = kwargs.get("verbose", config["automsr"]["verbose"])
+    verbose = kwargs.get("verbose", automsr.utility.config["automsr"]["verbose"])
     logger = get_logger(verbose=verbose)
 
     # dry run mode, defaults to False
@@ -60,9 +62,12 @@ def main(**kwargs):
     # test if env is correctly set
     if not dry_run:
         test_environment(**kwargs)
+    # if dry-run, log (debug) current config
+    else:
+        logger.debug(automsr.utility.config)
 
     # if the email is not null or empty string, it will be used
-    send_email = bool(config["automsr"]["email"])
+    send_email = bool(automsr.utility.config["automsr"]["email"])
     if send_email:
         logger.info(
             "Recipient email found, so emails will be"
