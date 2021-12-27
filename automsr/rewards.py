@@ -168,10 +168,6 @@ class MicrosoftRewards:
             or credentials["skip_search"]
         )
 
-        logger.debug(f"{skip_activity=}")
-        logger.debug(f"{skip_punchcard=}")
-        logger.debug(f"{skip_search=}")
-
         email = credentials["email"]
 
         # if both skips are true, exit function
@@ -189,10 +185,6 @@ class MicrosoftRewards:
         # get to know if profile login should be used
         profile_root = automsr.utility.config["selenium"]["profile_root"]
         is_profile_used = ipu(profile_root, profile_dir)
-
-        logger.debug(f"{profile_dir=}")
-        logger.debug(f"{profile_root=}")
-        logger.debug(f"{is_profile_used=}")
 
         # get a selenium driver
         driver = get_driver(**kwargs)
