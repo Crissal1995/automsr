@@ -18,45 +18,32 @@ class InvalidCredentialsError(Exception):
     """Error class for invalid Credentials objects"""
 
 
-possible_skips = (
-    "no",
-    "false",
-    "all",
-    "yes",
-    "true",
-    "search",
-    "searches",
-    "activity",
-    "activities",
-)
-
-
-def activity_skip(skip_str: str) -> Tuple[bool, bool]:
+def activity_skip(skip_str: str) -> Tuple[bool, ...]:
     """Function utility to know which activity,
-    listed as (daily_activities, daily_searches), is
+    listed as (activities, punchcards, searches), is
     to be skipped.
     False means the activity should not be skipped,
     True otherwise.
     """
-    skip_dict = {
-        "activity": (True, False),
-        "search": (False, True),
-        "yes": (True, True),
-        "no": (False, False),
-    }
-    skip_dict["activities"] = skip_dict["activity"]
-    skip_dict["searches"] = skip_dict["search"]
-    skip_dict["all"] = skip_dict["yes"]
-    skip_dict["true"] = skip_dict["yes"]
-    skip_dict["false"] = skip_dict["no"]
 
-    if any(kw not in skip_dict for kw in possible_skips):
-        raise KeyError(f"Fix skip_dict! Missing some keys from {possible_skips}")
+    skip_str = skip_str.lower().strip()
 
-    try:
-        return skip_dict[skip_str]
-    except KeyError:
-        raise ValueError(f"Invalid skip value provided: {skip_str}")
+    if skip_str in ("yes", "all", "true"):
+        return True, True, True
+    if skip_str in ("no", "false"):
+        return False, False, False
+
+    skip_tuple = [False, False, False]
+    skip_elems = [e.strip() for e in skip_str.split(",")]
+
+    if any(kw in skip_elems for kw in ("activity", "activities")):
+        skip_tuple[0] = True
+    if any(kw in skip_elems for kw in ("punchcard", "punchcards")):
+        skip_tuple[1] = True
+    if any(kw in skip_elems for kw in ("search", "searches")):
+        skip_tuple[2] = True
+
+    return tuple(skip_tuple)
 
 
 def is_profile_used(profile_root: str, profile_dir: str) -> bool:
@@ -180,7 +167,7 @@ def get_config(cfg_fp):
 
     # get automsr options
     skip = parser.get("automsr", "skip").lower()
-    skip_activity, skip_search = activity_skip(skip)
+    skip_activity, skip_punchcard, skip_search = activity_skip(skip)
 
     retry = parser.getint("automsr", "retry")
     credentials = parser.get("automsr", "credentials")
@@ -202,6 +189,7 @@ def get_config(cfg_fp):
         "automsr": dict(
             skip=skip,
             skip_activity=skip_activity,
+            skip_punchcard=skip_punchcard,
             skip_search=skip_search,
             retry=retry,
             credentials=credentials,
@@ -312,24 +300,15 @@ def get_credentials(credentials_fp):
             msg = f"{creds_errmsg} - Missing password and profile!"
             raise InvalidCredentialsError(msg)
 
-        skip_error = (
-            f"{creds_errmsg} - Invalid skip provided. "
-            f"Possible values are {possible_skips}"
-        )
-
         if not skip:
             logger.warning("Skip value missing, defaults to 'no'")
             skip = "no"
 
-        if skip not in possible_skips:
-            logger.error(skip_error)
-            logger.warning("Wrong skip value, defaults to 'no'")
-            skip = "no"
-
         creds.update(skip=skip)
 
-        skip_activity, skip_search = activity_skip(skip)
+        skip_activity, skip_punchcard, skip_search = activity_skip(skip)
         creds.update(skip_activity=skip_activity)
+        creds.update(skip_punchcard=skip_punchcard)
         creds.update(skip_search=skip_search)
 
         yield creds
@@ -347,6 +326,23 @@ def get_safe_credentials(credentials_fp):
             break
 
 
+def get_new_window(driver: Remote, old_windows):
+    # get new windows
+    new_windows = set(driver.window_handles)
+
+    # get window as diff between new and old windows
+    # if the set is empty (pop fails), then the button
+    # opened in current window handle
+    try:
+        window = new_windows.difference(old_windows).pop()
+        logger.debug("Link was opened in new window")
+    except KeyError:
+        window = driver.current_window_handle
+        logger.debug("Link was opened in same window")
+
+    return window
+
+
 class DriverCatcher:
     """A context manager wrapper for selenium driver,
     used to catch exceptions and store information about it"""
@@ -354,6 +350,7 @@ class DriverCatcher:
     def __init__(
         self,
         driver: Remote,
+        *,
         propagate_exception: bool = True,
         take_screenshot_on_exception: bool = True,
     ):

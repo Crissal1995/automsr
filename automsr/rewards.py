@@ -48,6 +48,7 @@ from automsr.utility import (
     change_user_agent,
     config,
     get_driver,
+    get_new_window,
     get_value_from_dictionary,
 )
 from automsr.utility import is_profile_used as ipu
@@ -157,12 +158,15 @@ class MicrosoftRewards:
         skip_activity = (
             config["automsr"]["skip_activity"] or credentials["skip_activity"]
         )
+        skip_punchcard = (
+            config["automsr"]["skip_punchcard"] or credentials["skip_punchcard"]
+        )
         skip_search = config["automsr"]["skip_search"] or credentials["skip_search"]
 
         email = credentials["email"]
 
         # if both skips are true, exit function
-        if skip_activity and skip_search:
+        if all((skip_activity, skip_punchcard, skip_search)):
             msg = "Skipped everything"
             logger.info(msg)
             return msg
@@ -203,13 +207,12 @@ class MicrosoftRewards:
             # get retries
             retries = config["automsr"]["retry"]
 
-            # execute runnables
+            # execute activities
             if skip_activity:
                 logger.warning("Skipping activity...")
             else:
                 logger.warning("Starting activity...")
                 rewards._execute_todo_runnables(Activity, retries=retries)
-                rewards._execute_todo_runnables(Punchcard, retries=retries)
 
                 # check if all activities are executed
                 activities = rewards.state_manager.get_missing_activities(
@@ -227,6 +230,13 @@ class MicrosoftRewards:
                     logger.info(msg)
 
                 messages.append(msg)
+
+            # execute punchcards
+            if skip_punchcard:
+                logger.warning("Skipping punchcards...")
+            else:
+                logger.warning("Starting punchcards...")
+                rewards._execute_todo_runnables(Punchcard, retries=retries)
 
             # execute desktop searches
             if skip_search:
@@ -797,22 +807,6 @@ class MicrosoftRewards:
 
         return self.execute_activities(activities_list)
 
-    def get_new_window(self, old_windows):
-        # get new windows
-        new_windows = set(self.driver.window_handles)
-
-        # get window as diff between new and old windows
-        # if the set is empty (pop fails), then the button
-        # opened in current window handle
-        try:
-            window = new_windows.difference(old_windows).pop()
-            logger.debug("Link was opened in new window")
-        except KeyError:
-            window = self.driver.current_window_handle
-            logger.debug("Link was opened in same window")
-
-        return window
-
     def _execute(
         self, runnables: Sequence[Runnable], runnable_type: str
     ) -> Sequence[Runnable]:
@@ -844,7 +838,7 @@ class MicrosoftRewards:
         actions = ActionChains(self.driver)
 
         for i, runnable in enumerate(runnables):
-            logger.info(f"Starting {singular} {i+1}/{length}: {str(runnable)}")
+            logger.info(f"Starting runnable {singular} {i+1}/{length}: {str(runnable)}")
 
             # go to homepage
             self.go_to_home_tab()
@@ -859,7 +853,7 @@ class MicrosoftRewards:
             runnable.start()
 
             # switch to page and let it load
-            window = self.get_new_window(old_windows)
+            window = get_new_window(self.driver, old_windows)
             self.driver.switch_to.window(window)
 
             # refresh tab for some activities that don't always load

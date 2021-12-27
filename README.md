@@ -101,12 +101,13 @@ The json file of credentials (should be a list of objects; see example file).
 Defaults to `credentials.json`.
 
 #### skip
-AutoMSR can skip Rewards activities or Bing searches (or both). 
-This value can be one of 
+AutoMSR can skip Rewards activities, punchcards and/or Bing searches. 
+This value can be a comma separated list of these keywords:
 `no` (don't skip anything), 
 `yes`, `all` (skip everything),
 `search`, `searches` (skip Bing searches), 
-`activity`, `activities` (skip Rewards activities).
+`activity`, `activities` (skip Rewards activities),
+`punchcard`, `punchcards` (skip Rewards activities).
 
 Defaults to `no`.
 
