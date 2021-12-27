@@ -500,7 +500,7 @@ class Punchcard(Runnable, ABC):
 
         missing_punchcards_urls = []
         for retry in range(retries):
-            logger.debug(f"Retry {retry+1}/{retries}")
+            logger.info(f"Retry {retry+1}/{retries}")
 
             for i, url in enumerate(todo_punchcards_urls):
                 logger.info(
@@ -521,6 +521,14 @@ class Punchcard(Runnable, ABC):
                 except exceptions.NoSuchElementException:
                     pass
 
+                # handles map punchcard action
+                try:
+                    self.driver.find_element_by_id("maps_sb")
+                    logger.info(f"Completed maps punchcard action {i + 1}")
+                    completed = True
+                except exceptions.NoSuchElementException:
+                    pass
+
                 # handles standard punchcard action
                 try:
                     self.driver.find_element_by_id("sb_form_q")
@@ -535,8 +543,7 @@ class Punchcard(Runnable, ABC):
 
                 # go back to punchcard homepage
                 self.driver.get(root_url)
-
-            todo_punchcards_urls = missing_punchcards_urls
+            todo_punchcards_urls = missing_punchcards_urls.copy()
 
         if todo_punchcards_urls:
             logger.error("Cannot complete punchcard")
