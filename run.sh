@@ -10,6 +10,7 @@ DELAY_TIME_M=$((1 + $RANDOM % ($MAX_HOURS_TO_DELAY * 60)))
 #DELAY_TIME_M=1
 DELAY_TIME_S=$(($DELAY_TIME_M * 60))
 #DELAY_TIME_S=1
+TS=$(date +%d-%m-%Y_%k-%M)
 
 if [ $# -gt 0 ]
 then
