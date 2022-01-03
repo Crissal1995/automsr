@@ -7,10 +7,10 @@ echo "**********************************"
 MAX_HOURS_TO_DELAY=2
 
 DELAY_TIME_M=$((1 + $RANDOM % ($MAX_HOURS_TO_DELAY * 60)))
-#DELAY_TIME_M=1
 DELAY_TIME_S=$(($DELAY_TIME_M * 60))
-#DELAY_TIME_S=1
 TS=$(date +%d-%m-%Y_%k-%M)
+
+AUTOMSR_PATH=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 if [ $# -gt 0 ]
 then
@@ -18,7 +18,7 @@ then
 	DELAY_TIME_S=$1
 fi
 
-cd /home/jiin995/auto_msrewards
+cd ${AUTOMSR_PATH}
 
 echo "[$(date)] Wait $DELAY_TIME_M minutes before run automsr"
 
