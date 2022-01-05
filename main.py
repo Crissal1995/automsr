@@ -1,11 +1,12 @@
 import logging
 import sys
+from typing import List
 
 import selenium.common.exceptions
 
 import automsr.utility
 from automsr import MicrosoftRewards
-from automsr.mail import OutlookEmailConnection, RewardsStatus
+from automsr.mail import EmailConnectionFactory, RewardsStatus
 from automsr.utility import get_config, get_safe_credentials, test_environment
 
 
@@ -56,8 +57,8 @@ def main(**kwargs):
     # dry run mode, defaults to False
     dry_run = kwargs.get("dry_run", False)
 
-    # hardcoded because it should be 2 at least
-    retry = 5
+    # parse retry for single account
+    retry = automsr.utility.config["automsr"]["retry"]
 
     # test if env is correctly set
     if not dry_run:
@@ -66,28 +67,20 @@ def main(**kwargs):
     else:
         logger.debug(automsr.utility.config)
 
-    # if the email is not null or empty string, it will be used
-    send_email = bool(automsr.utility.config["automsr"]["email"])
-    if send_email:
-        logger.info(
-            "Recipient email found, so emails will be"
-            " sent in case of success/failure"
-        )
-    else:
-        logger.info(
-            "No recipient email was found, so no email will be"
-            " sent in case of success/failure"
-        )
-
-    credentials_sender = None
-    status_list: [RewardsStatus] = []
-
     # cycle over credentials, getting points from activities
-    for i, credentials in enumerate(get_safe_credentials(credentials_fp)):
-        # take the first credentials set as only one sender
-        if i == 0:
-            credentials_sender = credentials
+    all_credentials = list(get_safe_credentials(credentials_fp))
+    status_list: List[RewardsStatus] = []
 
+    # check if email creds are valid
+    factory = EmailConnectionFactory(all_credentials=all_credentials)
+    conn = factory.get_connection()
+    if conn:
+        conn.close()
+        logger.info("A status email will be sent at the end of execution")
+    else:
+        logger.warning("No status email will be sent at the end of execution!")
+
+    for i, credentials in enumerate(all_credentials):
         # if we're iterating over multiple credentials, print a divider
         if i > 0:
             logger.info("-" * 30)
@@ -136,13 +129,13 @@ def main(**kwargs):
                 status_list.append(status)
                 break
 
-    # at the end of the cycle, we'll send the email with the report status
-    # if credentials_sender is set (there is almost one credentials to work with)
-    # and if recipient is set
-    if send_email and credentials_sender:
-        with OutlookEmailConnection(credentials_sender) as conn:
-            conn.send_status_message(status_list)
-        logger.info("Email sent to receipt correctly")
+    # at the end of the execution, we'll send the email with the report status
+    # with an email connection based on the chosen strategy
+    conn = factory.get_connection()
+    if conn:
+        conn.send_status_message(status_list)
+        conn.close()
+        logger.info("Status email sent correctly to recipient(s)")
 
 
 if __name__ == "__main__":
@@ -174,9 +167,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(
-        config=args.config,
-        credentials=args.credentials,
-        dry_run=args.dry_run,
-        verbose=args.verbose,
-    )
+    main(**vars(args))

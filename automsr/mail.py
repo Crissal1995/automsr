@@ -1,17 +1,19 @@
 import datetime
 import logging
+import random
 import smtplib
 from email.message import EmailMessage
 from enum import Enum
-from typing import List
+from typing import Dict, List, Optional
 
 import automsr.utility
+from automsr.exception import (
+    AuthenticationError,
+    MalformedSenderError,
+    MissingRecipientError,
+)
 
 logger = logging.getLogger(__name__)
-
-
-class MissingRecipientEmailError(Exception):
-    """Error raised when no destination email is found inside config"""
 
 
 class RewardsStatusEnum(Enum):
@@ -123,19 +125,20 @@ class RewardsEmailMessage(EmailMessage):
 class EmailConnection:
     def __init__(
         self,
-        credentials: dict,
         host: str,
         port: int,
-        ssl: bool = True,
-        to_address: str = None,
+        sender: str = None,
+        password: str = None,
+        recipient: str = None,
+        tls: bool = False,
     ):
-        self.from_email = credentials["email"]
-        to_email = to_address or automsr.utility.config["automsr"]["email"]
+        self.sender = sender or automsr.utility.config["email"]["sender"]
+        password = password or automsr.utility.config["email"]["password"]
+        self.recipient = recipient or automsr.utility.config["email"]["recipient"]
+        self.tls = automsr.utility.config["email"]["tls"] or tls
 
-        if to_email:
-            self.to_email = to_email
-        else:
-            raise MissingRecipientEmailError()
+        if not self.recipient:
+            raise MissingRecipientError()
 
         # create the smtp connection
         self.smtp = smtplib.SMTP(host=host, port=port)
@@ -143,23 +146,25 @@ class EmailConnection:
         # send an ehlo message to the server
         self.smtp.ehlo()
 
-        # if ssl is enabled, start tls
-        if ssl:
+        # if TLS is enabled, start it
+        if self.tls:
             self.smtp.starttls()
 
         # login with auth credentials
-        self.smtp.login(self.from_email, credentials["password"])
-        logger.debug("SMTP connection established")
+        try:
+            self.smtp.login(self.sender, password)
+            logger.debug("SMTP connection established")
+        except smtplib.SMTPAuthenticationError:
+            raise AuthenticationError("Invalid credentials provided!")
 
-    def _quit(self):
+    def close(self):
         try:
             self.smtp.quit()
+        finally:
             logger.debug("SMTP connection closed")
-        except smtplib.SMTPServerDisconnected:
-            logger.debug("SMTP connection was already closed")
 
     def __del__(self):
-        self._quit()
+        self.close()
 
     def _send_message(self, msg: EmailMessage):
         self.smtp.send_message(msg)
@@ -179,31 +184,111 @@ class EmailConnection:
         content = "\n\n".join(content_list)
 
         msg = RewardsEmailMessage.get_status_message(
-            self.from_email, self.to_email, content=content, content_html=content_html
+            self.sender, self.recipient, content=content, content_html=content_html
         )
         self._send_message(msg)
 
     def send_success_message(self):
-        msg = RewardsEmailMessage.get_success_message(self.from_email, self.to_email)
+        msg = RewardsEmailMessage.get_success_message(self.sender, self.recipient)
         self._send_message(msg)
 
     def send_failure_message(self):
-        msg = RewardsEmailMessage.get_failure_message(self.from_email, self.to_email)
+        msg = RewardsEmailMessage.get_failure_message(self.sender, self.recipient)
         self._send_message(msg)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._quit()
+        self.close()
 
 
 class OutlookEmailConnection(EmailConnection):
-    def __init__(self, credentials: dict, to_address: str = None):
+    def __init__(self, sender: str = None, password: str = None, recipient: str = None):
         super().__init__(
-            credentials=credentials,
-            to_address=to_address,
             host="smtp-mail.outlook.com",
             port=587,
-            ssl=True,
+            tls=True,
+            sender=sender,
+            password=password,
+            recipient=recipient,
         )
+
+
+class GmailEmailConnection(EmailConnection):
+    def __init__(self, sender: str = None, password: str = None, recipient: str = None):
+        super().__init__(
+            host="smtp.gmail.com",
+            port=587,
+            tls=True,
+            sender=sender,
+            password=password,
+            recipient=recipient,
+        )
+
+
+class EmailConnectionFactory:
+    def __init__(self, all_credentials: List[Dict[str, str]]) -> None:
+        self.config = automsr.utility.config["email"]
+        recipient = self.config["recipient"]
+        send = self.config["send"]
+
+        if send and not recipient:
+            raise MissingRecipientError()
+        self.credentials = all_credentials
+
+    def _get_connection_from_credentials(self, index: int, recipient: str = None):
+        """Return the OutlookEmailConnection corresponding to
+        the credentials at position index in the credentials array."""
+        creds = self.credentials[index]
+        email = creds.get("email")
+        password = creds.get("password")
+        if any(not v for v in (email, password)):
+            # obscure password if found
+            if password:
+                creds["password"] = "***"
+            raise MalformedSenderError(creds)
+        return OutlookEmailConnection(email, password, recipient)
+
+    def get_connection(self) -> Optional[EmailConnection]:
+        """Return the EmailConnection specified by the chosen strategy.
+        If should not send any email (send=False), returns None"""
+
+        if not self.config["send"]:
+            return None
+
+        recipient = self.config["recipient"]
+
+        strategy = self.config["strategy"]
+        n = len(self.credentials)
+
+        if strategy == "gmail":
+            email = self.config["sender"]
+            psw = self.config["password"]
+            return GmailEmailConnection(sender=email, password=psw, recipient=recipient)
+
+        elif strategy == "custom":
+            email = self.config["sender"]
+            psw = self.config["password"]
+            host = self.config["host"]
+            port = self.config["port"]
+            tls = self.config["tls"]
+            return EmailConnection(
+                host=host,
+                port=port,
+                sender=email,
+                password=psw,
+                recipient=recipient,
+                tls=tls,
+            )
+
+        else:
+            if strategy == "first":
+                index = 0
+            elif strategy == "last":
+                index = n - 1
+            elif strategy == "random":
+                index = random.randint(0, n - 1)
+            else:
+                raise NotImplementedError
+            return self._get_connection_from_credentials(index, recipient)
