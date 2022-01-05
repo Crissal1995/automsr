@@ -131,8 +131,17 @@ _default_config = {
         "skip": "no",
         "credentials": "credentials.json",
         "search_type": "random",
-        "email": "",
         "verbose": False,
+    },
+    "email": {
+        "send": True,
+        "strategy": "first",
+        "sender": "",
+        "password": "",
+        "recipient": "",
+        "tls": True,
+        "host": "",
+        "port": 0,
     },
     "selenium": {
         "env": "local",
@@ -151,7 +160,7 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
     # read defaults
     parser.read_dict(_default_config)
 
-    # skip the read if it's first usage, 
+    # skip the read if it's first usage,
     # found in this file with no path provided
     if not first_usage:
         # read file (can also be not found)
@@ -161,6 +170,7 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
             logger.warning(f"Cannot read config from {cfg_fp}. Defaults will be used.")
 
     valid_selenium_envs = ("local", "remote")
+    valid_strategies = ("first", "last", "random", "gmail", "custom")
 
     # get selenium options
     env = parser.get("selenium", "env")
@@ -173,16 +183,28 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
     # get automsr options
     skip = parser.get("automsr", "skip").lower()
     skip_activity, skip_punchcard, skip_search = activity_skip(skip)
-
     retry = parser.getint("automsr", "retry")
     credentials = parser.get("automsr", "credentials")
     search_type = parser.get("automsr", "search_type")
-    email = parser.get("automsr", "email")
     verbose = parser.getboolean("automsr", "verbose")
 
+    # get email options
+    send = parser.getboolean("email", "send")
+    strategy = parser.get("email", "strategy")
+    sender = parser.get("email", "sender")
+    password = parser.get("email", "password")
+    recipient = parser.get("email", "recipient")
+    tls = parser.getboolean("email", "tls")
+    host = parser.get("email", "host")
+    port = parser.getint("email", "port")
+
+    # check specific options
     if env not in valid_selenium_envs:
         err = f"Invalid selenium env provided! Valid envs are: {valid_selenium_envs}"
-        logger.error(err)
+        raise ValueError(err)
+
+    if strategy not in valid_strategies:
+        err = f"Invalid email choice provided! Valid choices are: {valid_strategies}"
         raise ValueError(err)
 
     if retry < 1:
@@ -190,6 +212,7 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
         logger.warning(msg)
         retry = 1
 
+    # finally return the config dictionary
     return {
         "automsr": dict(
             skip=skip,
@@ -199,7 +222,6 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
             retry=retry,
             credentials=credentials,
             search_type=search_type,
-            email=email,
             verbose=verbose,
         ),
         "selenium": dict(
@@ -209,6 +231,16 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
             headless=headless,
             enable_logging=enable_logging,
             profile_root=profile_root,
+        ),
+        "email": dict(
+            send=send,
+            strategy=strategy,
+            sender=sender,
+            password=password,
+            recipient=recipient,
+            tls=tls,
+            host=host,
+            port=port,
         ),
     }
 
