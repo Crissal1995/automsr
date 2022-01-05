@@ -145,17 +145,20 @@ _default_config = {
 }
 
 
-def get_config(cfg_fp: str = ""):
+def get_config(cfg_fp: str = "", *, first_usage=False):
     parser = configparser.ConfigParser()
 
     # read defaults
     parser.read_dict(_default_config)
 
-    # read file (can also be not found)
-    if not cfg_fp:
-        logger.warning("No config provided! Defaults will be used.")
-    elif not parser.read(cfg_fp):
-        logger.warning(f"Cannot read config from {cfg_fp}. Defaults will be used.")
+    # skip the read if it's first usage, 
+    # found in this file with no path provided
+    if not first_usage:
+        # read file (can also be not found)
+        if not cfg_fp:
+            logger.warning("No config provided! Defaults will be used.")
+        elif not parser.read(cfg_fp):
+            logger.warning(f"Cannot read config from {cfg_fp}. Defaults will be used.")
 
     valid_selenium_envs = ("local", "remote")
 
@@ -211,7 +214,7 @@ def get_config(cfg_fp: str = ""):
 
 
 # read one time and then use it
-config = get_config()
+config = get_config(first_usage=True)
 
 
 def get_driver(**kwargs):
