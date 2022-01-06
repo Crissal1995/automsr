@@ -4,16 +4,27 @@ import random
 import smtplib
 from email.message import EmailMessage
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import automsr.utility
 from automsr.exception import (
     AuthenticationError,
+    ConfigurationError,
+    EmailError,
     MalformedSenderError,
     MissingRecipientError,
 )
 
 logger = logging.getLogger(__name__)
+NO_SENDER_ERR = "No sender email found!"
+NO_SENDER_PSW_ERR = "No sender password found!"
+NO_RECIPIENT_ERR = "No recipient specified!"
+NO_HOST_ERR = "No SMTP host specified!"
+NO_PORT_ERR = "No port specified!"
+HOST_NOT_REACHABLE = "Cannot reach host! Check internet connection or hostname"
+SHOULD_NOT_CREATE_CONN = (
+    "Cannot create Email Connection if should not send any email! Check config"
+)
 
 
 class RewardsStatusEnum(Enum):
@@ -133,33 +144,52 @@ class EmailConnection:
         tls: bool = False,
     ):
         self.sender = sender or automsr.utility.config["email"]["sender"]
-        password = password or automsr.utility.config["email"]["password"]
+        self.password = password or automsr.utility.config["email"]["password"]
         self.recipient = recipient or automsr.utility.config["email"]["recipient"]
         self.tls = automsr.utility.config["email"]["tls"] or tls
+        self.host = host
+        self.port = port
+        self.smtp = smtplib.SMTP(host=self.host, port=self.port)
+
+        if not host:
+            raise ConfigurationError(NO_HOST_ERR)
+
+        if not port:
+            raise ConfigurationError(NO_PORT_ERR)
+
+        if not self.sender:
+            raise MalformedSenderError(NO_SENDER_ERR)
+
+        if not self.password:
+            raise MalformedSenderError(NO_SENDER_PSW_ERR)
 
         if not self.recipient:
-            raise MissingRecipientError()
+            raise MissingRecipientError(NO_RECIPIENT_ERR)
 
-        # create the smtp connection
-        self.smtp = smtplib.SMTP(host=host, port=port)
-
-        # send an ehlo message to the server
-        self.smtp.ehlo()
-
-        # if TLS is enabled, start it
-        if self.tls:
-            self.smtp.starttls()
-
-        # login with auth credentials
+    def open(self):
         try:
-            self.smtp.login(self.sender, password)
-            logger.debug("SMTP connection established")
+            # send an ehlo message to the server
+            self.smtp.ehlo()
+
+            # if TLS is enabled, start it
+            if self.tls:
+                self.smtp.starttls()
+
+            # actual login
+            self.smtp.login(self.sender, self.password)
+
         except smtplib.SMTPAuthenticationError:
             raise AuthenticationError("Invalid credentials provided!")
+        except TimeoutError:
+            raise EmailError(HOST_NOT_REACHABLE)
+        else:
+            return self
 
     def close(self):
         try:
             self.smtp.quit()
+        except smtplib.SMTPServerDisconnected:
+            pass
         finally:
             logger.debug("SMTP connection closed")
 
@@ -197,7 +227,7 @@ class EmailConnection:
         self._send_message(msg)
 
     def __enter__(self):
-        return self
+        return self.open()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
@@ -231,10 +261,10 @@ class EmailConnectionFactory:
     def __init__(self, all_credentials: List[Dict[str, str]]) -> None:
         self.config = automsr.utility.config["email"]
         recipient = self.config["recipient"]
-        send = self.config["send"]
+        self.send = self.config["send"]
 
-        if send and not recipient:
-            raise MissingRecipientError()
+        if self.send and not recipient:
+            raise MissingRecipientError(NO_RECIPIENT_ERR)
         self.credentials = all_credentials
 
     def _get_connection_from_credentials(self, index: int, recipient: str = None):
@@ -243,19 +273,14 @@ class EmailConnectionFactory:
         creds = self.credentials[index]
         email = creds.get("email")
         password = creds.get("password")
-        if any(not v for v in (email, password)):
-            # obscure password if found
-            if password:
-                creds["password"] = "***"
-            raise MalformedSenderError(creds)
         return OutlookEmailConnection(email, password, recipient)
 
-    def get_connection(self) -> Optional[EmailConnection]:
+    def get_connection(self) -> EmailConnection:
         """Return the EmailConnection specified by the chosen strategy.
-        If should not send any email (send=False), returns None"""
+        If this should not send any email (send=False), raise an error"""
 
-        if not self.config["send"]:
-            return None
+        if not self.send:
+            raise ConfigurationError(SHOULD_NOT_CREATE_CONN)
 
         recipient = self.config["recipient"]
 

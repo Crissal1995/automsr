@@ -9,10 +9,12 @@ from automsr import MicrosoftRewards
 from automsr.mail import EmailConnectionFactory, RewardsStatus
 from automsr.utility import get_config, get_safe_credentials, test_environment
 
+FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
+DIVIDER = "-" * 50
 
-def get_logger(verbose: bool):
-    FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
-    formatter = logging.Formatter(FORMAT)
+
+def get_logger(verbose: bool, log_format: str = FORMAT):
+    formatter = logging.Formatter(log_format)
 
     stream_level = logging.DEBUG if verbose else logging.INFO
     stream_handler = logging.StreamHandler()
@@ -73,17 +75,14 @@ def main(**kwargs):
 
     # check if email creds are valid
     factory = EmailConnectionFactory(all_credentials=all_credentials)
-    conn = factory.get_connection()
-    if conn:
-        conn.close()
+    if factory.send:
         logger.info("A status email will be sent at the end of execution")
+        logger.info(f"Sender email: {factory.get_connection().sender}")
     else:
         logger.warning("No status email will be sent at the end of execution!")
 
-    for i, credentials in enumerate(all_credentials):
-        # if we're iterating over multiple credentials, print a divider
-        if i > 0:
-            logger.info("-" * 30)
+    for credentials in all_credentials:
+        logger.info(DIVIDER)
 
         email = credentials["email"]
         logger.info(f"Working on credentials [email={email}]")
@@ -131,8 +130,11 @@ def main(**kwargs):
 
     # at the end of the execution, we'll send the email with the report status
     # with an email connection based on the chosen strategy
-    conn = factory.get_connection()
-    if conn:
+    logger.info(DIVIDER)
+    logger.info("Execution completed for all credentials")
+    if factory.send:
+        logger.info("Now sending email...")
+        conn = factory.get_connection().open()
         conn.send_status_message(status_list)
         conn.close()
         logger.info("Status email sent correctly to recipient(s)")

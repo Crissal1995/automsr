@@ -55,3 +55,7 @@ class MalformedSenderError(EmailError):
 
 class AuthenticationError(EmailError):
     """Error raised when provided credentials are wrong"""
+
+
+class ConfigurationError(EmailError):
+    """Error raised when provided configuration is wrong"""
