@@ -39,3 +39,23 @@ class InvalidInputError(AutomsrError):
 
 class Detected2FAError(AutomsrError):
     """Exception raised when 2FA is detected"""
+
+
+class EmailError(AutomsrError):
+    """Base class for email errors"""
+
+
+class MissingRecipientError(EmailError):
+    """Error raised when no destination email is found"""
+
+
+class MalformedSenderError(EmailError):
+    """Error raised when a sender miss email and/or password"""
+
+
+class AuthenticationError(EmailError):
+    """Error raised when provided credentials are wrong"""
+
+
+class ConfigurationError(EmailError):
+    """Error raised when provided configuration is wrong"""
