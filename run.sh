@@ -6,8 +6,8 @@ echo "**********************************"
 
 MAX_HOURS_TO_DELAY=2
 
-DELAY_TIME_M=$((1 + $RANDOM % ($MAX_HOURS_TO_DELAY * 60)))
-DELAY_TIME_S=$(($DELAY_TIME_M * 60))
+DELAY_TIME_M=$((1 + RANDOM % (MAX_HOURS_TO_DELAY * 60)))
+DELAY_TIME_S=$((DELAY_TIME_M * 60))
 TS=$(date +%F_%R)
 
 AUTOMSR_PATH=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
@@ -16,16 +16,20 @@ if [ $# -gt 0 ]
 then
 	echo "Time provided: $1"
 	DELAY_TIME_S=$1
-	DELAY_TIME_M=$(($DELAY_TIME_S / 60))
+	DELAY_TIME_M=$((DELAY_TIME_S / 60))
 fi
 
-REMAINDER=$(($DELAY_TIME_S % 60))
-echo "[$(date)] Wait $DELAY_TIME_M min, $REMAINDER sec before AutoMSR starts"
+REMAINDER=$((DELAY_TIME_S % 60))
+REMAINDER_STR=""
+if [[ ! $REMAINDER -eq 0 ]]; then
+  REMAINDER_STR=", $REMAINDER sec"
+fi
+echo "[$(date)] Wait $DELAY_TIME_M min$REMAINDER_STR before AutoMSR starts"
 
-sleep $DELAY_TIME_S
+sleep "$DELAY_TIME_S"
 echo "[$(date)] Ready to start AutoMSR"
 
-cd ${AUTOMSR_PATH}
+cd "$AUTOMSR_PATH" || exit 1
 
 possible_venvs=( ".venv" "venv" "virtualenv" )
 for venv in "${possible_venvs[@]}"
