@@ -17,7 +17,7 @@ i punti giornalieri disponibili su Microsoft Rewards.
 Cosa fa:
 - Completa le attività giornaliere
 - Completa altre attività
-- Completa le schede perforate gratuite 
+- Completa le schede punti gratuite 
 - Ricerche con uno User Agent desktop (Edge su Windows)
 - Ricerche con un User Agent mobile (Chrome su Android)
 
@@ -50,9 +50,10 @@ il profilo Chrome corrispondente.
 
 **Questo metodo presuppone che il tuo profilo sia impostato correttamente**, quindi che:
 
-- Sei loggato nella tua [homepage di Rewards][rewards]
-- Sei loggato nella tua [homepage di Bing][bing]
-(l'angolo in alto a destra dovrebbe riportare il tuo nome, non Accedi)
+- Sei loggato nella [homepage di Rewards][rewards];
+- Sei loggato nella [homepage di Bing][bing]
+(l'angolo in alto a destra dovrebbe riportare il tuo nome, non Accedi);
+- Hai accettato tutti i cookies popup trovati sia nella homepage di Rewards che nelle pagine di Bing.
 
 Per ottenere il nome del tuo profilo, devi andare in [chrome://version](chrome://version)
 e controllare *Percorso Profilo*.
@@ -62,8 +63,7 @@ Se entrambi `profile` che `password` vengono trovati, verrà utilizzato questo m
 ### Configurazione
 Tutti i parametri di configurazione sono elencati di seguito in modo più dettagliato. 
 Tuttavia, ci sono alcuni elementi che vale la pena notare, ovvero:
-
-1. `automsr/email`: Email (o lista di email, separate da virgola) dove
+1. `email/recipient`: Email (o lista di email separate da virgola) dove
 ricevere lo stato di esecuzione di AutoMSR.
 2. `selenium/headless`: Visualizza (`false`) o no (`true`) la finestra di Chrome
 durante l'esecuzione. È stato empiricamente provato che un valore `false`
@@ -88,13 +88,12 @@ python3 main.py
 ```
 
 *Si noti che, quando si esegue con Profiles, tutti i processi di Chrome
-dovrebbero essere terminati. È tuttavia possibile utilizzare altri browser
-Chromium, come Edge.*
+dovrebbero essere terminati. Mentre si esegue AutoMSR si possono comunque usare altri browser Chromium, come Edge.*
 
 ## Configurazione
 Il comportamento dello strumento può essere configurato all'interno di `automsr.cfg`.
 
-Ci sono due sezioni principali utilizzate in AutoMSR: **automsr** e **selenium**.
+Il file di configurazione è diviso in tre sezioni:  **automsr**, **email** e **selenium**.
 
 ### automsr
 #### credentials
@@ -127,20 +126,48 @@ rimuovendo un carattere alla fine della stringa alla volta) o
 
 Il valore predefinito è `random`.
 
-#### email
-L'email del destinatario per inviare informazioni sullo stato dell'esecuzione; 
-successo se tutti i punti sono stati riscattati, fallimento altrimenti. 
-
-L'email del mittente è quella del primo profilo valido individuato nelle credenziali.
-
-Se manca, non verrà inviata nessuna email.
-
-Il valore predefinito è nullo.
-
 #### verbose
 Se aumentare o meno la verbosità dell'output della console; la verbosità dei file di log è immutabile.
 
 Il valore predefinito è `false`.
+
+### email
+#### send
+Abilita o disabilita l'invio dell'email di stato alla fine dell'esecuzione
+per tutti gli account usati con AutoMSR.
+
+Il valore predefinito è `true`.
+
+#### recipient
+L'indirizzo email del destinatario dove ricevere l'email di stato. 
+Può essere un singolo indirizzo email o una lista separata da virgole d'indirizzi email.
+
+#### strategy
+La strategia usata per decidere quale mittente usare per inviare l'email di stato
+al destinatario specificato. 
+Può essere uno dei seguenti:
+- `first`: sarà usato il primo indirizzo email nel file di credenziali fornito;
+- `last`: verrà usato l'ultimo indirizzo email nel file di credenziali fornito;
+- `random`: verrà usato un indirizzo email casuale nel file di credenziali fornito;
+- `gmail`: verrà usato un indirizzo email Gmail (mittente e password devono essere configurati);
+- `custom`: verrà usato un indirizzo email generico (mittente, password, host e porta devono essere configurati).
+
+Il valore predefinito è `first`.
+
+#### sender
+Se la strategia è `gmail` o `custom`, specifica l'indirizzo email del mittente.
+
+#### password
+Se la strategia è `gmail` o `custom`, specifica la password del mittente.
+
+#### host
+Se la strategia è `custom`, specifica il nome dell'host SMTP.
+
+#### porta
+Se la strategia è `custom`, specifica la porta SMTP.
+
+#### tls
+Se la strategia è `custom`, specifica se usare o meno TLS.
 
 ### selenium
 #### env

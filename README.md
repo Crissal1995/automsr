@@ -50,9 +50,10 @@ Each entry must provide `email` and `profile`, and then the corresponding
 Chrome profile will be used. 
 
 **This method assumes that your profile is correctly set**, so that:
-- You are logged in your [Rewards homepage][rewards]
+- You are logged in your [Rewards homepage][rewards];
 - You are logged in your [Bing homepage][bing] (upper right corner should
-report your name, not Login) 
+report your name, not Login);
+- You have accepted all cookies popup found both in Rewards homepage and Bing pages.
 
 To get your profile name, you must head to [chrome://version](chrome://version)
 and check *Profile Path*.
@@ -62,7 +63,7 @@ If both `profile` and `password` are found, this method is preferred.
 ### Configuration
 All configuration parameters are listed below in more detail. 
 However, there are a few points worth noting, namely:
-1. `automsr/email`: Email (or list of emails, comma separated) where to receive the 
+1. `email/recipient`: Email (or comma separated list of emails) where to receive the 
 status execution of AutoMSR.
 2. `selenium/headless`: Displays (`false`) or not (`true`) the Chrome window during
 execution. It has been empirically proven that a `false`
@@ -87,12 +88,12 @@ python3 main.py
 ```
 
 *Note that, when running with Profiles, all Chrome process should be terminated.
-You can however use other Chromium browsers, like Edge.*
+While running AutoMSR you can however use other Chromium browsers, like Edge.*
 
 ## Configuration
 The behaviour of the tool can be configured within `automsr.cfg`.
 
-There are two main sections used in AutoMSR: **automsr** and **selenium**.
+The config file is divided into three sections:  **automsr**, **email** and **selenium**.
 
 ### automsr
 #### credentials
@@ -125,19 +126,48 @@ one character at the end of the string at time) or `takeout`
 
 Defaults to `random`.
 
-#### email
-The recipient email to send information regards the execution status; success if 
-all points are redeemed, failure otherwise. 
-The sender email is the one AutoMSR is currently working with.
-
-If it's missing, no email will be sent.
-
-Defaults to empty string.
-
 #### verbose
 Wether to increase console output verbosity or not; log files' verbosity is immutable.
 
 Defaults to `False`.
+
+### email
+#### send
+Enables or disables the sending of the status email collected at the end of execution
+for all accounts used with AutoMSR.
+
+Defaults to `true`.
+
+#### recipient
+The recipient email address where to receive the status email. 
+This can be a single email address, or a comma separated list of email addresses.
+
+#### strategy
+The strategy used to decide which sender to use in order to send the status email
+to the specified recipient(s). 
+This can be one of:
+- `first`: first email address in provided credentials file will be used;
+- `last`: last email address in provided credentials file will be used;
+- `random`: a random email address in provided credentials file will be used;
+- `gmail`: a Gmail email address will be used (sender and password must be configured);
+- `custom`: a generic email address will be used (sender, password, host and port must be configured).
+
+Defaults to `first`.
+
+#### sender
+If strategy is `gmail` or `custom`, specifies the sender email address.
+
+#### password
+If strategy is `gmail` or `custom`, specifies the sender email password.
+
+#### host
+If strategy is `custom`, specifies the SMTP host name.
+
+#### port
+If strategy is `custom`, specifies the SMTP port.
+
+#### tls
+If strategy is `custom`, specifies wether to use or not TLS.
 
 ### selenium
 #### env
