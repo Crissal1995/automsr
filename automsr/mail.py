@@ -136,19 +136,19 @@ class RewardsEmailMessage(EmailMessage):
 class EmailConnection:
     def __init__(
         self,
-        host: str,
-        port: int,
         sender: str = None,
         password: str = None,
         recipient: str = None,
         tls: bool = False,
+        host: str = "",
+        port: int = 0,
     ):
         self.sender = sender or automsr.utility.config["email"]["sender"]
         self.password = password or automsr.utility.config["email"]["password"]
         self.recipient = recipient or automsr.utility.config["email"]["recipient"]
         self.tls = automsr.utility.config["email"]["tls"] or tls
-        self.host = host
-        self.port = port
+        self.host = automsr.utility.config["email"]["host"] or host
+        self.port = automsr.utility.config["email"]["port"] or port
         self.smtp = smtplib.SMTP(host=self.host, port=self.port)
 
         if not host:
