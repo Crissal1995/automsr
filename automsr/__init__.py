@@ -1,4 +1,4 @@
 from automsr.rewards import MicrosoftRewards
 
-__version__ = "7.1.1"
+__version__ = "7.2.0"
 __all__ = ["MicrosoftRewards"]
