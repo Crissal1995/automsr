@@ -76,8 +76,9 @@ def main(**kwargs):
     # check if email creds are valid
     factory = EmailConnectionFactory(all_credentials=all_credentials)
     if factory.send:
+        conn = factory.get_connection().test_connection()
         logger.info("A status email will be sent at the end of execution")
-        logger.info(f"Sender email: {factory.get_connection().sender}")
+        logger.info(f"Sender email: {conn.sender}")
     else:
         logger.warning("No status email will be sent at the end of execution!")
 

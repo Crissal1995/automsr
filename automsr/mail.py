@@ -167,6 +167,7 @@ class EmailConnection:
             raise MissingRecipientError(NO_RECIPIENT_ERR)
 
     def open(self):
+        """Open SMTP connection and login with mail server"""
         try:
             # send an ehlo message to the server
             self.smtp.ehlo()
@@ -186,12 +187,22 @@ class EmailConnection:
             return self
 
     def close(self):
+        """Closes SMTP established connection"""
         try:
             self.smtp.quit()
         except smtplib.SMTPServerDisconnected:
             pass
         finally:
             logger.debug("SMTP connection closed")
+            return self
+
+    def test_connection(self):
+        """Test if the provided connection is successful.
+        Any exception is raised to the caller."""
+        self.open()
+        self.close()
+        logger.info("Email connection was succesful")
+        return self
 
     def __del__(self):
         self.close()
