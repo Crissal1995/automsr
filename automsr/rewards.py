@@ -2,7 +2,6 @@ import datetime
 import logging
 import random
 import re
-import string
 import time
 from typing import Dict, Sequence, Tuple, Type
 
@@ -42,7 +41,6 @@ from automsr.pages import (
     TryMicrosoftBrowserPage,
 )
 from automsr.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
-from automsr.search_takeout_parser import SearchTakeoutParser
 from automsr.state import ActivityState, StateManager
 from automsr.utility import (
     DriverCatcher,
@@ -243,7 +241,7 @@ class MicrosoftRewards:
                 logger.warning("Starting punchcards...")
                 rewards._execute_todo_runnables(Punchcard, retries=retries)
 
-            # execute desktop searches
+            # execute searches
             if skip_search:
                 logger.warning("Skipping daily search...")
             else:
@@ -361,7 +359,7 @@ class MicrosoftRewards:
                 limit = search_dict["desktop"]["missing"] // 3
                 # to ensure we get all points, add an amount
                 limit += 5
-                self.execute_searches2(search_type=search_type, limit=limit)
+                self.execute_searches(search_type=search_type, limit=limit)
 
             # change user agent to mobile
             change_user_agent(self.driver, self.useragent_chrome_android)
@@ -374,7 +372,7 @@ class MicrosoftRewards:
                 limit = search_dict["mobile"]["missing"] // 3
                 # to ensure we get all points, add an offset
                 limit += 5
-                self.execute_searches2(search_type=search_type, limit=limit)
+                self.execute_searches(search_type=search_type, limit=limit)
 
     def _store_activity_states(
         self, activities: Sequence[Activity], update_if_already_inserted=True
@@ -619,7 +617,7 @@ class MicrosoftRewards:
 
         return points_dict
 
-    def execute_searches2(self, limit=None, search_type="random"):
+    def execute_searches(self, limit=None, search_type="random"):
         max_mobile = 20
         max_desktop = 30
         offset = 5
@@ -702,105 +700,6 @@ class MicrosoftRewards:
             input_field.send_keys(Keys.ENTER)
 
             time.sleep(search_generator.tts)
-
-        logger.info("Searches completed")
-
-    def execute_searches(self, limit=None, search_type="random"):
-        max_mobile = 20
-        max_desktop = 30
-        offset = 10
-
-        if not limit:
-            a = max_mobile if self.is_mobile else max_desktop
-            a += offset
-            b = a + offset
-            # limit range is [MAX + OFFSET, MAX + 2*OFFSET]
-            limit = random.randint(a, b)
-
-        search_type_str = "Mobile" if self.is_mobile else "Desktop"
-        logger.info(f"{search_type_str} searches will be executed {limit} times")
-
-        if search_type == "takeout":
-            self.takeout_searcher(limit)
-        elif search_type == "random":
-            self.random_searcher(limit)
-        else:
-            error_msg = (
-                f"Invalid search_type provided: '{search_type}'. "
-                "Available are 'takeout' or 'random'"
-            )
-            raise ValueError(error_msg)
-
-    def takeout_searcher(self, limit):
-        for _ in tqdm(range(limit)):
-            try:
-                BingLoginPage(
-                    self.driver, self.url_login, self.credentials, self.is_mobile
-                ).complete()
-                logger.debug("Succesfully authenticated on BingPage")
-            except exceptions.NoSuchElementException:
-                logger.debug("Was already authenticated on BingPage")
-
-            parser = SearchTakeoutParser("./my_activities.json")
-            random_key = random.randint(0, parser.activity_count)
-            word = parser.get_query(random_key)
-            word_length = len(word)
-
-            logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
-
-            self.go_to(self.url_bing)
-
-            input_field = self.driver.find_element_by_css_selector("#sb_form_q")
-            input_field.send_keys(word)
-            input_field.send_keys(Keys.ENTER)
-
-            sleep_time = random.randint(10, 60)
-            logger.debug(f"Next search after {sleep_time}s")
-
-            time.sleep(sleep_time)
-
-    def random_searcher(self, limit):
-        max_word_length = 70
-        alphabet = string.ascii_lowercase
-
-        word_length = random.randint(limit, max_word_length)
-        word = "".join([random.choice(alphabet) for _ in range(word_length)])
-
-        logger.debug(f"Word to be searched (lenght: {word_length}): {word}")
-
-        # go the bing page
-        self.go_to(self.url_bing)
-
-        # try to complete its login
-        try:
-            BingLoginPage(
-                self.driver, self.url_login, self.credentials, self.is_mobile
-            ).complete()
-            logger.debug("Succesfully authenticated on BingPage")
-        except exceptions.WebDriverException:
-            logger.debug("Was already authenticated on BingPage")
-
-        # ensure we're on bing search again
-        self.go_to(self.url_bing)
-
-        # and then send entire word
-        selector = "#sb_form_q"
-
-        input_field = self.driver.find_element_by_css_selector(selector)
-        input_field.send_keys(word)
-        input_field.send_keys(Keys.ENTER)
-
-        time.sleep(1)
-
-        for i in tqdm(range(limit)):
-            logger.debug(f"Search {i + 1}/{limit}")
-            time.sleep(0.7)
-
-            # must search again input field because of page reloading
-            input_field = self.driver.find_element_by_css_selector(selector)
-
-            input_field.send_keys(Keys.BACKSPACE)
-            input_field.send_keys(Keys.ENTER)
 
         logger.info("Searches completed")
 
