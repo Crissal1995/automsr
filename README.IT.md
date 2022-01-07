@@ -109,7 +109,8 @@ Questo valore può essere uno tra
 `no` (non saltare nulla), 
 `yes`, `all` (saltare tutto), 
 `search`, `searches` (saltare le ricerche Bing), 
-`activity`, `activities` (saltare le attività Rewards).
+`activity`, `activities` (saltare le attività Rewards),
+`punchcard`, `punchcards` (saltare le schede punti Rewards).
 
 Il valore predefinito è `no`.
 

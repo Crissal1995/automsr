@@ -212,7 +212,7 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
         logger.warning(msg)
         retry = 1
 
-    # finally return the config dictionary
+    # finally, return the config dictionary
     return {
         "automsr": dict(
             skip=skip,

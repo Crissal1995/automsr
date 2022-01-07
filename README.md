@@ -108,7 +108,7 @@ This value can be a comma separated list of these keywords:
 `yes`, `all` (skip everything),
 `search`, `searches` (skip Bing searches), 
 `activity`, `activities` (skip Rewards activities),
-`punchcard`, `punchcards` (skip Rewards activities).
+`punchcard`, `punchcards` (skip Rewards punchcards).
 
 Defaults to `no`.
 
