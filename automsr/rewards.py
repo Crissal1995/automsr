@@ -697,7 +697,7 @@ class MicrosoftRewards:
             # must search again input field because of page reloading
             input_field = self.driver.find_element_by_css_selector(selector)
 
-            ActionChains(self.driver).move_to_element(input_field).click().perform()
+            # ActionChains(self.driver).move_to_element(input_field).click().perform()
             input_field.send_keys(next(generator))
             input_field.send_keys(Keys.ENTER)
 
