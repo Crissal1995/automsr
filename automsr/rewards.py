@@ -349,7 +349,7 @@ class MicrosoftRewards:
 
             # if every search dict is missing, exit
             if all(search_dict[ua]["missing"] == 0 for ua in ("desktop", "mobile")):
-                logger.info("Searches completed")
+                logger.info("All searches completed")
                 return
 
             # else execute desktop searches
@@ -703,7 +703,7 @@ class MicrosoftRewards:
 
             time.sleep(search_generator.tts)
 
-        logger.info("Searches completed")
+        logger.info(f"{search_type_str} searches completed")
 
     def execute_todo_activities(self):
         logger.info("Execute todo activities start")
