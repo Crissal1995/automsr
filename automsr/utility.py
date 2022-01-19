@@ -555,3 +555,27 @@ class DriverCatcher:
             self.driver.quit()
 
             return not self.propagate
+
+
+def calc_streak_bonus(streak):
+    if streak < 3:
+        days_until_streak_bonus = 3 - streak
+        streak_bonus_points = 45
+    elif streak < 12:
+        days_until_streak_bonus = 8 - streak % 5
+        days_until_streak_bonus -= 5 if days_until_streak_bonus > 5 else 0
+        days_until_streak_bonus -= 1 if streak >= 8 else 0
+        streak_bonus_points = 75
+    elif streak < 34:
+        if streak == 12:
+            days_until_streak_bonus = 8
+        else:
+            days_until_streak_bonus = 12 - streak % 7
+            days_until_streak_bonus -= 6 if days_until_streak_bonus >= 7 else -1
+        streak_bonus_points = 105
+    else:
+        days_until_streak_bonus = 14 - streak % 10
+        days_until_streak_bonus -= 10 if days_until_streak_bonus > 10 else 0
+        streak_bonus_points = 150
+
+    return days_until_streak_bonus, streak_bonus_points
