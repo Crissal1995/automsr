@@ -92,8 +92,9 @@ def parse_profiles(userdata_path: Union[str, pathlib.Path]) -> List[ChromeProfil
         if not thedir.is_dir():
             continue
 
-        # if it's system profile, skip if
-        if thedir.stem == "System Profile":
+        # if current profile is one of the banned profiles, continue
+        banned_profiles = ("System Profile", "Guest Profile")
+        if thedir.stem in banned_profiles:
             continue
 
         # if this file doesn't exist, it's not a profile
