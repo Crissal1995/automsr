@@ -27,11 +27,12 @@ from automsr.activities import (
 from automsr.exception import (
     AutomsrException,
     CannotCompleteActivityException,
+    CannotRetrieveDayStreakException,
     CannotRetrievePointsException,
     Detected2FAError,
     InvalidInputError,
     LessThanSixDailyActivitiesFoundException,
-    NoDailyActivityFoundException, CannotRetrieveDayStreakException,
+    NoDailyActivityFoundException,
 )
 from automsr.pages import (
     BannerCookiePage,
@@ -44,11 +45,11 @@ from automsr.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from automsr.state import ActivityState, StateManager
 from automsr.utility import (
     DriverCatcher,
+    calc_streak_bonus,
     change_user_agent,
     get_driver,
     get_new_window,
     get_value_from_dictionary,
-    calc_streak_bonus
 )
 from automsr.utility import is_profile_used as ipu
 
@@ -294,7 +295,9 @@ class MicrosoftRewards:
             logger.info(msg)
             messages.append(msg)
 
-            days_until_streak_bonus, streak_bonus_points = calc_streak_bonus(streak_count)
+            days_until_streak_bonus, streak_bonus_points = calc_streak_bonus(
+                streak_count
+            )
 
             msg = f"Days until {streak_bonus_points} points bonus: {days_until_streak_bonus}"
             logger.info(msg)
@@ -587,7 +590,9 @@ class MicrosoftRewards:
 
         if method == "dom":
             source: str = self.driver.page_source
-            match = re.search(r'"streakPromotion".+?(?="activityProgress":(\d+))', source)
+            match = re.search(
+                r'"streakPromotion".+?(?="activityProgress":(\d+))', source
+            )
             if not match:
                 raise CannotRetrieveDayStreakException(
                     "Cannot find streak info in DOM!"
