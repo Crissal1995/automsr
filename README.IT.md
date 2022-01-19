@@ -58,6 +58,9 @@ il profilo Chrome corrispondente.
 Per ottenere il nome del tuo profilo, devi andare in [chrome://version](chrome://version)
 e controllare *Percorso Profilo*.
 
+È stato sviluppato un metodo di utility per controllare facilmente i tuoi profili: 
+controlla la sezione [Mostra Profili][showProfiles].
+
 Se entrambi `profile` che `password` vengono trovati, verrà utilizzato questo metodo.
 
 ### Configurazione
@@ -89,6 +92,18 @@ python3 main.py
 
 *Si noti che, quando si esegue con Profiles, tutti i processi di Chrome
 dovrebbero essere terminati. Mentre si esegue AutoMSR si possono comunque usare altri browser Chromium, come Edge.*
+
+#### <a name="show-profiles"></a> Mostra Profili
+Per mostrare i profili Chrome disponibili, si può eseguire il seguente comando:
+```bash
+python3 main.py --show-profiles
+```
+Per ogni profilo Chrome trovato verrà mostrato un set di attributi:
+- `display_name`, il nome del profilo mostrato su Chrome;
+- `folder_name`, il nome della cartella del Profilo nel filesystem
+(diventa `profile` nel file `credentials.json`);
+- `profile_root`, la root dei profili Chrome (diventa `profile_root` nel file 
+`automsr.cfg`).
 
 ## Configurazione
 Il comportamento dello strumento può essere configurato all'interno di `automsr.cfg`.
@@ -210,3 +225,4 @@ Il valore predefinito è nullo.
 [2]: https://chromedriver.chromium.org/downloads
 [rewards]: https://rewards.microsoft.com/
 [bing]: https://www.bing.com/
+[showProfiles]: #show-profiles

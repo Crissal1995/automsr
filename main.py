@@ -7,7 +7,12 @@ import selenium.common.exceptions
 import automsr.utility
 from automsr import MicrosoftRewards
 from automsr.mail import EmailConnectionFactory, RewardsStatus
-from automsr.utility import get_config, get_safe_credentials, test_environment
+from automsr.utility import (
+    get_config,
+    get_safe_credentials,
+    show_profiles,
+    test_environment,
+)
 
 FORMAT = "%(asctime)s :: %(levelname)s :: [%(module)s.%(funcName)s.%(lineno)d] :: %(message)s"
 DIVIDER = "-" * 50
@@ -55,6 +60,11 @@ def main(**kwargs):
     # get logger
     verbose = kwargs.get("verbose", automsr.utility.config["automsr"]["verbose"])
     logger = get_logger(verbose=verbose)
+
+    # test if the flow should only show profiles and then exit
+    if kwargs.get("show_profiles"):
+        show_profiles()
+        return
 
     # dry run mode, defaults to False
     dry_run = kwargs.get("dry_run", False)
@@ -164,6 +174,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="Execute AutoMSR in dry-run mode"
+    )
+    parser.add_argument(
+        "--show-profiles",
+        action="store_true",
+        help="Show Chrome profiles found and then exit",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Increase console verbosity"
