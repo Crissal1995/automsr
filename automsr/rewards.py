@@ -31,7 +31,7 @@ from automsr.exception import (
     Detected2FAError,
     InvalidInputError,
     LessThanSixDailyActivitiesFoundException,
-    NoDailyActivityFoundException,
+    NoDailyActivityFoundException, CannotRetrieveDayStreakException,
 )
 from automsr.pages import (
     BannerCookiePage,
@@ -48,6 +48,7 @@ from automsr.utility import (
     get_driver,
     get_new_window,
     get_value_from_dictionary,
+    calc_streak_bonus
 )
 from automsr.utility import is_profile_used as ipu
 
@@ -252,6 +253,9 @@ class MicrosoftRewards:
             # get points after execution
             end_points_ok, end_points = rewards.get_safe_points()
 
+            # check day streak
+            streak_count = rewards.get_day_streak()
+
             # if both start and end are ok, compute delta
             delta = None
             if start_points_ok and end_points_ok:
@@ -282,6 +286,17 @@ class MicrosoftRewards:
             rewards.close()
 
             msg = f"Got {max_points} points."
+            logger.info(msg)
+            messages.append(msg)
+
+            msg = f"Streak count [{streak_count}]"
+            msg += " days." if streak_count > 1 else " day."
+            logger.info(msg)
+            messages.append(msg)
+
+            days_until_streak_bonus, streak_bonus_points = calc_streak_bonus(streak_count)
+
+            msg = f"Days until {streak_bonus_points} points bonus: {days_until_streak_bonus}"
             logger.info(msg)
             messages.append(msg)
 
@@ -562,6 +577,37 @@ class MicrosoftRewards:
 
         logger.warning("Cannot parse current user's points, defaulting to 0...")
         return False, 0
+
+    def get_day_streak(self, method: str = "dom"):
+        """Get Streak Count info from Rewards Home."""
+
+        method = method.lower()
+        self.go_to_home()
+        time.sleep(1)
+
+        if method == "dom":
+            source: str = self.driver.page_source
+            match = re.search(r'"streakPromotion".+?(?="activityProgress":(\d+))', source)
+            if not match:
+                raise CannotRetrieveDayStreakException(
+                    "Cannot find streak info in DOM!"
+                )
+            streak = int(match.group(1))
+        elif method == "animation":
+            time.sleep(3)
+            text: str = self.driver.find_element_by_tag_name(
+                "mee-rewards-user-status-streak"
+            ).text
+            logger.debug(f"User status streak text: {text}")
+            streak_str = text.split()[0]
+            streak = int(streak_str.replace(",", "").replace(".", ""))
+        else:
+            raise InvalidInputError(
+                f"Provided: '{method}'. Available methods are 'dom' and 'animation'"
+            )
+
+        logger.info(f"User status streak: {streak}")
+        return streak
 
     def check_missing_searches(self) -> dict:
         # go to rewards page

@@ -32,6 +32,12 @@ class CannotRetrievePointsException(AutomsrException):
     current user's points"""
 
 
+# Automsr exceptions
+class CannotRetrieveDayStreakException(AutomsrException):
+    """Exception raised when unable to retrieve
+    current user's streak"""
+
+
 # Automsr errors
 class InvalidCredentialsError(AutomsrError):
     """Error class for invalid Credentials objects"""
