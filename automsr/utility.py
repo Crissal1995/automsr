@@ -1,21 +1,129 @@
 import configparser
 import datetime
+import enum
 import json
 import logging
 import os
 import pathlib
-from typing import Any, Optional, Sequence, Tuple, Union
+import sys
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.remote_connection import ChromeRemoteConnection
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
+from automsr.exception import InvalidCredentialsError
+
 logger = logging.getLogger(__name__)
 
 
-class InvalidCredentialsError(Exception):
-    """Error class for invalid Credentials objects"""
+class ChromeVariant(enum.IntEnum):
+    """Chrome variant to use"""
+
+    CHROME = 0
+    CHROME_CANARY = 1
+    CHROMIUM = 2
+
+
+ENV_HOME = os.environ.get("HOME")
+ENV_LOCALAPPDATA = os.environ.get("LOCALAPPDATA")
+
+CHROME_PROFILES_LOCATIONS: Dict[str, List[str]] = {
+    "macOS": [
+        f"{ENV_HOME}/Library/Application Support/Google/Chrome",
+        f"{ENV_HOME}/Library/Application Support/Google/Chrome Canary",
+        f"{ENV_HOME}/Library/Application Support/Chromium",
+    ],
+    "windows": [
+        f"{ENV_LOCALAPPDATA}\\Google\\Chrome\\User Data",
+        f"{ENV_LOCALAPPDATA}\\Google\\Chrome SxS\\User Data",
+        f"{ENV_LOCALAPPDATA}\\Chromium\\User Data",
+    ],
+    "linux": [
+        f"{ENV_HOME}/.config/google-chrome",
+        f"{ENV_HOME}/.config/google-chrome-beta",
+        f"{ENV_HOME}/.config/chromium",
+    ],
+}
+
+
+def get_chrome_profile_location(variant: ChromeVariant) -> pathlib.Path:
+    """Returns Chrome profiles location associated with current platform and selected variant"""
+    key = "linux"  # assumes linux env if not win32 or darwin
+
+    if sys.platform.startswith("win32"):
+        key = "windows"
+    elif sys.platform.startswith("darwin"):
+        key = "macOS"
+
+    return pathlib.Path(CHROME_PROFILES_LOCATIONS[key][variant.value])
+
+
+def guess_chrome_profile_location() -> pathlib.Path:
+    """Returns chrome location trying every variant found in ChromeVariant enum
+    and returning the first valid location"""
+    for key, variant in ChromeVariant.__members__.items():
+        path = get_chrome_profile_location(variant)
+        if path.exists():
+            logger.info(f"Chrome variant found: {key}")
+            logger.debug(f"Chrome variant profiles path: {path}")
+            return path
+
+    err = "No default location path for Chrome profiles was found!"
+    raise FileNotFoundError(err)
+
+
+@dataclass
+class ChromeProfile:
+    display_name: str
+    folder_name: str
+    profile_root: str
+
+
+def parse_profiles(userdata_path: Union[str, pathlib.Path]) -> List[ChromeProfile]:
+    """Get a list of ChromeProfile objects from the root user data path"""
+    profiles = []
+    path = pathlib.Path(userdata_path)
+
+    for thedir in path.iterdir():
+        # if it's not a folder, surely it's not a profile
+        if not thedir.is_dir():
+            continue
+
+        # if it's system profile, skip if
+        if thedir.stem == "System Profile":
+            continue
+
+        # if this file doesn't exist, it's not a profile
+        preferences_path = thedir / "Preferences"
+        if not preferences_path.exists():
+            continue
+
+        preferences_dict = json.load(open(preferences_path))
+        display_name = preferences_dict["profile"]["name"]
+        folder_name = thedir.stem
+        profile_root = str(thedir.parent)
+        profile = ChromeProfile(
+            display_name=display_name,
+            folder_name=folder_name,
+            profile_root=profile_root,
+        )
+        profiles.append(profile)
+
+    return profiles
+
+
+def show_profiles():
+    """Show Chrome profiles, printing
+    the found profiles of the first Chrome variant found"""
+    rootpath = guess_chrome_profile_location()
+    profiles = parse_profiles(rootpath)
+
+    logger.info(f"Found {len(profiles)} Chrome profiles")
+    for profile in profiles:
+        logger.info(str(profile))
 
 
 def activity_skip(skip_str: str) -> Tuple[bool, ...]:
@@ -90,7 +198,7 @@ def get_date_str(datetime_obj: Union[datetime.datetime, datetime.date] = None):
     return get_datetime_str(datetime_obj, False)
 
 
-def get_options(**kwargs):
+def get_options(**kwargs) -> Options:
     global config
 
     options = Options()
@@ -249,10 +357,11 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
 config = get_config(first_usage=True)
 
 
-def get_driver(**kwargs):
+def get_driver(options: Optional[Options] = None, **kwargs):
     global config
 
-    options = get_options(**kwargs)
+    if not options:
+        options = get_options(**kwargs)
     path = kwargs.get("path", config["selenium"]["path"])
     url = kwargs.get("url", config["selenium"]["url"])
 

@@ -33,6 +33,10 @@ class CannotRetrievePointsException(AutomsrException):
 
 
 # Automsr errors
+class InvalidCredentialsError(AutomsrError):
+    """Error class for invalid Credentials objects"""
+
+
 class InvalidInputError(AutomsrError):
     """Base class for invalid input provided by user"""
 
