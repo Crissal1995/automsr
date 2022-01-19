@@ -180,7 +180,7 @@ Il valore predefinito è `local`.
 #### headless
 Scegliere se avviare o meno la sessione di Chrome in modalità headless.
 
-Il valore predefinito è `true`.
+Il valore predefinito è `false`.
 
 #### path
 Ignorato quando env è `remote`. Il percorso dell'eseguibile di chromedriver.

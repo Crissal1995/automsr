@@ -179,7 +179,7 @@ Defaults to `local`.
 #### headless
 Choose to start the Chrome session in headless mode or not.
 
-Defaults to `true`.
+Defaults to `false`.
 
 #### path
 Ignored when `env` is `remote`. The path to the chromedriver executable.

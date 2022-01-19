@@ -147,7 +147,7 @@ _default_config = {
         "env": "local",
         "path": "chromedriver",
         "url": "http://localhost:4444/wd/hub",
-        "headless": True,
+        "headless": False,
         "logging": True,
         "profile_root": "",
     },
