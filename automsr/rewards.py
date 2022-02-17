@@ -116,6 +116,7 @@ class MicrosoftRewards:
         else:
             logger.info("Profile provided, I assume you're already logged in there")
 
+        self.login_bing()
         self.go_to_home()
 
     def close(self):
@@ -485,6 +486,17 @@ class MicrosoftRewards:
 
     def execute_activity(self, activity: Activity):
         return self.execute_activities([activity])
+
+    def login_bing(self):
+        self.go_to(self.url_bing)
+        button = self.driver.find_element_by_id("id_l")
+        username: str = self.driver.find_element_by_id("id_n").text
+        if not username:
+            logger.warning("I had to login again!")
+            button.click()
+        else:
+            logger.debug("Already logged in on Bing")
+        time.sleep(0.5)
 
     def login(self):
         self.go_to(self.url_bing)
