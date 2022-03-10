@@ -196,9 +196,16 @@ class QuizActivity(Activity):
 
         while not self.is_quiz_over():
             logger.info(f"Round {i+1} started")
+            should_check_if_quiz_over = True
 
             for answer_id in self.answers:
                 time.sleep(1)
+
+                if should_check_if_quiz_over and self.is_quiz_over():
+                    return
+                else:
+                    should_check_if_quiz_over = False
+
                 try:
                     self.driver.find_element_by_id(answer_id).click()
                 except exceptions.WebDriverException:
