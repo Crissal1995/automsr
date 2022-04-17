@@ -1,12 +1,13 @@
 import configparser
 import datetime
-import enum
 import json
 import logging
 import os
 import pathlib
+import string
 import sys
 from dataclasses import dataclass
+from enum import Flag, IntEnum, auto
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from selenium.webdriver import Chrome, Remote
@@ -19,7 +20,7 @@ from automsr.exception import InvalidCredentialsError
 logger = logging.getLogger(__name__)
 
 
-class ChromeVariant(enum.IntEnum):
+class ChromeVariant(IntEnum):
     """Chrome variant to use"""
 
     CHROME = 0
@@ -579,3 +580,106 @@ def calc_streak_bonus(streak):
         streak_bonus_points = 150
 
     return days_until_streak_bonus, streak_bonus_points
+
+
+class Prizes(Flag):
+    MICROSOFT_GIFTCARD = auto()
+    THIRD_PARTY_GIFTCARD = auto()
+    GAMEPASS_ULTIMATE = auto()
+    GAMEPASS_PC = auto()
+    DONATION = auto()
+
+
+class PrizeKeys(Flag):
+    POINTS_PER_ONE_AMOUNT = auto()
+    MINIMUM_AMOUNT = auto()
+    AMOUNT_COLLECTED = auto()
+
+
+def get_prizes(points: int, level: int = 2) -> Dict[Prizes, Dict[PrizeKeys, int]]:
+    """
+    Returns the map of prizes that the user can redeem with
+    the given points and level (this defaults to level 2,
+    obtained by reaching a small points threshold every month).
+
+    Returns a dictionary (key: string, value: int) where
+    each key is a prize, and the value returned is the amount
+    of prizes the user can get.
+    """
+    LEVEL_ERR_MSG = "Invalid level provided: $level! Must be one of $levels"
+    VALID_LEVELS = (1, 2)
+
+    if level not in VALID_LEVELS:
+        err = string.Template(LEVEL_ERR_MSG).substitute(
+            dict(level=level, levels=", ".join(map(str, VALID_LEVELS)))
+        )
+        raise ValueError(err)
+
+    # TODO parse it from file?
+    prizes = {
+        Prizes.MICROSOFT_GIFTCARD: {
+            PrizeKeys.POINTS_PER_ONE_AMOUNT: 930 if level == 2 else 1000,
+            PrizeKeys.MINIMUM_AMOUNT: 2,
+        },
+        Prizes.THIRD_PARTY_GIFTCARD: {
+            PrizeKeys.POINTS_PER_ONE_AMOUNT: 1500,
+            PrizeKeys.MINIMUM_AMOUNT: 1,  # should differentiate for every third party giftcard
+        },
+        Prizes.GAMEPASS_ULTIMATE: {
+            PrizeKeys.POINTS_PER_ONE_AMOUNT: 12_000 if level == 2 else 14_000,
+            PrizeKeys.MINIMUM_AMOUNT: 1,
+        },
+        Prizes.GAMEPASS_PC: {
+            PrizeKeys.POINTS_PER_ONE_AMOUNT: 7750 if level == 2 else 9250,
+            PrizeKeys.MINIMUM_AMOUNT: 1,
+        },
+        Prizes.DONATION: {
+            PrizeKeys.POINTS_PER_ONE_AMOUNT: 1000,
+            PrizeKeys.MINIMUM_AMOUNT: 1,
+        },
+    }
+
+    prizes_collected = prizes.copy()
+
+    for prize in prizes_collected.values():
+        one_amount = prize[PrizeKeys.POINTS_PER_ONE_AMOUNT]
+        minimum_amount = prize[PrizeKeys.MINIMUM_AMOUNT]
+        collected = points // one_amount
+        prize[PrizeKeys.AMOUNT_COLLECTED] = (
+            collected if collected > minimum_amount else 0
+        )
+
+    return prizes_collected
+
+
+def get_prizes_str(points: int, level: int = 2) -> str:
+    """
+    Returns a string holding a formatted representation of the prizes
+     that the user can redeem.
+    """
+    prizes_collected = get_prizes(points=points, level=level)
+
+    if not any(
+        prize[PrizeKeys.AMOUNT_COLLECTED] for prize in prizes_collected.values()
+    ):
+        return "You cannot redeem anything!"
+
+    # here at least one prize can be collected
+    msg_list = ["You can redeem: "]
+    for prize_key, prize in prizes_collected.items():
+        amount = prize[PrizeKeys.AMOUNT_COLLECTED]
+        if not amount:
+            continue
+
+        value = amount * prize[PrizeKeys.MINIMUM_AMOUNT]
+
+        unit = "€"
+        if prize_key in (Prizes.GAMEPASS_PC, Prizes.GAMEPASS_ULTIMATE):
+            unit = " month"
+            if amount > 1:
+                unit += "s"
+
+        msg_list += [f"{amount} {prize_key.name} [{value}{unit}]"]
+
+    msg = msg_list[0] + ", ".join(msg_list[1:])
+    return msg

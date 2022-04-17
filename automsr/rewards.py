@@ -49,6 +49,7 @@ from automsr.utility import (
     change_user_agent,
     get_driver,
     get_new_window,
+    get_prizes_str,
     get_value_from_dictionary,
 )
 from automsr.utility import is_profile_used as ipu
@@ -291,7 +292,7 @@ class MicrosoftRewards:
             logger.info(msg)
             messages.append(msg)
 
-            msg = f"Streak count [{streak_count}]"
+            msg = f"Streak count: {streak_count}"
             msg += " days." if streak_count > 1 else " day."
             logger.info(msg)
             messages.append(msg)
@@ -304,7 +305,8 @@ class MicrosoftRewards:
             logger.info(msg)
             messages.append(msg)
 
-            giftcards_str = rewards.get_gift_card_amounts_str(max_points)
+            # giftcards_str = rewards.get_gift_card_amounts_str(max_points)
+            giftcards_str = get_prizes_str(max_points)
             logger.info(giftcards_str)
             messages.append(giftcards_str)
 
