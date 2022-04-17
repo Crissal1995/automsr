@@ -646,7 +646,7 @@ def get_prizes(points: int, level: int = 2) -> Dict[Prizes, Dict[PrizeKeys, int]
         minimum_amount = prize[PrizeKeys.MINIMUM_AMOUNT]
         collected = points // one_amount
         prize[PrizeKeys.AMOUNT_COLLECTED] = (
-            collected if collected > minimum_amount else 0
+            collected if collected >= minimum_amount else 0
         )
 
     return prizes_collected
