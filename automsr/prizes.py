@@ -290,6 +290,10 @@ def get_prizes_str(
     """
     Returns a string holding a formatted representation of the prizes
      that the user can redeem.
+
+    Prizes Mask is an optional [list of] string[s], that will be used to retrieve
+    the desired prizes instead of all prizes. If not provided,
+    all prizes will be returned.
     """
     prizes = get_prizes(points=points, prizes_mask=prizes_mask)
 

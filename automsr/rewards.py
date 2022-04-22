@@ -41,6 +41,7 @@ from automsr.pages import (
     LoginPage,
     TryMicrosoftBrowserPage,
 )
+from automsr.prizes import get_prizes_str
 from automsr.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from automsr.state import ActivityState, StateManager
 from automsr.utility import (
@@ -304,8 +305,8 @@ class MicrosoftRewards:
             logger.info(msg)
             messages.append(msg)
 
-            giftcards_str = rewards.get_gift_card_amounts_str(max_points)
-            # giftcards_str = get_prizes_str(max_points)
+            # giftcards_str = rewards.get_gift_card_amounts_str(max_points)
+            giftcards_str = get_prizes_str(max_points)
             logger.info(giftcards_str)
             messages.append(giftcards_str)
 
