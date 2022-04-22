@@ -105,6 +105,13 @@ For each Chrome profile found, a set of attributes is displayed:
 - `profile_root`, the root of Chrome profiles (becomes `profile_root` in 
 `automsr.cfg` file).
 
+#### <a name="show-prizes"></a> Show prizes
+To show available prizes that can be used in prize/mask, you can execute the 
+following command:
+```bash
+python3 main.py --show-prizes
+```
+
 ## Configuration
 The behaviour of the tool can be configured within `automsr.cfg`.
 
@@ -220,8 +227,19 @@ C:\Users\<USER>\AppData\Local\Google\Chrome\User Data
 
 Defaults to null.
 
+### prize
+#### mask
+Comma-separated string representing the mask of the desired prizes 
+in the final message obtained. The string is case-insensitive.
+
+A utility method has been implemented to easily check all prizes: check section 
+[Show Prizes][showPrizes].
+
+Defaults to `microsoft_giftcard, gamepass_pc, third_party_giftcard`.
+
 [1]: https://www.microsoft.com/servicesagreement
 [2]: https://chromedriver.chromium.org/downloads
 [rewards]: https://rewards.microsoft.com/
 [bing]: https://www.bing.com/
 [showProfiles]: #show-profiles
+[showPrizes]: #show-prizes
