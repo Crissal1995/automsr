@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, Flag, auto
 from typing import Dict, List, Tuple, Union
 
@@ -13,42 +13,69 @@ class PrizeKind(Enum):
     GAMEPASS_ULTIMATE = "GAMEPASS_ULTIMATE"
     GAMEPASS_PC = "GAMEPASS_PC"
 
-    ESSELUNGA_GIFT_CARD = "ESSELUNGA_GIFT_CARD"
-    IKEA_GIFT_CARD = "IKEA_GIFT_CARD"
-    OVS_GIFT_CARD = "OVS_GIFT_CARD"
-    Q8_GIFT_CARD = "Q8_GIFT_CARD"
-    ZALANDO_GIFT_CARD = "ZALANDO_GIFT_CARD"
-    DECATHLON_GIFT_CARD = "DECATHLON_GIFT_CARD"
-    FOOT_LOCKER_GIFT_CARD = "FOOT_LOCKER_GIFT_CARD"
-    MANGO_GIFT_CARD = "MANGO_GIFT_CARD"
-    MONDADORI_GIFT_CARD = "MONDADORI_GIFT_CARD"
-    SPOTIFY_GIFT_CARD = "SPOTIFY_GIFT_CARD"
-    VOLAGRATIS_GIFT_CARD = "VOLAGRATIS_GIFT_CARD"
+    ESSELUNGA_GIFTCARD = "ESSELUNGA_GIFTCARD"
+    IKEA_GIFTCARD = "IKEA_GIFTCARD"
+    OVS_GIFTCARD = "OVS_GIFTCARD"
+    Q8_GIFTCARD = "Q8_GIFTCARD"
+    ZALANDO_GIFTCARD = "ZALANDO_GIFTCARD"
+    DECATHLON_GIFTCARD = "DECATHLON_GIFTCARD"
+    FOOT_LOCKER_GIFTCARD = "FOOT_LOCKER_GIFTCARD"
+    MANGO_GIFTCARD = "MANGO_GIFTCARD"
+    MONDADORI_GIFTCARD = "MONDADORI_GIFTCARD"
+    SPOTIFY_GIFTCARD = "SPOTIFY_GIFTCARD"
+    VOLAGRATIS_GIFTCARD = "VOLAGRATIS_GIFTCARD"
 
     THIRD_PARTY_GIFTCARD = "THIRD_PARTY_GIFTCARD"
 
+    def __str__(self):
+        return self.name
+
+
+@dataclass
+class PrizeKindGetter:
+    get_query: str
+    _get_query_parts: List[str] = field(init=False, default_factory=list)
+
+    def __post_init__(self):
+        assert self.get_query
+        parts = list(map(str.strip, self.get_query.split(",")))
+        valid_parts = [p for p in parts if p]
+        self._get_query_parts = valid_parts
+
     @classmethod
-    def get_mask(cls, *prize_kinds: Union[str, "PrizeKind"]) -> List["PrizeKind"]:
+    def _check_and_get_prize_kind(cls, prize_kind) -> PrizeKind:
+        if isinstance(prize_kind, PrizeKind):
+            pk = prize_kind
+        elif isinstance(prize_kind, str):
+            pk = PrizeKind(prize_kind.upper())
+        else:
+            raise ValueError(prize_kind)
+        return pk
+
+    @classmethod
+    def get_mask_from_args(cls, *prize_kinds: Union[str, PrizeKind]) -> List[PrizeKind]:
         buffer = []
 
         for prize_kind in prize_kinds:
-            if isinstance(prize_kind, PrizeKind):
-                pk = prize_kind
-            elif isinstance(prize_kind, str):
-                pk = cls(prize_kind.upper())
-            else:
-                raise ValueError(prize_kind)
-
+            pk = cls._check_and_get_prize_kind(prize_kind)
             buffer.append(pk)
 
         return buffer
 
-    @classmethod
-    def get_all_mask(cls) -> List["PrizeKind"]:
-        return list(cls.__members__.values())
+    def get_mask(self) -> List[PrizeKind]:
+        return self.get_mask_from_args(*self._get_query_parts)
 
-    def __str__(self):
-        return self.name
+    @classmethod
+    def get_default_mask(cls) -> List[PrizeKind]:
+        return cls.get_mask_from_args(
+            PrizeKind.MICROSOFT_GIFTCARD,
+            PrizeKind.GAMEPASS_PC,
+            PrizeKind.THIRD_PARTY_GIFTCARD,
+        )
+
+    @classmethod
+    def get_all_mask(cls) -> List[PrizeKind]:
+        return list(PrizeKind.__members__.values())
 
 
 class PrizeUnit(Flag):
@@ -178,37 +205,37 @@ ALL_PRIZES_LIST = [
     Prize(kind=PrizeKind.GAMEPASS_PC, amounts=[PA_GAMEPASS_PC_ONE_MONTH]),
     # THIRD_PARTY_GIFTCARD
     Prize(
-        kind=PrizeKind.ESSELUNGA_GIFT_CARD, amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * 10
+        kind=PrizeKind.ESSELUNGA_GIFTCARD, amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * 10
     ),
-    Prize(kind=PrizeKind.IKEA_GIFT_CARD, amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * 50),
-    Prize(kind=PrizeKind.OVS_GIFT_CARD, amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * 10),
-    Prize(kind=PrizeKind.Q8_GIFT_CARD, amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * 10),
+    Prize(kind=PrizeKind.IKEA_GIFTCARD, amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * 50),
+    Prize(kind=PrizeKind.OVS_GIFTCARD, amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * 10),
+    Prize(kind=PrizeKind.Q8_GIFTCARD, amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * 10),
     Prize(
-        kind=PrizeKind.ZALANDO_GIFT_CARD,
+        kind=PrizeKind.ZALANDO_GIFTCARD,
         amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * (5, 10),
     ),
     Prize(
-        kind=PrizeKind.DECATHLON_GIFT_CARD,
+        kind=PrizeKind.DECATHLON_GIFTCARD,
         amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * (5, 10, 25),
     ),
     Prize(
-        kind=PrizeKind.FOOT_LOCKER_GIFT_CARD,
+        kind=PrizeKind.FOOT_LOCKER_GIFTCARD,
         amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * (10, 25, 50),
     ),
     Prize(
-        kind=PrizeKind.MANGO_GIFT_CARD,
+        kind=PrizeKind.MANGO_GIFTCARD,
         amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * (25, 50, 100),
     ),
     Prize(
-        kind=PrizeKind.MONDADORI_GIFT_CARD,
+        kind=PrizeKind.MONDADORI_GIFTCARD,
         amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * (5, 10, 25),
     ),
     Prize(
-        kind=PrizeKind.SPOTIFY_GIFT_CARD,
+        kind=PrizeKind.SPOTIFY_GIFTCARD,
         amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * (10, 30, 60),
     ),
     Prize(
-        kind=PrizeKind.VOLAGRATIS_GIFT_CARD,
+        kind=PrizeKind.VOLAGRATIS_GIFTCARD,
         amounts=PA_THIRD_PARTY_GIFTCARD_ONE_EUR * (25, 50, 100),
     ),
     # GENERIC THIRD PARTY
@@ -235,11 +262,11 @@ def get_prizes(
     """
 
     if not prizes_mask:
-        prizes_mask = PrizeKind.get_all_mask()
+        prizes_mask = PrizeKindGetter.get_all_mask()
     elif isinstance(prizes_mask, (list, tuple)):
-        prizes_mask = PrizeKind.get_mask(*prizes_mask)
+        prizes_mask = PrizeKindGetter.get_mask_from_args(*prizes_mask)
     else:
-        prizes_mask = PrizeKind.get_mask(prizes_mask)
+        prizes_mask = PrizeKindGetter.get_mask_from_args(prizes_mask)
 
     assert prizes_mask, "At least one prize should be retrieved"
 

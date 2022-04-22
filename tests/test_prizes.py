@@ -64,7 +64,7 @@ def test2():
 def test3():
     assert get_prizes_str(
         10_000,
-        [PrizeKind.GAMEPASS_PC, PrizeKind.MICROSOFT_GIFTCARD, PrizeKind.Q8_GIFT_CARD],
+        [PrizeKind.GAMEPASS_PC, PrizeKind.MICROSOFT_GIFTCARD, PrizeKind.Q8_GIFTCARD],
     ) == __(
         {
             "amount": [1, 10],
@@ -77,7 +77,7 @@ def test3():
 def test4():
     assert get_prizes_str(
         10_000,
-        [PrizeKind.GAMEPASS_PC, PrizeKind.MICROSOFT_GIFTCARD, PrizeKind.Q8_GIFT_CARD],
+        [PrizeKind.GAMEPASS_PC, PrizeKind.MICROSOFT_GIFTCARD, PrizeKind.Q8_GIFTCARD],
         returns_only_collected=False,
     ) == __(
         {
@@ -86,7 +86,7 @@ def test4():
             "kind": [
                 PrizeKind.GAMEPASS_PC,
                 PrizeKind.MICROSOFT_GIFTCARD,
-                PrizeKind.Q8_GIFT_CARD,
+                PrizeKind.Q8_GIFTCARD,
             ],
         }
     )

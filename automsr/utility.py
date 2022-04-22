@@ -234,7 +234,7 @@ def get_options(**kwargs) -> Options:
     return options
 
 
-_default_config = {
+_default_config: Dict[str, Dict[str, Union[str, int, bool]]] = {
     "automsr": {
         "retry": 3,
         "skip": "no",
@@ -260,6 +260,7 @@ _default_config = {
         "logging": True,
         "profile_root": "",
     },
+    "prize": {"mask": "microsoft_giftcard, gamepass_pc, third_party_giftcard"},
 }
 
 
@@ -307,6 +308,9 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
     host = parser.get("email", "host")
     port = parser.getint("email", "port")
 
+    # get prize options
+    mask = parser.get("prize", "mask")
+
     # check specific options
     if env not in valid_selenium_envs:
         err = f"Invalid selenium env provided! Valid envs are: {valid_selenium_envs}"
@@ -350,6 +354,9 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
             tls=tls,
             host=host,
             port=port,
+        ),
+        "prize": dict(
+            mask=mask,
         ),
     }
 
