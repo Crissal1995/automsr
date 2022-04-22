@@ -7,6 +7,7 @@ import selenium.common.exceptions
 import automsr.utility
 from automsr import MicrosoftRewards
 from automsr.mail import EmailConnectionFactory, RewardsStatus
+from automsr.prizes import show_all_prizes
 from automsr.utility import (
     get_config,
     get_safe_credentials,
@@ -64,6 +65,10 @@ def main(**kwargs):
     # test if the flow should only show profiles and then exit
     if kwargs.get("show_profiles"):
         show_profiles()
+        return
+
+    if kwargs.get("show_prizes"):
+        show_all_prizes()
         return
 
     # dry run mode, defaults to False
@@ -179,6 +184,11 @@ if __name__ == "__main__":
         "--show-profiles",
         action="store_true",
         help="Show Chrome profiles found and then exit",
+    )
+    parser.add_argument(
+        "--show-prizes",
+        action="store_true",
+        help="Show all possible prizes that can inserted into prize mask",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Increase console verbosity"

@@ -1,8 +1,11 @@
+import logging
 from dataclasses import dataclass, field
 from enum import Enum, Flag, auto
 from typing import Dict, List, Tuple, Union
 
 from .utility import config
+
+logger = logging.getLogger(__name__)
 
 
 class PrizeKind(Enum):
@@ -76,8 +79,15 @@ class PrizeKindGetter:
         )
 
     @classmethod
-    def get_all_mask(cls) -> List[PrizeKind]:
+    def get_all_prizes(cls) -> List[PrizeKind]:
         return list(PrizeKind.__members__.values())
+
+
+def show_all_prizes():
+    prizes = PrizeKindGetter.get_all_prizes()
+    logger.info(f"Found {len(prizes)} different prizes")
+    for prize in prizes:
+        logger.info(str(prize).lower())
 
 
 class PrizeUnit(Flag):
@@ -264,7 +274,7 @@ def get_prizes(
     """
 
     if not prizes_mask:
-        prizes_mask = PrizeKindGetter.get_all_mask()
+        prizes_mask = PrizeKindGetter.get_all_prizes()
     elif isinstance(prizes_mask, (list, tuple)):
         prizes_mask = PrizeKindGetter.get_mask_from_args(*prizes_mask)
     else:
