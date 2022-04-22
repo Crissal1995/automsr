@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from enum import Enum, Flag, auto
 from typing import Dict, List, Tuple, Union
 
+from .utility import config
+
 
 class PrizeKind(Enum):
     DONATION = "DONATION"
@@ -337,3 +339,18 @@ def get_prizes_str(
         s.append("NOTHING")
 
     return s[0] + ", ".join(s[1:])
+
+
+def get_prizes_str_from_config(points: int, returns_only_collected: bool = True):
+    """
+    Returns a string holding a formatted representation of the prizes
+     that the user can redeem.
+    The mask will be parsed from config.
+    """
+    mask = config["prize"]["mask"]
+    getter = PrizeKindGetter(mask)
+    return get_prizes_str(
+        points=points,
+        prizes_mask=getter.get_mask(),
+        returns_only_collected=returns_only_collected,
+    )

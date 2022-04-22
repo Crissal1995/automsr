@@ -41,7 +41,7 @@ from automsr.pages import (
     LoginPage,
     TryMicrosoftBrowserPage,
 )
-from automsr.prizes import get_prizes_str
+from automsr.prizes import get_prizes_str_from_config
 from automsr.search import GoogleTakeoutSearchGenerator, RandomSearchGenerator
 from automsr.state import ActivityState, StateManager
 from automsr.utility import (
@@ -188,6 +188,9 @@ class MicrosoftRewards:
         profile_root = automsr.utility.config["selenium"]["profile_root"]
         is_profile_used = ipu(profile_root, profile_dir)
 
+        # check if prize mask is valid
+        get_prizes_str_from_config(0)
+
         # get a selenium driver
         driver = get_driver(**kwargs)
 
@@ -306,7 +309,7 @@ class MicrosoftRewards:
             messages.append(msg)
 
             # giftcards_str = rewards.get_gift_card_amounts_str(max_points)
-            giftcards_str = get_prizes_str(max_points)
+            giftcards_str = get_prizes_str_from_config(max_points)
             logger.info(giftcards_str)
             messages.append(giftcards_str)
 
