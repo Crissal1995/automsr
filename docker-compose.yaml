@@ -3,6 +3,7 @@ version: "3"
 services:
   chrome:
     build:
+      context: .
       dockerfile: Dockerfile.chrome
     expose:
       - 4444
@@ -11,10 +12,12 @@ services:
 
   app:
     build:
+      context: .
       dockerfile: Dockerfile.app
     depends_on:
       - chrome
     volumes:
       - ./automsr.remote.cfg:/app/automsr.cfg
-      - ./credentials_slim.json:/app/credentials.json
-      # TODO DEBUG: must set credentials.json instead of credentials_slim.json
+      - ./credentials.json:/app/credentials.json
+    environment:
+      - AUTOMSR_OPTS=
