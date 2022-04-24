@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  chrome:
+    build:
+      dockerfile: Dockerfile.chrome
+    expose:
+      - 4444
+    environment:
+      - JAVA_OPTS=-Dwebdriver.chrome.whitelistedIps=
+
+  app:
+    build:
+      dockerfile: Dockerfile.app
+    depends_on:
+      - chrome
+    volumes:
+      - ./automsr.remote.cfg:/app/automsr.cfg
+      - ./credentials_slim.json:/app/credentials.json
+      # TODO DEBUG: must set credentials.json instead of credentials_slim.json

@@ -1,0 +1,19 @@
+# https://github.com/SeleniumHQ/docker-selenium/blob/selenium-3/StandaloneChrome/Dockerfile
+
+FROM selenium/node-chrome:3.141.59-20210929
+LABEL authors=SeleniumHQ
+
+USER 1200
+
+#====================================
+# Scripts to run Selenium Standalone
+#====================================
+COPY start-selenium-standalone.sh /opt/bin/start-selenium-standalone.sh
+
+#==============================
+# Supervisor configuration file
+#==============================
+COPY selenium.conf /etc/supervisor/conf.d/
+
+
+EXPOSE 4444
