@@ -223,9 +223,14 @@ def get_options(**kwargs) -> Options:
     profile_dir = kwargs.get("profile_dir")
 
     if profile_root and profile_dir:
-        logger.info(f"Using profile '{profile_dir}' (root: {profile_root})")
-        options.add_argument(f"--user-data-dir={profile_root}")
-        options.add_argument(f"--profile-directory={profile_dir}")
+        if IN_DOCKER_CONTAINER:
+            logger.warning(
+                "Cannot use profiles in docker env! Defaults to old login method"
+            )
+        else:
+            logger.info(f"Using profile '{profile_dir}' (root: {profile_root})")
+            options.add_argument(f"--user-data-dir={profile_root}")
+            options.add_argument(f"--profile-directory={profile_dir}")
     elif profile_dir:  # ignore only profile_root set
         raise ValueError(
             "Cannot use Chrome profile without 'profile_root' variable set in configuration"
