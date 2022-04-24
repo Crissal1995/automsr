@@ -9,4 +9,4 @@ COPY . .
 
 ENV IN_DOCKER_CONTAINER=true
 
-CMD [ "python", "main.py" ]
+ENTRYPOINT [ "/app/run-now.sh" ]
