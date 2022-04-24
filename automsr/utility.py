@@ -5,10 +5,12 @@ import logging
 import os
 import pathlib
 import sys
+import time
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.remote_connection import ChromeRemoteConnection
@@ -155,9 +157,18 @@ def activity_skip(skip_str: str) -> Tuple[bool, ...]:
     return tuple(skip_tuple)
 
 
+IN_DOCKER_CONTAINER = os.environ.get("IN_DOCKER_CONTAINER", False)
+
+
 def is_profile_used(profile_root: str, profile_dir: str) -> bool:
-    """Determines if the chrome profile should be used"""
-    return bool(profile_root) and bool(profile_dir)
+    """
+    Determines if the chrome profile should be used.
+
+    If the application is runned inside a docker container,
+     the login method should be used, hence this method
+     should return False
+    """
+    return not IN_DOCKER_CONTAINER and bool(profile_root) and bool(profile_dir)
 
 
 def get_value_from_dictionary(
@@ -405,12 +416,31 @@ def change_user_agent(driver, new_user_agent: str):
     logger.debug(f"Changed user-agent to {new_user_agent}")
 
 
-def test_environment(**kwargs):
+def test_environment(retries: int = 5, **kwargs):
     """Determine if current environment is correctly set"""
-    driver = get_driver(**kwargs)
-    driver.get("https://example.org/")
-    driver.quit()
-    logger.info("Selenium driver found!")
+    driver = None
+    last_exc: Optional[WebDriverException] = None
+    wait_s = 3
+
+    for retry in range(retries):
+        try:
+            driver = get_driver(**kwargs)
+            break
+        except WebDriverException as e:
+            last_exc = e
+            logger.warning(
+                f"Retry {retry+1}/{retries} failed, retrying in {wait_s} seconds..."
+            )
+            time.sleep(wait_s)
+
+    if not driver and last_exc:
+        raise last_exc
+    elif driver:
+        driver.get("https://example.org/")
+        driver.quit()
+        logger.info("Selenium driver found!")
+    else:
+        raise RuntimeError("Should not be here")
 
 
 def get_credentials(credentials_fp):
