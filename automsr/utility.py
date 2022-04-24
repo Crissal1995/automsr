@@ -5,9 +5,9 @@ import logging
 import os
 import pathlib
 import sys
-import time
 from dataclasses import dataclass
 from enum import IntEnum
+from time import sleep
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from selenium.common.exceptions import WebDriverException
@@ -376,7 +376,7 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
 config = get_config(first_usage=True)
 
 
-def get_driver(options: Optional[Options] = None, **kwargs):
+def get_driver(options: Optional[Options] = None, **kwargs) -> Remote:
     global config
 
     if not options:
@@ -418,7 +418,7 @@ def change_user_agent(driver, new_user_agent: str):
 
 def test_environment(retries: int = 5, **kwargs):
     """Determine if current environment is correctly set"""
-    driver = None
+    driver: Optional[Remote] = None
     last_exc: Optional[WebDriverException] = None
     wait_s = 3
 
@@ -431,7 +431,7 @@ def test_environment(retries: int = 5, **kwargs):
             logger.warning(
                 f"Retry {retry+1}/{retries} failed, retrying in {wait_s} seconds..."
             )
-            time.sleep(wait_s)
+            sleep(wait_s)
 
     if not driver and last_exc:
         raise last_exc
