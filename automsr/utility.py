@@ -10,7 +10,6 @@ from enum import IntEnum
 from time import sleep
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-from selenium.common.exceptions import WebDriverException
 from selenium.webdriver import Chrome, Remote
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.remote_connection import ChromeRemoteConnection
@@ -419,14 +418,14 @@ def change_user_agent(driver, new_user_agent: str):
 def test_environment(retries: int = 5, **kwargs):
     """Determine if current environment is correctly set"""
     driver: Optional[Remote] = None
-    last_exc: Optional[WebDriverException] = None
+    last_exc: Optional[Exception] = None
     wait_s = 3
 
     for retry in range(retries):
         try:
             driver = get_driver(**kwargs)
             break
-        except WebDriverException as e:
+        except Exception as e:
             last_exc = e
             logger.warning(
                 f"Retry {retry+1}/{retries} failed, retrying in {wait_s} seconds..."
