@@ -17,7 +17,7 @@ services:
     depends_on:
       - chrome
     volumes:
-      - ./automsr.remote.cfg:/app/automsr.cfg
+      - ./automsr.docker.cfg:/app/automsr.cfg
       - ./credentials.json:/app/credentials.json
     environment:
       - AUTOMSR_OPTS=

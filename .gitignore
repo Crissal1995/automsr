@@ -10,6 +10,7 @@ __pycache__
 !credentials.example.json
 *.cfg
 !automsr.example.cfg
+!automsr.docker.example.cfg
 *.log
 *.csv
 screenshots
