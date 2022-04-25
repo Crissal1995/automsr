@@ -26,7 +26,6 @@ from automsr.activities import (
 )
 from automsr.exception import (
     AutomsrException,
-    CannotCompleteActivityException,
     CannotRetrieveDayStreakException,
     CannotRetrievePointsException,
     Detected2FAError,
@@ -478,7 +477,8 @@ class MicrosoftRewards:
             count = len(missing)
             word = runnable_type.name if count == 1 else runnable_type.name_plural
             msg = f"Cannot complete {count} {word}: {missing}"
-            raise CannotCompleteActivityException(msg)
+            # raise CannotCompleteActivityException(msg)
+            logger.error(msg)
         elif any_todos:  # no missing, found at least one to-do runnable
             logger.info(f"All {runnable_type.name_plural} completed")
         else:  # no missing, found no to-do runnable
