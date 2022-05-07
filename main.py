@@ -117,6 +117,9 @@ def main(**kwargs):
                 success_message = MicrosoftRewards.do_every_activity(
                     credentials=credentials
                 )
+            except KeyboardInterrupt:
+                logger.error("Gracefully exiting...")
+                sys.exit(1)
             except selenium.common.exceptions.InvalidArgumentException as e:
                 logger.error(
                     "Error caught with Chromium profiles! "
