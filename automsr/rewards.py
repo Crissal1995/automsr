@@ -2,6 +2,7 @@ import datetime
 import logging
 import random
 import re
+import string
 import time
 from typing import Dict, Sequence, Tuple, Type
 
@@ -60,6 +61,7 @@ class MicrosoftRewards:
     # URLs section
     url_rewards = "https://account.microsoft.com/rewards/"
     url_rewards_alt = "https://rewards.microsoft.com/"
+    url_punchcard = f"{url_rewards_alt}dashboard/$offerId"
     url_bing = "https://www.bing.com/"
     url_login = "https://login.live.com/login.srf"
     url_bing_searched = "https://www.bing.com/search?q=google"
@@ -944,8 +946,13 @@ class MicrosoftRewards:
             attrs = promotion["attributes"]
             title = attrs.get("classification.TitleText")
             text = attrs.get("description")
-            dest = attrs["destination"]
+            # dest = attrs["destination"]
             types = attrs["type"].split(",")
+
+            offer_id = promotion["offerId"]
+            dest = string.Template(self.url_punchcard).substitute(
+                dict(offerId=offer_id)
+            )
 
             kwargs = dict(
                 driver=self.driver,

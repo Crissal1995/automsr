@@ -443,6 +443,7 @@ class ThisOrThatActivity(Activity):
 class Punchcard(Runnable, ABC):
     name = "punchcard"
     name_plural = "punchcards"
+    retries = 3
 
     def __init__(
         self,
@@ -480,39 +481,41 @@ class Punchcard(Runnable, ABC):
         QuizActivity(self.driver, None, punchcard=True).do_it()
 
     def do_it(self):
-        retries = 3
-
         # store punchcard homepage
-        root_url = self.driver.current_url
+        root_url = self.destination
 
-        punchcards: [WebElement] = self.driver.find_elements_by_class_name(
-            "punchcard-row"
-        )
-        logger.debug(f"Found {len(punchcards)} punchcards actions inside {str(self)}")
+        todo_punchcards: List[WebElement] = []
 
-        todo_punchcards: List[WebElement] = [
-            punchcard for punchcard in punchcards if not self.is_complete(punchcard)
-        ]
-        logger.debug(
-            f"Found {len(todo_punchcards)} todo punchcards actions inside {str(self)}"
-        )
+        for retry in range(self.retries):
+            logger.info(f"Execute punchcard elements, retry {retry+1}/{self.retries}")
 
-        if not todo_punchcards:
-            return
+            self.driver.get(root_url)
 
-        todo_punchcards_urls = [
-            p.find_element_by_tag_name("a").get_attribute("href")
-            for p in todo_punchcards
-        ]
+            punchcards: [WebElement] = self.driver.find_elements_by_class_name(
+                "punchcard-row"
+            )
+            logger.debug(
+                f"Found {len(punchcards)} punchcards actions inside {str(self)}"
+            )
 
-        missing_punchcards_urls = []
-        for retry in range(retries):
-            logger.info(f"Retry {retry+1}/{retries}")
+            todo_punchcards: List[WebElement] = [
+                punchcard for punchcard in punchcards if not self.is_complete(punchcard)
+            ]
+            logger.debug(
+                f"Found {len(todo_punchcards)} todo punchcards actions inside {str(self)}"
+            )
+            todo_punchcards_urls = [
+                p.find_element_by_tag_name("a").get_attribute("href")
+                for p in todo_punchcards
+            ]
+
+            if not todo_punchcards_urls:
+                logger.info("All punchcard elements were completed")
+                return
 
             for i, url in enumerate(todo_punchcards_urls):
-                logger.info(
-                    f"Executing punchcard element {i+1}/{len(todo_punchcards_urls)}"
-                )
+                n = len(todo_punchcards)
+                logger.info(f"Executing punchcard element {i+1}/{n}")
 
                 self.driver.get(url)
                 time.sleep(1.5)
@@ -545,15 +548,13 @@ class Punchcard(Runnable, ABC):
                     pass
 
                 if not completed:
-                    logger.error("Cannot complete punchcard action!")
-                    missing_punchcards_urls.append(url)
+                    logger.error("Cannot complete punchcard element")
 
                 # go back to punchcard homepage
                 self.driver.get(root_url)
-            todo_punchcards_urls = missing_punchcards_urls.copy()
 
-        if todo_punchcards_urls:
-            logger.error("Cannot complete punchcard")
+        if todo_punchcards:
+            logger.error(f"Cannot complete {len(todo_punchcards)} punchcard elements")
 
 
 class PaidPunchcard(Punchcard):
