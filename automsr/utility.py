@@ -246,6 +246,11 @@ def get_options(**kwargs) -> Options:
     if not config["selenium"]["enable_logging"]:
         options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
+    binary_location = config["selenium"]["binary_location"]
+    if binary_location:
+        logger.info(f"Binary location provided: {binary_location}")
+        options.binary_location = binary_location
+
     return options
 
 
@@ -274,6 +279,7 @@ _default_config: Dict[str, Dict[str, Union[str, int, bool]]] = {
         "headless": False,
         "logging": True,
         "profile_root": "",
+        "binary_location": "",
     },
     "prize": {"mask": "microsoft_giftcard, gamepass_pc, third_party_giftcard"},
 }
@@ -304,6 +310,7 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
     headless = parser.getboolean("selenium", "headless")
     enable_logging = parser.getboolean("selenium", "logging")
     profile_root = parser.get("selenium", "profile_root")
+    binary_location = parser.get("selenium", "binary_location")
 
     # get automsr options
     skip = parser.get("automsr", "skip").lower()
@@ -359,6 +366,7 @@ def get_config(cfg_fp: str = "", *, first_usage=False):
             headless=headless,
             enable_logging=enable_logging,
             profile_root=profile_root,
+            binary_location=binary_location,
         ),
         "email": dict(
             send=send,
