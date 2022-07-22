@@ -103,7 +103,7 @@ def parse_profiles(userdata_path: Union[str, pathlib.Path]) -> List[ChromeProfil
         if not preferences_path.exists():
             continue
 
-        preferences_dict = json.load(open(preferences_path))
+        preferences_dict = json.load(open(preferences_path, encoding="utf-8"))
         display_name = preferences_dict.get("profile", {}).get("name", "")
         folder_name = thedir.stem
         profile_root = str(thedir.parent)
