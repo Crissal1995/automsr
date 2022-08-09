@@ -93,6 +93,9 @@ class MicrosoftRewards:
         " Mobile Safari/537.36"
     )
 
+    __MOBILE_SEARCH_CAN_BREAK_AT = 17
+    __MOBILE_SEARCH_SHOULD_STOP_AT = __MOBILE_SEARCH_CAN_BREAK_AT - 3
+
     def __init__(
         self,
         driver: WebDriver,
@@ -766,6 +769,11 @@ class MicrosoftRewards:
 
         for i in tqdm(range(limit)):
             logger.debug(f"Search {i + 1}/{limit}")
+
+            if self.is_mobile and i >= self.__MOBILE_SEARCH_SHOULD_STOP_AT:
+                msg = "Mobile searches interrupted to avoid freezes"
+                logger.info(msg)
+                raise RuntimeError(msg)
 
             # must search again input field because of page reloading
             input_field = self.driver.find_element_by_css_selector(selector)
