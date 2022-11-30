@@ -642,7 +642,11 @@ class MicrosoftRewards:
         time.sleep(1.5)
 
         # open points popup
-        self.driver.find_element_by_css_selector("#rx-user-status-action").click()
+        try:
+            self.driver.find_element_by_css_selector("#rx-user-status-action").click()
+        except:
+            logger.error("Points popup not found, trying new page version")
+            self.driver.find_element_by_css_selector("#dailypointColumnCalltoAction").click()
         time.sleep(2)
 
         # get searches
