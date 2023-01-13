@@ -32,6 +32,7 @@ from automsr.exception import (
     Detected2FAError,
     InvalidInputError,
     LessThanSixDailyActivitiesFoundException,
+    MobileSearchAvoidFreezeError,
     NoDailyActivityFoundException,
 )
 from automsr.pages import (
@@ -397,10 +398,17 @@ class MicrosoftRewards:
             if search_dict["mobile"]["missing"] == 0:
                 logger.info("Skipping mobile search, they are already done")
             else:
-                limit = search_dict["mobile"]["missing"] // 3
-                # to ensure we get all points, add an offset
-                limit += 5
-                self.execute_searches(search_type=search_type, limit=limit)
+                try:
+                    limit = search_dict["mobile"]["missing"] // 3
+                    # to ensure we get all points, add an offset
+                    limit += 5
+                    self.execute_searches(search_type=search_type, limit=limit)
+                except MobileSearchAvoidFreezeError:
+                    if self.check_missing_searches()["mobile"]["missing"] == 0:
+                        search_type_str = "Mobile" if self.is_mobile else "Desktop"
+                        logger.info(f"{search_type_str} searches completed")
+                    else:
+                        raise RuntimeError("Cannot complete mobile searches, retry")
 
     def _store_activity_states(
         self, activities: Sequence[Activity], update_if_already_inserted=True
@@ -644,7 +652,7 @@ class MicrosoftRewards:
         # open points popup
         try:
             self.driver.find_element_by_css_selector("#rx-user-status-action").click()
-        except exceptions.WebDriverException :
+        except exceptions.WebDriverException:
             logger.error("Points popup not found, trying new page version")
             self.driver.find_element_by_css_selector(
                 "#dailypointColumnCalltoAction"
@@ -779,7 +787,7 @@ class MicrosoftRewards:
             if self.is_mobile and i >= self.__MOBILE_SEARCH_SHOULD_STOP_AT:
                 msg = "Mobile searches interrupted to avoid freezes"
                 logger.info(msg)
-                raise RuntimeError(msg)
+                raise MobileSearchAvoidFreezeError(msg)
 
             # must search again input field because of page reloading
             input_field = self.driver.find_element_by_css_selector(selector)
