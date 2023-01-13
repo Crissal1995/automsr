@@ -644,9 +644,11 @@ class MicrosoftRewards:
         # open points popup
         try:
             self.driver.find_element_by_css_selector("#rx-user-status-action").click()
-        except:
+        except exceptions.WebDriverException :
             logger.error("Points popup not found, trying new page version")
-            self.driver.find_element_by_css_selector("#dailypointColumnCalltoAction").click()
+            self.driver.find_element_by_css_selector(
+                "#dailypointColumnCalltoAction"
+            ).click()
         time.sleep(2)
 
         # get searches
@@ -1009,28 +1011,32 @@ class MicrosoftRewards:
             logger.debug(f"Activity header text is: {header}")
 
             header_cmp = header.lower().strip()
-
-            # cast right type to elements
-            if ThisOrThatActivity.base_header.lower() in header_cmp:
-                activity = ThisOrThatActivity(
-                    driver=self.driver, element=element, daily_set=daily_set
-                )
-                logger.debug("This or That Activity found")
-            elif PollActivity.base_header.lower() in header_cmp:
-                activity = PollActivity(
-                    driver=self.driver, element=element, daily_set=daily_set
-                )
-                logger.debug("Poll Activity found")
-            elif QuizActivity.base_header.lower() in header_cmp:
-                activity = QuizActivity(
-                    driver=self.driver, element=element, daily_set=daily_set
-                )
-                logger.debug("Quiz Activity found")
-            else:
-                activity = StandardActivity(
-                    driver=self.driver, element=element, daily_set=daily_set
-                )
-                logger.debug("Standard activity found")
+            try:
+                # cast right type to elements
+                if ThisOrThatActivity.base_header.lower() in header_cmp:
+                    activity = ThisOrThatActivity(
+                        driver=self.driver, element=element, daily_set=daily_set
+                    )
+                    logger.debug("This or That Activity found")
+                elif PollActivity.base_header.lower() in header_cmp:
+                    activity = PollActivity(
+                        driver=self.driver, element=element, daily_set=daily_set
+                    )
+                    logger.debug("Poll Activity found")
+                elif QuizActivity.base_header.lower() in header_cmp:
+                    activity = QuizActivity(
+                        driver=self.driver,
+                        element=element,
+                        daily_set=daily_set,
+                    )
+                    logger.debug("Quiz Activity found")
+                else:
+                    activity = StandardActivity(
+                        driver=self.driver, element=element, daily_set=daily_set
+                    )
+                    logger.debug("Standard activity found")
+            except Exception:
+                logger.error("Skip activity becouse not found type")
             logger.debug(str(activity))
 
             # append to activites
