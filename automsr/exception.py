@@ -75,5 +75,5 @@ class MobileSearchError(AutomsrError):
     """Error class for Mobile search exceptions"""
 
 
-class MobileSearchAvoidFreezeError(AutomsrError):
+class MobileSearchAvoidFreezeError(MobileSearchError):
     """Error raised when mobile search is stopped to avoid freeze"""
