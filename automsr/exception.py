@@ -69,3 +69,11 @@ class AuthenticationError(EmailError):
 
 class ConfigurationError(EmailError):
     """Error raised when provided configuration is wrong"""
+
+
+class MobileSearchError(AutomsrError):
+    """Error class for Mobile search exceptions"""
+
+
+class MobileSearchAvoidFreezeError(MobileSearchError):
+    """Error raised when mobile search is stopped to avoid freeze"""
