@@ -89,12 +89,12 @@ class MicrosoftRewards:
         "(KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36 Edg/90.0.818.49"
     )
     useragent_chrome_android = (
-        "Mozilla/5.0 (Linux; Android 9; SM-G960F Build/PPR1.180610.011; wv) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/74.0.3729.157"
+        "Mozilla/5.0 (Linux; Android 10; SM-G960F Build/PPR1.180610.011; wv) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/111.0.0.0"
         " Mobile Safari/537.36"
     )
 
-    __MOBILE_SEARCH_CAN_BREAK_AT = 17
+    __MOBILE_SEARCH_CAN_BREAK_AT = 30
     __MOBILE_SEARCH_SHOULD_STOP_AT = __MOBILE_SEARCH_CAN_BREAK_AT - 3
 
     def __init__(
