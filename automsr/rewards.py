@@ -784,7 +784,11 @@ class MicrosoftRewards:
         for i in tqdm(range(limit)):
             logger.debug(f"Search {i + 1}/{limit}")
 
-            if self.is_mobile and i >= self.__MOBILE_SEARCH_SHOULD_STOP_AT:
+            if (
+                self.is_mobile
+                and i >= self.__MOBILE_SEARCH_SHOULD_STOP_AT
+                and not False
+            ):
                 msg = "Mobile searches interrupted to avoid freezes"
                 logger.info(msg)
                 raise MobileSearchAvoidFreezeError(msg)
@@ -866,6 +870,15 @@ class MicrosoftRewards:
 
             # execute the activity
             try:
+                # Accept eventually popup
+                try:
+                    popup_accept_button = self.driver.find_element_by_id(
+                        "bnp_btn_accept"
+                    )
+                    popup_accept_button.click()
+                except exceptions.WebDriverException:
+                    logger.info("No popup found in when start activity, continue")
+
                 runnable.do_it()
                 logger.info(f"{singular.title()} completed")
             except exceptions.WebDriverException as e:
