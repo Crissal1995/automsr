@@ -1,8 +1,5 @@
-import json
 import logging
-import pathlib
 import random
-import re
 import string
 from abc import ABC
 from typing import Generator
@@ -10,12 +7,10 @@ from urllib.parse import urlparse
 
 from selenium.webdriver.common.keys import Keys
 
-import automsr.utility
-
 logger = logging.getLogger(__name__)
 
 
-def is_valid_url(url: str):
+def is_valid_url(url: str) -> bool:
     try:
         result = urlparse(url)
     except (AttributeError, ValueError):
@@ -25,23 +20,31 @@ def is_valid_url(url: str):
 
 
 class SearchGenerator(ABC):
-    """Interface for search generators to be used as generators of
-    query for Bing searches"""
+    """
+    Interface for search generators to be used as generators of
+    query for Bing searches
+    """
 
-    def query_gen(self) -> Generator:
-        """Returns a generator of queries to be used with Bing searches"""
+    def query_gen(self) -> Generator[str]:
+        """
+        Returns a generator of queries to be used with Bing searches
+        """
+
         raise NotImplementedError
 
     @property
     def tts(self) -> float:
-        """Returns the time to sleep in seconds between Bing searches"""
+        """
+        Returns the time to sleep in seconds between Bing searches
+        """
+
         raise NotImplementedError
 
 
 class RandomSearchGenerator(SearchGenerator):
     @property
     def tts(self):
-        return 1
+        return 1.5
 
     def query_gen(self):
         alphabet = string.ascii_lowercase
@@ -57,40 +60,3 @@ class RandomSearchGenerator(SearchGenerator):
         while True:
             logger.debug("Yielding backspace...")
             yield Keys.BACKSPACE
-
-
-class GoogleTakeoutSearchGenerator(SearchGenerator):
-    @property
-    def tts(self) -> float:
-        return random.randint(10, 60)
-
-    def query_gen(self) -> Generator:
-        while True:
-            # get a random activity from the activities
-            activity = random.choice(self.activities)
-
-            # parse query from url
-            title_url_query = urlparse(activity["titleUrl"]).query.replace("q=", "")
-            logger.debug(f"url query is {title_url_query}")
-
-            # yield the correct value, based on the validity of title url query
-            if is_valid_url(title_url_query):
-                yield re.sub("&usg=[a-zA-Z0-9]+", "", title_url_query)
-            else:
-                yield title_url_query.replace("+", " ")
-
-    def __init__(self):
-        super().__init__()
-        takeout_json = pathlib.Path(automsr.utility.config["automsr"]["takeout"])
-        if not takeout_json.exists():
-            msg = f"Takeout json file doesn't exist! Path provided: {takeout_json}"
-            logger.error(msg)
-            raise FileNotFoundError(msg)
-
-        with open(takeout_json) as f:
-            self.activities = json.load(f)
-
-        if not self.activities:
-            msg = "No activity found inside the file provided!"
-            logger.error(msg)
-            raise ValueError(msg)
