@@ -1,21 +1,34 @@
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Collection, Dict, Union
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from email_validator import validate_email, ValidatedEmail
+from pydantic import BaseModel, ConfigDict, field_validator
+
+from automsr.datatypes.automsr import RewardsType
 
 
 class AutomsrConfig(BaseModel):
     credentials: Path
+    skip: Union[RewardsType, Collection[RewardsType]]
 
 
 class EmailConfig(BaseModel):
-    pass
+    enable: bool
+    sender: str
+    recipient: str
+
+    @field_validator("sender", "recipient")
+    @classmethod
+    def _validate_email(cls, value: str) -> str:
+        validated_email: ValidatedEmail = validate_email(value)
+        return validated_email.normalized
 
 
 class SeleniumConfig(BaseModel):
-    pass
+    chromedriver_path: Path
+    chrome_binary_path: Path
 
 
 class Config(BaseModel):
