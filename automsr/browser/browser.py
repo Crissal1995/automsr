@@ -5,6 +5,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
 
+from automsr.config import Config
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,11 +25,11 @@ class CannotChangeUserAgentException(BrowserException):
 @define
 class BrowserOptions:
     @classmethod
-    def from_config(cls, config) -> "BrowserOptions":
-        ...
+    def from_config(cls, config: Config) -> "BrowserOptions":
+        raise NotImplementedError
 
     def as_options(self) -> Options:
-        ...
+        raise NotImplementedError
 
 
 @define
@@ -65,7 +67,7 @@ class Browser:
             logger.debug(f"Changed user-agent to: {user_agent}")
 
     @classmethod
-    def from_config(cls, config) -> "Browser":
+    def from_config(cls, config: Config) -> "Browser":
         """
         Construct a Browser from a Chrome executable path provided as input.
         """
@@ -82,3 +84,10 @@ class Browser:
 
         test_url = "https://example.org/"
         self.driver.get(test_url)
+
+    def go_to(self, url: str) -> None:
+        """
+        Change page following the provided url.
+        """
+
+        self.driver.get(url)

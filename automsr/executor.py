@@ -1,5 +1,7 @@
 from attr import define, field
-from selenium.webdriver.remote.webdriver import WebDriver
+
+from automsr.browser.browser import Browser
+from automsr.config import Config
 
 
 @define
@@ -19,7 +21,8 @@ class SingleTargetExecutor:
     This executor will target a single profile.
     """
 
-    driver: WebDriver = field(init=False)
+    config: Config
+    browser: Browser = field(init=False)
 
     def execute(self) -> None:
         """
@@ -31,3 +34,7 @@ class SingleTargetExecutor:
         Create a new session with Selenium and Chromedriver,
         then returns the session object to the caller.
         """
+
+        self.browser = Browser.from_config(config=self.config)
+        self.browser.test_driver()
+        self.browser.go_to(self.config.automsr.rewards_homepage)

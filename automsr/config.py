@@ -1,31 +1,44 @@
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from typing_extensions import Annotated
+from urllib.parse import urlparse
 
 import yaml
-from email_validator import ValidatedEmail, validate_email
-from pydantic import BaseModel, ConfigDict, field_validator
+from email_validator import ValidatedEmail as _ValidatedEmail, validate_email as _validate_email
+from pydantic import BaseModel, ConfigDict, field_validator, AfterValidator
 
 from automsr.datatypes import RewardsType
+
+
+def validate_url(value: str) -> str:
+    result = urlparse(value)
+    assert all(field for field in (result.scheme, result.netloc, result.path))
+    return value
+
+
+def validate_email(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    validated_email: _ValidatedEmail = _validate_email(value)
+    return validated_email.normalized
+
+
+ValidatedURL = Annotated[str, AfterValidator(validate_url)]
+ValidatedEmail = Annotated[str, AfterValidator(validate_email)]
 
 
 class AutomsrConfig(BaseModel):
     credentials: Path
     skip: Union[None, RewardsType, List[RewardsType]] = None
 
+    rewards_homepage: ValidatedURL = "https://rewards.bing.com/"
+
 
 class EmailConfig(BaseModel):
     enable: bool = False
-    sender: Optional[str] = None
-    recipient: Optional[str] = None
-
-    @field_validator("sender", "recipient")
-    @classmethod
-    def _validate_email(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return None
-        validated_email: ValidatedEmail = validate_email(value)
-        return validated_email.normalized
+    sender: Optional[ValidatedEmail] = None
+    recipient: Optional[ValidatedEmail] = None
 
 
 class SeleniumConfig(BaseModel):
@@ -78,6 +91,15 @@ class Config(BaseModel):
         ... }
         >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
         Config(version='v1', automsr=..., email=..., selenium=...)
+        >>> _data["email"]["sender"] = "invalid-email"
+        >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
+        email.sender
+          Value error, The email address is not valid...
+        ...
+        >>> del _data["email"]["sender"]
         >>> _data["version"] = "v2"
         >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
         Traceback (most recent call last):
