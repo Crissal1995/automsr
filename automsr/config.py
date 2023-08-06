@@ -6,7 +6,7 @@ import yaml
 from email_validator import validate_email, ValidatedEmail
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from automsr.datatypes.automsr import RewardsType
+from automsr.datatypes import RewardsType
 
 
 class AutomsrConfig(BaseModel):
