@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "automsr"
+version = "8.0.0"
+description = "Automate Rewards points collection"
+authors = ["Cristiano Salerno <cristianosalerno1@gmail.com>"]
+license = "MIT License"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+selenium = "^4.11.2"
+tqdm = "^4.65.0"
+
+[tool.poetry.group.lint.dependencies]
+black = "^23.7.0"
+ruff = "^0.0.282"
+mypy = "^1.4.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
