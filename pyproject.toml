@@ -9,6 +9,7 @@ license = "MIT License"
 python = "^3.8"
 selenium = "^4.11.2"
 tqdm = "^4.65.0"
+pydantic = "^2.1.1"
 
 [tool.poetry.group.lint]
 optional = true
@@ -27,3 +28,9 @@ pytest = "^7.4.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+select = ["E", "F", "I", "W"]
+line-length = 120  # more lenient than Black
+
+[tool.mypy]
