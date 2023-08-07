@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from attr import define
 from selenium.webdriver.chrome.options import Options
@@ -35,6 +36,16 @@ class BrowserOptions:
 @define
 class Browser:
     driver: ChromeWebDriver
+
+    desktop_user_agent: str = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
+    )
+    mobile_user_agent: str = (
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.3"
+    )
 
     def change_user_agent(self, user_agent: str, strict: bool = True) -> None:
         """
@@ -98,3 +109,10 @@ class Browser:
         """
 
         self.driver.get(url)
+
+    def execute_script(self, script: str) -> Any:
+        """
+        Execute one or more JS instructions and returns the result.
+        """
+
+        return self.driver.execute_script(script=script)
