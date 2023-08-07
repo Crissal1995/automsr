@@ -36,7 +36,7 @@ class BrowserOptions:
 class Browser:
     driver: ChromeWebDriver
 
-    def change_user_agent(self, user_agent: str, check: bool = True) -> None:
+    def change_user_agent(self, user_agent: str, strict: bool = True) -> None:
         """
         Change user agent in the current driver.
 
@@ -54,6 +54,8 @@ class Browser:
         server_command = "Network.setUserAgentOverride"
         server_command_args = dict(userAgent=user_agent)
 
+        logger.debug(f"Trying to change user-agent to: {user_agent}")
+        
         self.driver.execute(
             driver_command, {"cmd": server_command, "params": server_command_args}
         )
@@ -61,10 +63,13 @@ class Browser:
         actual_user_agent = str(
             self.driver.execute_script("return navigator.userAgent;")
         )
-        if check and actual_user_agent != user_agent:
-            raise CannotChangeUserAgentException("Cannot set a new user-agent!")
+        if actual_user_agent != user_agent:
+            if strict:
+                raise CannotChangeUserAgentException("Cannot set a new user-agent!")
+            else:
+                logger.warning(f"Cannot set a new user-agent! Current user-agent: {actual_user_agent}")
         else:
-            logger.debug(f"Changed user-agent to: {user_agent}")
+            logger.debug(f"Changed user-agent to: {actual_user_agent}")
 
     @classmethod
     def from_config(cls, config: Config) -> "Browser":
