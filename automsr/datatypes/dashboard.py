@@ -111,3 +111,34 @@ class Dashboard(BaseModel):
     dailySetPromotions: DailySetPromotions
     # punchCards: List[Any]
     morePromotions: List[Promotion]
+
+    def level(self) -> LevelsInfoEnum:
+        """
+        Returns the current user level.
+        """
+
+        return self.userStatus.levelInfo.activeLevel
+
+    def points(self) -> int:
+        """
+        Returns the amount of points available.
+        """
+
+        return self.userStatus.availablePoints
+
+    def can_search_on_pc(self) -> bool:
+        """
+        Returns True if any PC search is missing, False otherwise.
+        """
+
+        return self.userStatus.counters.pcSearch[0].is_completable()
+
+    def can_search_on_mobile(self) -> bool:
+        """
+        Returns True if any Mobile search is missing, False otherwise.
+        """
+
+        if self.level() is LevelsInfoEnum.level_1:
+            return False
+
+        raise NotImplementedError
