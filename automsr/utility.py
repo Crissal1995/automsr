@@ -10,10 +10,8 @@ from enum import IntEnum
 from time import sleep
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-from selenium.webdriver import Chrome, Remote
+from selenium.webdriver import Remote
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.remote_connection import ChromeRemoteConnection
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
 from automsr.exception import InvalidCredentialsError
 
@@ -389,30 +387,31 @@ config = get_config(first_usage=True)
 
 
 def get_driver(options: Optional[Options] = None, **kwargs) -> Remote:
-    global config
-
-    if not options:
-        options = get_options(**kwargs)
-    path = kwargs.get("path", config["selenium"]["path"])
-    url = kwargs.get("url", config["selenium"]["url"])
-
-    env = config["selenium"]["env"]
-
-    if env == "local":
-        driver = Chrome(executable_path=path, options=options)
-    elif env == "remote":
-        driver = Remote(
-            command_executor=ChromeRemoteConnection(remote_server_addr=url),
-            desired_capabilities=DesiredCapabilities.CHROME,
-            options=options,
-        )
-    else:
-        raise NotImplementedError
-
-    # expand driver full-screen
-    driver.maximize_window()
-
-    return driver
+    raise DeprecationWarning
+    # global config
+    #
+    # if not options:
+    #     options = get_options(**kwargs)
+    # path = kwargs.get("path", config["selenium"]["path"])
+    # url = kwargs.get("url", config["selenium"]["url"])
+    #
+    # env = config["selenium"]["env"]
+    #
+    # if env == "local":
+    #     driver = Chrome(executable_path=path, options=options)
+    # elif env == "remote":
+    #     driver = Remote(
+    #         command_executor=ChromeRemoteConnection(remote_server_addr=url),
+    #         desired_capabilities=DesiredCapabilities.CHROME,
+    #         options=options,
+    #     )
+    # else:
+    #     raise NotImplementedError
+    #
+    # # expand driver full-screen
+    # driver.maximize_window()
+    #
+    # return driver
 
 
 def change_user_agent(driver, new_user_agent: str):
