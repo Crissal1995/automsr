@@ -55,7 +55,7 @@ class Browser:
         server_command_args = dict(userAgent=user_agent)
 
         logger.debug(f"Trying to change user-agent to: {user_agent}")
-        
+
         self.driver.execute(
             driver_command, {"cmd": server_command, "params": server_command_args}
         )
@@ -67,7 +67,9 @@ class Browser:
             if strict:
                 raise CannotChangeUserAgentException("Cannot set a new user-agent!")
             else:
-                logger.warning(f"Cannot set a new user-agent! Current user-agent: {actual_user_agent}")
+                logger.warning(
+                    f"Cannot set a new user-agent! Current user-agent: {actual_user_agent}"
+                )
         else:
             logger.debug(f"Changed user-agent to: {actual_user_agent}")
 

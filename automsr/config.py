@@ -1,14 +1,25 @@
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-from typing_extensions import Annotated
 from urllib.parse import urlparse
 
 import yaml
-from email_validator import ValidatedEmail as _ValidatedEmail, validate_email as _validate_email
-from pydantic import BaseModel, ConfigDict, field_validator, AfterValidator
+from email_validator import (
+    ValidatedEmail as _ValidatedEmail,
+)
+from email_validator import (
+    validate_email as _validate_email,
+)
+from pydantic import AfterValidator, BaseModel, ConfigDict
+from typing_extensions import Annotated
 
 from automsr.datatypes import RewardsType
+
+
+def validate_version(value: str) -> str:
+    if value != "v1":
+        raise ValueError("Version unsupported")
+    return value
 
 
 def validate_url(value: str) -> str:
@@ -24,6 +35,7 @@ def validate_email(value: Optional[str]) -> Optional[str]:
     return validated_email.normalized
 
 
+ValidatedVersion = Annotated[str, AfterValidator(validate_version)]
 ValidatedURL = Annotated[str, AfterValidator(validate_url)]
 ValidatedEmail = Annotated[str, AfterValidator(validate_email)]
 
@@ -49,17 +61,10 @@ class SeleniumConfig(BaseModel):
 class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    version: str = "v1"
+    version: ValidatedVersion = "v1"
     automsr: AutomsrConfig
     email: EmailConfig
     selenium: SeleniumConfig
-
-    @field_validator("version")
-    @classmethod
-    def _assert_version(cls, value: str) -> str:
-        if value != "v1":
-            raise ValueError("Only version 'v1' is supported!")
-        return value
 
     @classmethod
     def from_yaml(cls, path: Path) -> "Config":
@@ -106,7 +111,7 @@ class Config(BaseModel):
         ...
         pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
         version
-          Value error, Only version 'v1' is supported! [type=value_error, input_value='v2', input_type=str]
+          Value error, Version unsupported [type=value_error, input_value='v2', input_type=str]
         ...
         """
 
