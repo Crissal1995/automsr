@@ -25,6 +25,12 @@ dist/
 *.sqlite
 *.sqlite-journal
 
-# AutoMSR
+# AutoMSR - chromedriver
 chromedriver.exe
 chromedriver
+# AutoMSR - credentials
+credentials*.json
+!credentials.example.json
+# AutoMSR - config
+automsr*.cfg
+!automsr.example.cfg
