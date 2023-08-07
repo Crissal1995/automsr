@@ -14,7 +14,6 @@ class TestDatatypes(unittest.TestCase):
     def setUp(self) -> None:
         dashboards_path = Path(__file__).parent / "dashboards"
         self.partial_dashboard = dashboards_path / "07-08-2023.json"
-        self.completed_dashboard = dashboards_path / "07-08-2023-completed.json"
 
     def test_dashboard(self) -> None:
         """
