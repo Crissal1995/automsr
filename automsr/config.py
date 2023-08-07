@@ -10,7 +10,7 @@ from email_validator import (
 from email_validator import (
     validate_email as _validate_email,
 )
-from pydantic import AfterValidator, BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict, SecretStr
 from typing_extensions import Annotated
 
 from automsr.datatypes import RewardsType
@@ -40,8 +40,56 @@ ValidatedURL = Annotated[str, AfterValidator(validate_url)]
 ValidatedEmail = Annotated[str, AfterValidator(validate_email)]
 
 
+class SingleCredentials(BaseModel):
+    email: ValidatedEmail
+    password: SecretStr
+
+
+class MultipleCredentials(BaseModel):
+    credentials: List[SingleCredentials]
+
+
+def validate_credentials_path(value: Path) -> Path:
+    content = open(value).read()
+    if value.suffix == ".json":
+        data = json.loads(content)
+    elif value.suffix in (".yml", ".yaml"):
+        data = yaml.safe_load(content)
+    else:
+        raise ValueError(f"Expecting a json or yaml file, received: {value!s}")
+
+    # check that the data is pydantic-complaint
+    if isinstance(data, list):
+        raise TypeError("Expecting a dictionary, found a list!")
+    elif isinstance(data, dict):
+        _credentials = MultipleCredentials(**data)
+
+    return value
+
+
+ValidatedCredentialsPath = Annotated[Path, AfterValidator(validate_credentials_path)]
+
+
 class AutomsrConfig(BaseModel):
-    credentials: Path
+    """
+    >>> from unittest.mock import patch, mock_open
+    >>> from unittest import TestCase
+    >>> from pydantic import ValidationError
+    >>> path = Path("credentials.json")
+    >>> content = '{"credentials": [{"email": "mario@outlook.com", "password": "secretValue"}]}'
+    >>> wrong_content_list = '[{"email": "mario@outlook.com", "password": "secretValue"}]'
+    >>> wrong_content_fields = '{"credentials": [{"foo": "baz"}]}'
+    >>> with patch("builtins.open", mock_open(read_data=content)):
+    ...     _ = AutomsrConfig(credentials=path)
+    >>> with patch("builtins.open", mock_open(read_data=wrong_content_list)):
+    ...     with TestCase().assertRaises(TypeError):
+    ...         _ = AutomsrConfig(credentials=path)
+    >>> with patch("builtins.open", mock_open(read_data=wrong_content_fields)):
+    ...     with TestCase().assertRaises(ValidationError):
+    ...         _ = AutomsrConfig(credentials=path)
+    """
+
+    credentials: ValidatedCredentialsPath
     skip: Union[None, RewardsType, List[RewardsType]] = None
 
     rewards_homepage: ValidatedURL = "https://rewards.bing.com/"
