@@ -137,15 +137,20 @@ class Config(BaseModel):
         """
         Load config from an in-memory mapping.
 
+        >>> from unittest.mock import patch, mock_open
+        >>> path = Path("credentials.json")
+        >>> content = '{"credentials": [{"email": "mario@outlook.com", "password": "secretValue"}]}'
         >>> _data = {
-        ...     "automsr": {"credentials": Path("creds.json")},
+        ...     "automsr": {"credentials": path},
         ...     "email": {},
         ...     "selenium": {"chrome_path": Path("chrome.exe"), "chromedriver_path": Path("chromedriver.exe")},
         ... }
-        >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
+        >>> with patch("builtins.open", mock_open(read_data=content)):
+        ...     Config.from_dict(_data)  # doctest: +ELLIPSIS
         Config(version='v1', automsr=..., email=..., selenium=...)
         >>> _data["email"]["sender"] = "invalid-email"
-        >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
+        >>> with patch("builtins.open", mock_open(read_data=content)):
+        ...     Config.from_dict(_data)  # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
         pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
@@ -154,7 +159,8 @@ class Config(BaseModel):
         ...
         >>> del _data["email"]["sender"]
         >>> _data["version"] = "v2"
-        >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
+        >>> with patch("builtins.open", mock_open(read_data=content)):
+        ...     Config.from_dict(_data)  # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
         pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
