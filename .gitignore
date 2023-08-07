@@ -1,24 +1,30 @@
-.idea
-venv*
-.venv*
-.tox
+# IDE
+.idea/
+.vscode/
+
+# Python venv
+venv/
+.venv/
+virtualenv/
+
+# Python
+.tox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 *.egg-info
-.env
-*driver.exe
+*.pyc
 __pycache__
-*.json
-!credentials.example.json
-*.cfg
-!automsr.example.cfg
-!automsr.docker.example.cfg
-*.log
-*.csv
-screenshots
-*.sqlite
-*.sqlite-journal
-.DS_Store
 build/
 dist/
-*.spec
 
-/chrome_driver_/
+# Misc
+.env
+*.spec
+.DS_Store
+*.sqlite
+*.sqlite-journal
+
+# AutoMSR
+chromedriver.exe
+chromedriver
