@@ -1,10 +1,6 @@
-import json
 import unittest
 from pathlib import Path
 
-import yaml
-
-from automsr.datatypes.dashboard import Dashboard, LevelsInfoEnum
 from config import Config
 
 
@@ -30,4 +26,6 @@ class TestConfigs(unittest.TestCase):
         config = load_config("config.example.yaml")
         self.assertEqual(len(config.automsr.profiles), 1)
         self.assertEqual(config.version, "v1")
-        self.assertEqual(config.email.sender_password.get_secret_value(), "my_secret_password")
+        self.assertEqual(
+            config.email.sender_password.get_secret_value(), "my_secret_password"
+        )
