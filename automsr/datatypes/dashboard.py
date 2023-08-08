@@ -145,4 +145,4 @@ class Dashboard(BaseModel):
         if self.level() is LevelsInfoEnum.LEVEL_1:
             return False
 
-        raise NotImplementedError
+        return self.userStatus.counters.mobileSearch[0].is_completable()
