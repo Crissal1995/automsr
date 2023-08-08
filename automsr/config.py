@@ -80,16 +80,16 @@ class AutomsrConfig(BaseModel):
     >>> wrong_content_list = '[{"email": "mario@outlook.com", "password": "secretValue"}]'
     >>> wrong_content_fields = '{"credentials": [{"foo": "baz"}]}'
     >>> with patch("builtins.open", mock_open(read_data=content)):
-    ...     _ = AutomsrConfig(credentials=path)
+    ...     _ = AutomsrConfig(credentials_path=path)
     >>> with patch("builtins.open", mock_open(read_data=wrong_content_list)):
     ...     with TestCase().assertRaises(TypeError):
-    ...         _ = AutomsrConfig(credentials=path)
+    ...         _ = AutomsrConfig(credentials_path=path)
     >>> with patch("builtins.open", mock_open(read_data=wrong_content_fields)):
     ...     with TestCase().assertRaises(ValidationError):
-    ...         _ = AutomsrConfig(credentials=path)
+    ...         _ = AutomsrConfig(credentials_path=path)
     """
 
-    credentials: ValidatedCredentialsPath
+    credentials_path: ValidatedCredentialsPath
     skip: Union[None, RewardsType, List[RewardsType]] = None
 
     rewards_homepage: ValidatedURL = "https://rewards.bing.com/"
@@ -141,7 +141,7 @@ class Config(BaseModel):
         >>> path = Path("credentials.json")
         >>> content = '{"credentials": [{"email": "mario@outlook.com", "password": "secretValue"}]}'
         >>> _data = {
-        ...     "automsr": {"credentials": path},
+        ...     "automsr": {"credentials_path": path},
         ...     "email": {},
         ...     "selenium": {"chrome_path": Path("chrome.exe"), "chromedriver_path": Path("chromedriver.exe")},
         ... }
