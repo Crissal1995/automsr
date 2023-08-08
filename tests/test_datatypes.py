@@ -1,7 +1,7 @@
 import json
 import unittest
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 from automsr.datatypes.dashboard import Dashboard, LevelsInfoEnum
 
