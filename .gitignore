@@ -34,3 +34,5 @@ credentials*.json
 # AutoMSR - config
 automsr*.cfg
 !automsr.example.cfg
+# AutoMSR - new config
+config.yaml
