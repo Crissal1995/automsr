@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, RootModel, constr
+from pydantic import BaseModel, Field, RootModel, constr
 
 Date = constr(pattern=r"\d{2}/\d{2}/\d{4}")
 
@@ -70,7 +70,7 @@ class LevelInfo(BaseModel):
     activeLevel: LevelsInfoEnum
 
 
-class PcSearchCounter(BaseModel):
+class SearchCounter(BaseModel):
     name: str
     offerId: str
     complete: bool
@@ -82,7 +82,11 @@ class PcSearchCounter(BaseModel):
 
 
 class Counters(BaseModel):
-    pcSearch: List[PcSearchCounter]
+    # two items expected: actual pc searches counter, and bing searches counter
+    pcSearch: List[SearchCounter] = Field(..., min_items=2, max_items=2)
+
+    # one item expected: actual mobile searches counter
+    mobileSearch: Optional[List[SearchCounter]] = Field(None, min_items=1, max_items=1)
 
 
 class UserStatus(BaseModel):
