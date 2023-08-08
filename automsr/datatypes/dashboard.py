@@ -86,7 +86,9 @@ class Counters(BaseModel):
     pcSearch: List[SearchCounter] = Field(..., min_length=2, max_length=2)
 
     # one item expected: actual mobile searches counter
-    mobileSearch: Optional[List[SearchCounter]] = Field(None, min_length=1, max_length=1)
+    mobileSearch: Optional[List[SearchCounter]] = Field(
+        None, min_length=1, max_length=1
+    )
 
 
 class UserStatus(BaseModel):
