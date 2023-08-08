@@ -1,0 +1,17 @@
+---
+version: v1
+
+automsr:
+  profiles:
+    - email: crissal@outlook.com  # profile email, will be only used to log it during execution
+      profile: "Profile 1"  # profile name found in chrome's profiles directory
+
+selenium:
+  profiles_root: path/to/chrome/profiles  # pointer to the root of profiles
+  chromedriver_path: path/to/chromedriver  # be sure it matches your current Chrome version
+
+email:
+  enable: true  # receive an email with the status of the execution
+  recipient: an_address@gmail.com
+  sender: my_address@gmail.com
+  sender_password: my_secret_password  # be careful sharing this config with others!

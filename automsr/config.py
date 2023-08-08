@@ -40,56 +40,18 @@ ValidatedURL = Annotated[str, AfterValidator(validate_url)]
 ValidatedEmail = Annotated[str, AfterValidator(validate_email)]
 
 
-class SingleCredentials(BaseModel):
+class Profile(BaseModel):
     email: ValidatedEmail
-    password: SecretStr
-
-
-class MultipleCredentials(BaseModel):
-    credentials: List[SingleCredentials]
-
-
-def validate_credentials_path(value: Path) -> Path:
-    content = open(value).read()
-    if value.suffix == ".json":
-        data = json.loads(content)
-    elif value.suffix in (".yml", ".yaml"):
-        data = yaml.safe_load(content)
-    else:
-        raise ValueError(f"Expecting a json or yaml file, received: {value!s}")
-
-    # check that the data is pydantic-complaint
-    if isinstance(data, list):
-        raise TypeError("Expecting a dictionary, found a list!")
-    elif isinstance(data, dict):
-        _credentials = MultipleCredentials(**data)
-
-    return value
-
-
-ValidatedCredentialsPath = Annotated[Path, AfterValidator(validate_credentials_path)]
+    profile: str
 
 
 class AutomsrConfig(BaseModel):
     """
-    >>> from unittest.mock import patch, mock_open
-    >>> from unittest import TestCase
-    >>> from pydantic import ValidationError
-    >>> path = Path("credentials.json")
-    >>> content = '{"credentials": [{"email": "mario@outlook.com", "password": "secretValue"}]}'
-    >>> wrong_content_list = '[{"email": "mario@outlook.com", "password": "secretValue"}]'
-    >>> wrong_content_fields = '{"credentials": [{"foo": "baz"}]}'
-    >>> with patch("builtins.open", mock_open(read_data=content)):
-    ...     _ = AutomsrConfig(credentials_path=path)
-    >>> with patch("builtins.open", mock_open(read_data=wrong_content_list)):
-    ...     with TestCase().assertRaises(TypeError):
-    ...         _ = AutomsrConfig(credentials_path=path)
-    >>> with patch("builtins.open", mock_open(read_data=wrong_content_fields)):
-    ...     with TestCase().assertRaises(ValidationError):
-    ...         _ = AutomsrConfig(credentials_path=path)
+    >>> profiles = [{"email": "1@gmail.com", "profile": "p1"}, {"email": "2@gmail.com", "profile": "p2"}]
+    >>> _ = AutomsrConfig(profiles=profiles)
     """
 
-    credentials_path: ValidatedCredentialsPath
+    profiles: List[Profile]
     skip: Union[None, RewardsType, List[RewardsType]] = None
 
     rewards_homepage: ValidatedURL = "https://rewards.bing.com/"
@@ -97,12 +59,13 @@ class AutomsrConfig(BaseModel):
 
 class EmailConfig(BaseModel):
     enable: bool = False
-    sender: Optional[ValidatedEmail] = None
     recipient: Optional[ValidatedEmail] = None
+    sender: Optional[ValidatedEmail] = None
+    sender_password: Optional[SecretStr] = None
 
 
 class SeleniumConfig(BaseModel):
-    chrome_path: Path
+    profiles_root: Path
     chromedriver_path: Path
 
 
@@ -137,20 +100,16 @@ class Config(BaseModel):
         """
         Load config from an in-memory mapping.
 
-        >>> from unittest.mock import patch, mock_open
-        >>> path = Path("credentials.json")
-        >>> content = '{"credentials": [{"email": "mario@outlook.com", "password": "secretValue"}]}'
+        >>> profiles = [{"email": "1@gmail.com", "profile": "p1"}]
         >>> _data = {
-        ...     "automsr": {"credentials_path": path},
+        ...     "automsr": {"profiles": profiles},
         ...     "email": {},
         ...     "selenium": {"chrome_path": Path("chrome.exe"), "chromedriver_path": Path("chromedriver.exe")},
         ... }
-        >>> with patch("builtins.open", mock_open(read_data=content)):
-        ...     Config.from_dict(_data)  # doctest: +ELLIPSIS
+        >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
         Config(version='v1', automsr=..., email=..., selenium=...)
         >>> _data["email"]["sender"] = "invalid-email"
-        >>> with patch("builtins.open", mock_open(read_data=content)):
-        ...     Config.from_dict(_data)  # doctest: +ELLIPSIS
+        >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
         pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
@@ -159,8 +118,7 @@ class Config(BaseModel):
         ...
         >>> del _data["email"]["sender"]
         >>> _data["version"] = "v2"
-        >>> with patch("builtins.open", mock_open(read_data=content)):
-        ...     Config.from_dict(_data)  # doctest: +ELLIPSIS
+        >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
         Traceback (most recent call last):
         ...
         pydantic_core._pydantic_core.ValidationError: 1 validation error for Config
