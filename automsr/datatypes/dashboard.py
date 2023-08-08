@@ -7,8 +7,8 @@ Date = constr(pattern=r"\d{2}/\d{2}/\d{4}")
 
 
 class LevelsInfoEnum(Enum):
-    level_1 = "Level1"
-    level_2 = "Level2"
+    LEVEL_1 = "Level1"
+    LEVEL_2 = "Level2"
 
 
 class PromotionType(Enum):
@@ -138,7 +138,7 @@ class Dashboard(BaseModel):
         Returns True if any Mobile search is missing, False otherwise.
         """
 
-        if self.level() is LevelsInfoEnum.level_1:
+        if self.level() is LevelsInfoEnum.LEVEL_1:
             return False
 
         raise NotImplementedError

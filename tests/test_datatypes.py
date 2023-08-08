@@ -23,4 +23,4 @@ class TestDatatypes(unittest.TestCase):
         dashboard = self.partial_dashboard
         data: Dict[str, Any] = json.loads(dashboard.read_text())
         model = Dashboard(**data)  # validate parsing
-        assert model.userStatus.levelInfo.activeLevel == LevelsInfoEnum.level_1
+        assert model.userStatus.levelInfo.activeLevel == LevelsInfoEnum.LEVEL_1
