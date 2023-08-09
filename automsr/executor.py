@@ -71,28 +71,36 @@ class SingleTargetExecutor:
         Execute PC searches, if needed.
         """
 
-        if not dashboard.can_search_on_pc():
+        if amount := dashboard.amount_of_pc_searches() == 0:
             logger.info("No PC search is needed.")
             return
 
-        logger.info("Executing PC searches.")
-        self._execute_searches(user_agent=self.browser.desktop_user_agent)
+        logger.info(f"Executing {amount} PC searches.")
+        return self._execute_searches(
+            amount=amount, user_agent=self.browser.user_agents.desktop
+        )
 
     def execute_mobile_searches(self, dashboard: Dashboard) -> None:
         """
         Execute Mobile searches, if needed.
         """
 
-        if not dashboard.can_search_on_mobile():
+        if amount := dashboard.amount_of_mobile_searches() == 0:
             logger.info("No Mobile search is needed.")
             return
 
-        logger.info("Executing Mobile searches.")
-        return self._execute_searches(user_agent=self.browser.mobile_user_agent)
+        logger.info(f"Executing {amount} Mobile searches.")
+        return self._execute_searches(
+            amount=amount, user_agent=self.browser.user_agents.mobile
+        )
 
-    def _execute_searches(self, user_agent: Optional[str] = None) -> None:
+    def _execute_searches(
+        self, amount: int = 1, user_agent: Optional[str] = None
+    ) -> None:
         """
-        Helper method to execute searches.
+        Helper method to execute `amount` searches.
+
+        Can specify a custom `user_agent` to use.
         """
 
         if user_agent is not None:

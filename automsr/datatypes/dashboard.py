@@ -1,3 +1,4 @@
+import math
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -80,6 +81,24 @@ class SearchCounter(BaseModel):
     def is_completable(self) -> bool:
         return not self.complete
 
+    @staticmethod
+    def get_points_per_search() -> int:
+        """
+        Returns the amount of points earned per single search.
+        """
+
+        return 3  # TODO: this could be also parsed from `description`
+
+    def get_needed_searches_amount(self) -> int:
+        """
+        Returns the amount of searches needed to reach the maximum for the day.
+        """
+
+        delta_points = self.pointProgressMax - self.pointProgress
+        count_searches: float = delta_points / self.get_points_per_search()
+        count_searches_ceil = math.ceil(count_searches)
+        return int(count_searches_ceil)
+
 
 class Counters(BaseModel):
     # two items expected: actual pc searches counter, and bing searches counter
@@ -147,4 +166,29 @@ class Dashboard(BaseModel):
         if self.level() is LevelsInfoEnum.LEVEL_1:
             return False
 
+        assert self.userStatus.counters.mobileSearch is not None
         return self.userStatus.counters.mobileSearch[0].is_completable()
+
+    def amount_of_pc_searches(self) -> int:
+        """
+        Returns the amount of PC searches that are needed to be executed.
+
+        Returns 0 if no PC search is needed, or the corresponding counter is disabled.
+        """
+
+        if not self.can_search_on_pc():
+            return 0
+
+        return self.userStatus.counters.pcSearch[0].get_needed_searches_amount()
+
+    def amount_of_mobile_searches(self) -> int:
+        """
+        Returns the amount of Mobile searches that are needed to be executed.
+
+        Returns 0 if no Mobile search is needed, or the corresponding counter is disabled.
+        """
+
+        if not self.can_search_on_mobile():
+            return 0
+
+        return self.userStatus.counters.mobileSearch[0].get_needed_searches_amount()

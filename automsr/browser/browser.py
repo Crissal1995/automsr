@@ -34,18 +34,31 @@ class BrowserOptions:
 
 
 @define
-class Browser:
-    driver: ChromeWebDriver
-
-    desktop_user_agent: str = (
+class UserAgent:
+    desktop = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
     )
-    mobile_user_agent: str = (
+
+    mobile = (
         "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.3"
     )
+
+
+@define
+class RewardsUrl:
+    bing = "https://www.bing.com/?scope=web"
+    rewards = "https://rewards.bing.com/"
+
+
+@define
+class Browser:
+    driver: ChromeWebDriver
+
+    user_agents = UserAgent()
+    urls = RewardsUrl()
 
     def change_user_agent(self, user_agent: str, strict: bool = True) -> None:
         """
@@ -116,3 +129,17 @@ class Browser:
         """
 
         return self.driver.execute_script(script=script)
+
+    def go_to_bing(self) -> None:
+        """
+        Change page to Bing homepage.
+        """
+
+        return self.go_to(self.urls.bing)
+
+    def go_to_rewards(self) -> None:
+        """
+        Change page to Rewards homepage.
+        """
+
+        return self.go_to(self.urls.rewards)
