@@ -32,8 +32,7 @@ class SearchGenerator(ABC):
 
         raise NotImplementedError
 
-    @property
-    def tts(self) -> float:
+    def sleep_time(self) -> float:
         """
         Returns the time to sleep in seconds between Bing searches
         """
@@ -42,8 +41,7 @@ class SearchGenerator(ABC):
 
 
 class RandomSearchGenerator(SearchGenerator):
-    @property
-    def tts(self):
+    def sleep_time(self):
         return 1.5
 
     def query_gen(self):

@@ -779,7 +779,7 @@ class MicrosoftRewards:
         input_field.send_keys(next(generator))
         input_field.send_keys(Keys.ENTER)
 
-        time.sleep(search_generator.tts)
+        time.sleep(search_generator.sleep_time)
 
         for i in tqdm(range(limit)):
             logger.debug(f"Search {i + 1}/{limit}")
@@ -800,7 +800,7 @@ class MicrosoftRewards:
             input_field.send_keys(next(generator))
             input_field.send_keys(Keys.ENTER)
 
-            time.sleep(search_generator.tts)
+            time.sleep(search_generator.sleep_time)
 
         logger.info(f"{search_type_str} searches completed")
 

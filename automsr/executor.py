@@ -1,11 +1,17 @@
 import logging
+import time
 from typing import Any, Dict, Optional
 
 from attr import define, field
+from selenium.webdriver import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
+from tqdm import tqdm
 
 from automsr.browser.browser import Browser
 from automsr.config import Config
 from automsr.datatypes.dashboard import Dashboard
+from automsr.search import RandomSearchGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +81,7 @@ class SingleTargetExecutor:
             logger.info("No PC search is needed.")
             return
 
-        logger.info(f"Executing {amount} PC searches.")
+        logger.info("Executing %s PC searches.", amount)
         return self._execute_searches(
             amount=amount, user_agent=self.browser.user_agents.desktop
         )
@@ -89,7 +95,7 @@ class SingleTargetExecutor:
             logger.info("No Mobile search is needed.")
             return
 
-        logger.info(f"Executing {amount} Mobile searches.")
+        logger.info("Executing %s Mobile searches.", amount)
         return self._execute_searches(
             amount=amount, user_agent=self.browser.user_agents.mobile
         )
@@ -103,7 +109,40 @@ class SingleTargetExecutor:
         Can specify a custom `user_agent` to use.
         """
 
+        assert amount >= 1, "Invalid value!"
+
+        safe_amount = amount + 5
+        logger.info("Original amount of searches: %s", amount)
+        logger.info("Safe amount of searches: %s", safe_amount)
+
         if user_agent is not None:
+            logger.info("Changing user-agent to: %s", user_agent)
             self.browser.change_user_agent(user_agent=user_agent)
 
-        raise NotImplementedError
+        search_generator = RandomSearchGenerator()
+        sleep_time = search_generator.sleep_time()
+        query = search_generator.query_gen()
+
+        self.browser.go_to_bing()
+
+        for i in tqdm(range(amount)):
+            logger.debug("Executing search: %s/%s", i + 1, amount)
+
+            # we retrieve the element in the for-loop since the page is reloaded, thus the element can be invalidated
+            element: WebElement = self.browser.driver.find_element(
+                by=By.ID, value="sb_form_q"
+            )
+
+            # send the next item of the generator to the input field
+            element.send_keys(next(query))
+
+            # sleep to prevent issues with Selenium interacting with the page
+            time.sleep(0.5)
+
+            # send ENTER to perform a search
+            element.send_keys(Keys.ENTER)
+
+            # sleep a certain amount of time
+            time.sleep(sleep_time)
+
+        logger.debug("Finished searches")
