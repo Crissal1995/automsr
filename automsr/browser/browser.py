@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
 
-from automsr.config import Config, Profile
+from automsr.config import Config, Defaults, Profile
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ class BrowserOptions:
             profiles_root=profiles_root, profile_directory_name=profile_directory_name
         )
 
-    def as_options(self) -> Options:
+    def as_chromium(self) -> Options:
         """
         Returns the object as Chromium Options.
 
@@ -69,30 +69,22 @@ class BrowserOptions:
 
 @define
 class UserAgent:
-    desktop = (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
-    )
-
-    mobile = (
-        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.3"
-    )
+    desktop: str = Defaults.desktop_useragent
+    mobile: str = Defaults.mobile_useragent
 
 
 @define
 class RewardsUrl:
-    bing = "https://www.bing.com/?scope=web"
-    rewards = "https://rewards.bing.com/"
+    bing: str = Defaults.bing_homepage
+    rewards: str = Defaults.rewards_homepage
 
 
 @define
 class Browser:
     driver: ChromeWebDriver
 
-    user_agents = UserAgent()
-    urls = RewardsUrl()
+    user_agents: UserAgent = UserAgent()
+    urls: RewardsUrl = RewardsUrl()
 
     def change_user_agent(self, user_agent: str, strict: bool = True) -> None:
         """
@@ -141,12 +133,26 @@ class Browser:
             chromedriver_path = None
         logger.debug("Chromedriver path: %s", chromedriver_path)
 
-        options = BrowserOptions.from_config(
-            config=config, profile=profile
-        ).as_options()
+        user_agents = UserAgent(
+            desktop=config.automsr.desktop_useragent,
+            mobile=config.automsr.mobile_useragent,
+        )
+        urls = RewardsUrl(
+            bing=config.automsr.bing_homepage,
+            rewards=config.automsr.rewards_homepage,
+        )
+
+        logger.debug("User agents used: %s", user_agents)
+        logger.debug("Rewards URLs used: %s", urls)
+
+        options = BrowserOptions.from_config(config=config, profile=profile)
+        logger.debug("Browser options: %s", options)
+
+        chromium_options = options.as_chromium()
         service = Service(chromedriver_path=chromedriver_path)
-        driver = ChromeWebDriver(options=options, service=service)
-        return cls(driver=driver)
+        driver = ChromeWebDriver(options=chromium_options, service=service)
+
+        return cls(driver=driver, user_agents=user_agents, urls=urls)
 
     def test_driver(self) -> None:
         """

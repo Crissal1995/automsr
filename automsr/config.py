@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import yaml
+from attr import define
 from email_validator import (
     ValidatedEmail as _ValidatedEmail,
 )
@@ -12,8 +13,6 @@ from email_validator import (
 )
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr
 from typing_extensions import Annotated
-
-from automsr.datatypes import RewardsType
 
 
 def validate_version(value: str) -> str:
@@ -40,9 +39,26 @@ ValidatedURL = Annotated[str, AfterValidator(validate_url)]
 ValidatedEmail = Annotated[str, AfterValidator(validate_email)]
 
 
+@define(frozen=True)
+class Defaults:
+    desktop_useragent = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.188"
+    )
+    mobile_useragent = (
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.3"
+    )
+
+    rewards_homepage = "https://rewards.bing.com/"
+    bing_homepage = "https://www.bing.com/?scope=web"
+
+
 class Profile(BaseModel):
     email: ValidatedEmail
     profile: str
+    include: bool = True
 
 
 class AutomsrConfig(BaseModel):
@@ -52,9 +68,12 @@ class AutomsrConfig(BaseModel):
     """
 
     profiles: List[Profile] = Field(..., min_length=1)
-    skip: Union[None, RewardsType, List[RewardsType]] = None
 
-    rewards_homepage: ValidatedURL = "https://rewards.bing.com/"
+    rewards_homepage: ValidatedURL = Defaults.rewards_homepage
+    bing_homepage: ValidatedURL = Defaults.bing_homepage
+
+    desktop_useragent: str = Defaults.desktop_useragent
+    mobile_useragent: str = Defaults.mobile_useragent
 
 
 class EmailConfig(BaseModel):
