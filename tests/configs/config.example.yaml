@@ -15,3 +15,6 @@ email:
   recipient: an_address@gmail.com
   sender: my_address@gmail.com
   sender_password: my_secret_password  # be careful sharing this config with others!
+  host: my_host.smtp.something  # must specify if not using a gmail/outlook sender address
+  port: 587  # must specify if not using a gmail/outlook sender address
+  tls: false  # specify if tls is enabled on a custom smtp server

@@ -81,6 +81,9 @@ class EmailConfig(BaseModel):
     recipient: Optional[ValidatedEmail] = None
     sender: Optional[ValidatedEmail] = None
     sender_password: Optional[SecretStr] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    tls: Optional[bool] = False
 
 
 class SeleniumConfig(BaseModel):
