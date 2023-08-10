@@ -9,7 +9,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from tqdm import tqdm
 
 from automsr.browser.browser import Browser
-from automsr.config import Config
+from automsr.config import Config, Profile
 from automsr.datatypes.dashboard import Dashboard
 from automsr.search import RandomSearchGenerator
 
@@ -21,30 +21,30 @@ class SingleTargetExecutor:
     """
     Executor class driving the completion of all the tasks associated with Rewards.
 
-    In particular, there are several steps to perform to accomplish an execution:
-    - Open a new browser session with Selenium and a Chrome driver.
-    - Retrieval of dashboard json from Rewards page
-    - TODO Execution of all completable punchcards
-    - Execution of all completable promotions
-    - Execution of searches:
-        - PC searches (desktop user agent)
-        - Mobile searches (mobile user agent)
-
     This executor will target a single profile.
+    If not specified in the init, it will default to the first profile found in the config file.
     """
 
     config: Config
+    profile: Profile
     browser: Browser = field(init=False)
 
     def execute(self) -> None:
         """
-        Execute the steps mentioned in the class doctest.
+        Execute the following steps:
+        - Open a new browser session with Selenium and a Chrome driver.
+        - Retrieval of dashboard json from Rewards page
+        - TODO Execution of all completable punchcards
+        - TODO Execution of all completable promotions
+        - Execution of searches:
+            - PC searches (desktop user agent)
+            - Mobile searches (mobile user agent)
         """
 
         # Start a new session
         self.start_session()
 
-        # Retrieve the current
+        # Retrieve the current dashboard
         dashboard = self.get_dashboard()
 
         # Execute both PC and Mobile searches, if needed
@@ -57,7 +57,7 @@ class SingleTargetExecutor:
         then returns the session object to the caller.
         """
 
-        self.browser = Browser.from_config(config=self.config)
+        self.browser = Browser.from_config(config=self.config, profile=self.profile)
         self.browser.test_driver()
         self.browser.go_to(self.config.automsr.rewards_homepage)
 
@@ -80,7 +80,7 @@ class SingleTargetExecutor:
         if amount := dashboard.amount_of_pc_searches() == 0:
             logger.info("No PC search is needed.")
             return
-
+        assert amount > 0
         logger.info("Executing %s PC searches.", amount)
         return self._execute_searches(
             amount=amount, user_agent=self.browser.user_agents.desktop
@@ -94,7 +94,7 @@ class SingleTargetExecutor:
         if amount := dashboard.amount_of_mobile_searches() == 0:
             logger.info("No Mobile search is needed.")
             return
-
+        assert amount > 0
         logger.info("Executing %s Mobile searches.", amount)
         return self._execute_searches(
             amount=amount, user_agent=self.browser.user_agents.mobile

@@ -10,7 +10,7 @@ from email_validator import (
 from email_validator import (
     validate_email as _validate_email,
 )
-from pydantic import AfterValidator, BaseModel, ConfigDict, SecretStr
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr
 from typing_extensions import Annotated
 
 from automsr.datatypes import RewardsType
@@ -51,7 +51,7 @@ class AutomsrConfig(BaseModel):
     >>> _ = AutomsrConfig(profiles=profiles)
     """
 
-    profiles: List[Profile]
+    profiles: List[Profile] = Field(..., min_length=1)
     skip: Union[None, RewardsType, List[RewardsType]] = None
 
     rewards_homepage: ValidatedURL = "https://rewards.bing.com/"

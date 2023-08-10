@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Any
 
 from attr import define
@@ -6,7 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
 
-from automsr.config import Config
+from automsr.config import Config, Profile
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +26,45 @@ class CannotChangeUserAgentException(BrowserException):
 
 @define
 class BrowserOptions:
+    """
+    Abstraction of Browser Options, and wrapper around Selenium Chrome Options.
+    """
+
+    profiles_root: Path
+    profile_directory_name: str
+
     @classmethod
-    def from_config(cls, config: Config) -> "BrowserOptions":
-        raise NotImplementedError
+    def from_config(cls, config: Config, profile: Profile) -> "BrowserOptions":
+        """
+        Generate the Options based on the profiles_root specified in the `config`, and a chosen `profile`.
+        """
+
+        profiles_root = config.selenium.profiles_root
+        profile_directory_name = profile.profile
+
+        # safety check
+        profile_path = profiles_root / profile_directory_name
+        if not profile_path.is_dir():
+            raise FileNotFoundError(
+                f"Profile `{profile_directory_name}` not found in directory: {profiles_root}"
+            )
+
+        return cls(
+            profiles_root=profiles_root, profile_directory_name=profile_directory_name
+        )
 
     def as_options(self) -> Options:
-        raise NotImplementedError
+        """
+        Returns the object as Chromium Options.
+
+        Exhaustive list of Chromium switches: https://peter.sh/experiments/chromium-command-line-switches/
+        """
+
+        options = Options()
+        options.add_argument("--start-maximized")
+        options.add_argument(f"--user-data-dir={self.profiles_root!s}")
+        options.add_argument(f"--profile-directory={self.profile_directory_name}")
+        return options
 
 
 @define
@@ -98,13 +132,23 @@ class Browser:
             logger.debug(f"Changed user-agent to: {actual_user_agent}")
 
     @classmethod
-    def from_config(cls, config: Config) -> "Browser":
+    def from_config(cls, config: Config, profile: Profile) -> "Browser":
         """
-        Construct a Browser from a Chrome executable path provided as input.
+        Construct a Browser from a `config` and a `profile` provided as inputs.
         """
 
-        options = BrowserOptions.from_config(config=config).as_options()
-        service = Service()
+        logger.info("Profile to use with Browser: %s", profile)
+
+        if (path := config.selenium.chromedriver_path) is not None:
+            chromedriver_path = str(path)
+        else:
+            chromedriver_path = None
+        logger.debug("Chromedriver path: %s", chromedriver_path)
+
+        options = BrowserOptions.from_config(
+            config=config, profile=profile
+        ).as_options()
+        service = Service(chromedriver_path=chromedriver_path)
         driver = ChromeWebDriver(options=options, service=service)
         return cls(driver=driver)
 
