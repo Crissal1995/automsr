@@ -22,7 +22,6 @@ class SingleTargetExecutor:
     Executor class driving the completion of all the tasks associated with Rewards.
 
     This executor will target a single profile.
-    If not specified in the init, it will default to the first profile found in the config file.
     """
 
     config: Config
@@ -51,6 +50,9 @@ class SingleTargetExecutor:
         self.execute_pc_searches(dashboard=dashboard)
         self.execute_mobile_searches(dashboard=dashboard)
 
+        # End session
+        self.end_session()
+
     def start_session(self) -> None:
         """
         Create a new session with Selenium and Chromedriver,
@@ -60,6 +62,13 @@ class SingleTargetExecutor:
         self.browser = Browser.from_config(config=self.config, profile=self.profile)
         self.browser.test_driver()
         self.browser.go_to(self.config.automsr.rewards_homepage)
+
+    def end_session(self) -> None:
+        """
+        Terminate the session.
+        """
+
+        self.browser.driver.quit()
 
     def get_dashboard(self) -> Dashboard:
         """
@@ -77,11 +86,13 @@ class SingleTargetExecutor:
         Execute PC searches, if needed.
         """
 
-        if amount := dashboard.amount_of_pc_searches() == 0:
-            logger.info("No PC search is needed.")
+        if (amount := dashboard.amount_of_pc_searches()) == 0:
+            logger.info("No PC search is needed")
             return
+        else:
+            logger.info("Starting PC searches")
+
         assert amount > 0
-        logger.info("Executing %s PC searches.", amount)
         return self._execute_searches(
             amount=amount, user_agent=self.browser.user_agents.desktop
         )
@@ -91,11 +102,13 @@ class SingleTargetExecutor:
         Execute Mobile searches, if needed.
         """
 
-        if amount := dashboard.amount_of_mobile_searches() == 0:
-            logger.info("No Mobile search is needed.")
+        if (amount := dashboard.amount_of_mobile_searches()) == 0:
+            logger.info("No Mobile search is needed")
             return
+        else:
+            logger.info("Starting Mobile searches")
+
         assert amount > 0
-        logger.info("Executing %s Mobile searches.", amount)
         return self._execute_searches(
             amount=amount, user_agent=self.browser.user_agents.mobile
         )
@@ -112,11 +125,13 @@ class SingleTargetExecutor:
         assert amount >= 1, "Invalid value!"
 
         safe_amount = amount + 5
-        logger.info("Original amount of searches: %s", amount)
-        logger.info("Safe amount of searches: %s", safe_amount)
+        logger.debug("Original amount of searches: %s", amount)
+        logger.debug("Safe amount of searches: %s", safe_amount)
 
+        old_user_agent: Optional[str] = None
         if user_agent is not None:
-            logger.info("Changing user-agent to: %s", user_agent)
+            logger.debug("Changing user-agent to: %s", user_agent)
+            old_user_agent = self.browser.get_user_agent()
             self.browser.change_user_agent(user_agent=user_agent)
 
         search_generator = RandomSearchGenerator()
@@ -125,7 +140,7 @@ class SingleTargetExecutor:
 
         self.browser.go_to_bing()
 
-        for i in tqdm(range(amount)):
+        for i in tqdm(range(safe_amount)):
             logger.debug("Executing search: %s/%s", i + 1, amount)
 
             # we retrieve the element in the for-loop since the page is reloaded, thus the element can be invalidated
@@ -145,4 +160,28 @@ class SingleTargetExecutor:
             # sleep a certain amount of time
             time.sleep(sleep_time)
 
-        logger.debug("Finished searches")
+        if user_agent is not None:
+            logger.debug("Restoring original user-agent: %s", old_user_agent)
+            assert old_user_agent is not None
+            self.browser.change_user_agent(user_agent=old_user_agent)
+
+
+@define
+class MultipleTargetsExecutor:
+    """
+    Executor class driving the completion of all the tasks associated with Rewards.
+
+    This executor will target multiple profiles automatically.
+    """
+
+    config: Config
+
+    def execute(self) -> None:
+        """
+        Spawn a SingleTargetExecutor for every profile specified in the `config` file.
+        """
+
+        for profile in self.config.automsr.profiles:
+            logger.info("Profile under execution: %s", profile)
+            executor = SingleTargetExecutor(config=self.config, profile=profile)
+            executor.execute()

@@ -25,7 +25,7 @@ class SearchGenerator(ABC):
     query for Bing searches
     """
 
-    def query_gen(self) -> Generator[str]:
+    def query_gen(self) -> Generator[str, None, None]:
         """
         Returns a generator of queries to be used with Bing searches
         """

@@ -118,9 +118,7 @@ class Browser:
             driver_command, {"cmd": server_command, "params": server_command_args}
         )
 
-        actual_user_agent = str(
-            self.driver.execute_script("return navigator.userAgent;")
-        )
+        actual_user_agent = self.get_user_agent()
         if actual_user_agent != user_agent:
             if strict:
                 raise CannotChangeUserAgentException("Cannot set a new user-agent!")
@@ -136,8 +134,6 @@ class Browser:
         """
         Construct a Browser from a `config` and a `profile` provided as inputs.
         """
-
-        logger.info("Profile to use with Browser: %s", profile)
 
         if (path := config.selenium.chromedriver_path) is not None:
             chromedriver_path = str(path)
@@ -157,7 +153,7 @@ class Browser:
         Test if the driver is working correctly.
         """
 
-        test_url = "https://example.org/"
+        test_url = "https://www.google.com"
         self.driver.get(test_url)
 
     def go_to(self, url: str) -> None:
@@ -187,3 +183,10 @@ class Browser:
         """
 
         return self.go_to(self.urls.rewards)
+
+    def get_user_agent(self) -> str:
+        """
+        Returns the current User-Agent.
+        """
+
+        return str(self.driver.execute_script("return navigator.userAgent;"))
