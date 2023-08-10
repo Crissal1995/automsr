@@ -77,6 +77,7 @@ class SearchCounter(BaseModel):
     complete: bool
     pointProgress: int
     pointProgressMax: int
+    description: str
 
     def is_completable(self) -> bool:
         return not self.complete
