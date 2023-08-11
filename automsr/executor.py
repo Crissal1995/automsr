@@ -292,6 +292,8 @@ class SingleTargetExecutor:
 
         driver = self.browser.driver
 
+        logger.debug("Resolving promotion as quiz with type: %s", quiz_type)
+
         if quiz_type is QuizType.CHOICE_BETWEEN_TWO:
             answer = driver.find_element(by=By.ID, value="btoption0")
             answer.click()
