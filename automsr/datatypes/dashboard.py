@@ -126,9 +126,10 @@ class UserStatus(BaseModel):
 # RootModel instead of BaseModel because of:
 # https://docs.pydantic.dev/latest/usage/models/#rootmodel-and-custom-root-types
 class DailySetPromotions(RootModel):
-    root: Dict[
-        Date, List[Promotion]
-    ]  # needed to parse automatically `Date` keys, since they are dynamic
+    # `root` is needed to parse automatically `Date` keys, since they are dynamic
+    # Minimum 2 items (daily set for today and tomorrow),
+    # but occasionally 3 items are available (yesterday, today, tomorrow)
+    root: Dict[Date, List[Promotion]] = Field(min_length=2, max_length=3)
 
     def __iter__(self):
         return iter(self.__root__)
@@ -136,17 +137,61 @@ class DailySetPromotions(RootModel):
     def __getitem__(self, item):
         return self.__root__[item]
 
-    def get_first_daily_set(self) -> List[Promotion]:
+    def _keys(self) -> List[str]:
         """
-        Returns the first daily set found.
-
-        This corresponds to the current daily set, and since Python 3.7 the insertion order
-        in dictionaries is preserved.
-
-        Therefore, the first item in memory is corresponding to the first item in the dashboard.
+        Returns the keys found for storing the DailySets.
         """
 
-        key = list(self.root.keys())[0]
+        return list(self.root.keys())
+
+    def get_daily_set_for_today(self) -> List[Promotion]:
+        """
+        Returns the daily set that is available today.
+        """
+
+        keys = self._keys()
+        if len(keys) == 2:
+            key = keys[0]
+        elif len(keys) == 3:
+            key = keys[1]
+        else:
+            # Pydantic will ensure that we don't have <2 or >3 keys in `root` dict
+            raise RuntimeError("Unreachable")
+
+        return self.root[key]
+
+    def get_daily_set_for_yesterday(self) -> Optional[List[Promotion]]:
+        """
+        Returns the daily set that was available yesterday.
+
+        Returns None if this set is not found.
+        """
+
+        keys = self._keys()
+        if len(keys) == 2:
+            return None
+        elif len(keys) == 3:
+            key = keys[0]
+        else:
+            # Pydantic will ensure that we don't have <2 or >3 keys in `root` dict
+            raise RuntimeError("Unreachable")
+
+        return self.root[key]
+
+    def get_daily_set_for_tomorrow(self) -> List[Promotion]:
+        """
+        Returns the daily set that will be available tomorrow.
+        """
+
+        keys = self._keys()
+        if len(keys) == 2:
+            key = keys[1]
+        elif len(keys) == 3:
+            key = keys[2]
+        else:
+            # Pydantic will ensure that we don't have <2 or >3 keys in `root` dict
+            raise RuntimeError("Unreachable")
+
         return self.root[key]
 
 
@@ -222,7 +267,15 @@ class Dashboard(BaseModel):
 
         # First, add the daily set promotions,
         # as they have more priority being part of the streak
-        promotions.extend(self.dailySetPromotions.get_first_daily_set())
+        today_daily_set = self.dailySetPromotions.get_daily_set_for_today()
+        promotions.extend(today_daily_set)
+
+        # Consideration about the daily sets:
+        # - Today's is always available to parse and complete.
+        # - Tomorrow's is always available to parse, but not to complete.
+        # - Yesterday's could be available to parse, but since it doesn't
+        #   show up in the Rewards homepage, it is better to not include it
+        #   in the parsed promotions.
 
         # Then, take the optional promotion, if available
         if self.promotionalItem is not None:

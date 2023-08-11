@@ -39,3 +39,13 @@ class TestDatatypes(unittest.TestCase):
         self.assertEqual(len(mobile_searches), 1)
         mobile_search = mobile_searches[0]
         self.assertTrue(mobile_search.is_completable())
+
+    def test_dashboard_not_executed(self) -> None:
+        """
+        Test that a dashboard with no promotion nor searches executed
+        returns the expected missing completable promotions and required searches.
+        """
+
+        model = load_dashboard("no-promotions-done.json")
+        promotions = model.get_completable_promotions()
+        self.assertEqual(8, len(promotions))
