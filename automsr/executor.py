@@ -3,6 +3,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from attr import define, field
+from selenium.common import NoSuchElementException
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -10,10 +11,35 @@ from tqdm import tqdm
 
 from automsr.browser.browser import Browser
 from automsr.config import Config, Profile
-from automsr.datatypes.dashboard import Dashboard, Promotion, PromotionType
+from automsr.datatypes.dashboard import Dashboard, Promotion, PromotionType, QuizType
 from automsr.search import RandomSearchGenerator
 
 logger = logging.getLogger(__name__)
+
+
+class ExecutorException(Exception):
+    """
+    Base class for Executor exceptions.
+    """
+
+
+class QuizException(ExecutorException):
+    """
+    Base class for Quiz Promotions exceptions.
+    """
+
+
+class CannotFindStartButtonException(QuizException):
+    """
+    Exception raised when the Start button for quizzes is expected but not found.
+    """
+
+
+class CannotDetermineQuizTypeException(QuizException):
+    """
+    Exception raised when the Executor is unable to determine
+    the quiz-type of a promotion.
+    """
 
 
 @define
@@ -178,7 +204,7 @@ class SingleTargetExecutor:
         promotions: List[Promotion] = dashboard.get_completable_promotions()
 
         for promotion in promotions:
-            logger.debug("Executing promotion: %s", promotion)
+            logger.debug("Executing promotion: %s", promotion.title)
             self._execute_promotion(promotion=promotion)
 
             # simulate navigation
@@ -192,22 +218,89 @@ class SingleTargetExecutor:
         Execute a specific promotion.
         """
 
-        # open the promotion page
+        # Open the promotion page
         self.browser.go_to(url=promotion.destinationUrl)
 
+        # Sleep to simulate user behavior and to let JS load the page
+        time.sleep(3)
+
+        # Determine which promotion is currently on
         if promotion.promotionType == PromotionType.QUIZ:
-            raise NotImplementedError
+            driver = self.browser.driver
+
+            # Try to determine which quiz we are dealing with
+            try:
+                _ = driver.find_element(by=By.ID, value="btoption0")
+            except NoSuchElementException:
+                pass
+            else:
+                return self._execute_quiz_promotion(
+                    promotion=promotion, quiz_type=QuizType.CHOICE_BETWEEN_TWO
+                )
+
+            # If the quiz is not a choice-between-two, try with the three-questions-N-answers
+            try:
+                start_button = driver.find_element(by=By.ID, value="rqStartQuiz")
+            except NoSuchElementException as e:
+                raise CannotFindStartButtonException() from e
+            else:
+                # if we find the button, we click it and then wait a little bit for JS
+                # to load the answers in the DOM
+                start_button.click()
+                time.sleep(1.5)
+
+            # Check if the quiz is 8-answers
+            try:
+                _ = driver.find_element(by=By.ID, value="rqAnswerOption7")
+            except NoSuchElementException:
+                pass
+            else:
+                return self._execute_quiz_promotion(
+                    promotion=promotion,
+                    quiz_type=QuizType.THREE_QUESTIONS_EIGHT_ANSWERS,
+                )
+
+            # Check if the quiz is 4-answers
+            try:
+                _ = driver.find_element(by=By.ID, value="rqAnswerOption3")
+            except NoSuchElementException as e:
+                raise CannotDetermineQuizTypeException() from e
+            else:
+                return self._execute_quiz_promotion(
+                    promotion=promotion, quiz_type=QuizType.THREE_QUESTIONS_FOUR_ANSWERS
+                )
+
         elif promotion.promotionType in (
             PromotionType.URL_REWARD,
             PromotionType.WELCOME_TOUR,
         ):
             logger.info("Promotion executed by just opening the destination url.")
-            logger.debug("Sleeping to simulate a real user behavior.")
-            time.sleep(3)
         else:
             raise ValueError(
                 f"Cannot execute promotion with type: {promotion.promotionType}"
             )
+
+    def _execute_quiz_promotion(
+        self, promotion: Promotion, quiz_type: QuizType
+    ) -> None:
+        """
+        Execute a specific promotion that is a quiz with a known type.
+
+        The method assumes that, if a quiz type requires for a Start button to be clicked,
+        this is done by the caller.
+        """
+
+        driver = self.browser.driver
+
+        if quiz_type is QuizType.CHOICE_BETWEEN_TWO:
+            answer = driver.find_element(by=By.ID, value="btoption0")
+            answer.click()
+        elif quiz_type is QuizType.THREE_QUESTIONS_FOUR_ANSWERS:
+            raise NotImplementedError
+        elif quiz_type is QuizType.THREE_QUESTIONS_EIGHT_ANSWERS:
+            raise NotImplementedError
+        else:
+            raise ValueError(f"Quiz type not supported: {quiz_type}")
 
 
 @define

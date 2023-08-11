@@ -1,6 +1,6 @@
 import copy
 import math
-from enum import Enum
+from enum import Enum, auto
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, RootModel, constr
@@ -26,6 +26,21 @@ class PromotionType(Enum):
     STREAK = "streak"
     STREAK_BONUS = "streakbonus"
     COACH_MARKS = "coachmarks"
+
+
+class QuizType(Enum):
+    """
+    Differentiation of possible Quiz types.
+    """
+
+    # This quiz is a simple choice between two elements.
+    # It does not have a Start button to click.
+    CHOICE_BETWEEN_TWO = auto()
+
+    # These quizzes have a Start button to click.
+    # They can be either questions with four or eight answers.
+    THREE_QUESTIONS_FOUR_ANSWERS = auto()
+    THREE_QUESTIONS_EIGHT_ANSWERS = auto()
 
 
 class Promotion(BaseModel):
