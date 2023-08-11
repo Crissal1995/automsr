@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from attr import define
+from selenium.common import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
@@ -21,6 +22,12 @@ class BrowserException(Exception):
 class CannotChangeUserAgentException(BrowserException):
     """
     Exception raised when the browser is unable to change User Agent.
+    """
+
+
+class CannotStartBrowserException(BrowserException):
+    """
+    Exception raised when Selenium is unable to start a new Browser Session.
     """
 
 
@@ -150,7 +157,13 @@ class Browser:
 
         chromium_options = options.as_chromium()
         service = Service(chromedriver_path=chromedriver_path)
-        driver = ChromeWebDriver(options=chromium_options, service=service)
+        try:
+            driver = ChromeWebDriver(options=chromium_options, service=service)
+        except WebDriverException as e:
+            exception = CannotStartBrowserException(
+                "Cannot create a new Chrome Session! Maybe there is already one process running?"
+            )
+            raise exception from e
 
         return cls(driver=driver, user_agents=user_agents, urls=urls)
 
