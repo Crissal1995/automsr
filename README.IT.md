@@ -6,7 +6,7 @@
 README languages: [EN](README.md) **IT**
 
 ## Descrizione
-**AutoMSR** è uno strumento di automazione creato a scopo educativo, con 
+**AutoMSR** è uno strumento di automazione creato a scopo educativo, con
 l'intenzione di mostrare come utilizzare Selenium come driver di automazione
 per il servizio Microsoft Rewards.
 
@@ -17,12 +17,12 @@ i punti giornalieri disponibili su Microsoft Rewards.
 Cosa fa:
 - Completa le attività giornaliere
 - Completa altre attività
-- Completa le schede punti gratuite 
+- Completa le schede punti gratuite
 - Ricerche con uno User Agent desktop (Edge su Windows)
 - Ricerche con un User Agent mobile (Chrome su Android)
 
 ### Attenzione
-Prima di utilizzare questo software, leggere attentamente i 
+Prima di utilizzare questo software, leggere attentamente i
 [Termini di servizio Microsoft][1], sezione Microsoft Rewards.
 
 ## Utilizzo
@@ -30,7 +30,7 @@ Prima di utilizzare questo software, leggere attentamente i
 Scarica il [Chromedriver][2] corretto corrispondente alla tua versione di Chrome.
 
 ### Credenziali e profili
-Crea il tuo `credentials.json` seguendo il file di esempio. 
+Crea il tuo `credentials.json` seguendo il file di esempio.
 Il file è strutturato come una lista di record, dove ogni record
 rappresenta un diverso profilo da utilizzare con AutoMSR.
 
@@ -58,21 +58,21 @@ il profilo Chrome corrispondente.
 Per ottenere il nome del tuo profilo, devi andare in [chrome://version](chrome://version)
 e controllare *Percorso Profilo*.
 
-È stato sviluppato un metodo di utility per controllare facilmente i tuoi profili: 
+È stato sviluppato un metodo di utility per controllare facilmente i tuoi profili:
 controlla la sezione [Mostra Profili][showProfiles].
 
 Se entrambi `profile` che `password` vengono trovati, verrà utilizzato questo metodo.
 
 ### Configurazione
-Tutti i parametri di configurazione sono elencati di seguito in modo più dettagliato. 
+Tutti i parametri di configurazione sono elencati di seguito in modo più dettagliato.
 Tuttavia, ci sono alcuni elementi che vale la pena notare, ovvero:
 1. `email/recipient`: Email (o lista di email separate da virgola) dove
 ricevere lo stato di esecuzione di AutoMSR.
 2. `selenium/headless`: Visualizza (`false`) o no (`true`) la finestra di Chrome
 durante l'esecuzione. È stato empiricamente provato che un valore `false`
-dia maggiore stabilità al sistema. 
+dia maggiore stabilità al sistema.
 3. `selenium/path`: Percorso completo dell'eseguibile di Chromedriver, se
-non si trova nella variabile d'ambiente PATH. 
+non si trova nella variabile d'ambiente PATH.
 4. `selenium/profile_root`: Se usato con Profiles (invece di Login), deve
 puntare al percorso dei profili di Chrome.
 
@@ -102,7 +102,7 @@ Per ogni profilo Chrome trovato verrà mostrato un set di attributi:
 - `display_name`, il nome del profilo mostrato su Chrome;
 - `folder_name`, il nome della cartella del Profilo nel filesystem
 (diventa `profile` nel file `credentials.json`);
-- `profile_root`, la root dei profili Chrome (diventa `profile_root` nel file 
+- `profile_root`, la root dei profili Chrome (diventa `profile_root` nel file
 `automsr.cfg`).
 
 #### <a name="show-prizes"></a> Mostra Premi
@@ -119,18 +119,18 @@ Il file di configurazione è diviso in tre sezioni:  **automsr**, **email** e **
 
 ### automsr
 #### credentials
-Il file json delle credenziali (dovrebbe essere una lista di oggetti; 
+Il file json delle credenziali (dovrebbe essere una lista di oggetti;
 vedi file di esempio).
 
 Il valore predefinito è `credentials.json`.
 
 #### skip
-AutoMSR può saltare le attività Rewards o le ricerche di Bing (o entrambe). 
+AutoMSR può saltare le attività Rewards o le ricerche di Bing (o entrambe).
 
-Questo valore può essere uno tra 
-`no` (non saltare nulla), 
-`yes`, `all` (saltare tutto), 
-`search`, `searches` (saltare le ricerche Bing), 
+Questo valore può essere uno tra
+`no` (non saltare nulla),
+`yes`, `all` (saltare tutto),
+`search`, `searches` (saltare le ricerche Bing),
 `activity`, `activities` (saltare le attività Rewards),
 `punchcard`, `punchcards` (saltare le schede punti Rewards).
 
@@ -142,9 +142,9 @@ Il numero di volte che AutoMSR dovrebbe riprovare le attività Rewards mancanti 
 Il valore predefinito è 3.
 
 #### search_type
-Come eseguire le ricerche di Bing. 
-Può essere `random` (genera una parola casuale e poi esegue una ricerca 
-rimuovendo un carattere alla fine della stringa alla volta) o 
+Come eseguire le ricerche di Bing.
+Può essere `random` (genera una parola casuale e poi esegue una ricerca
+rimuovendo un carattere alla fine della stringa alla volta) o
 `takeout` (usa le ricerche di Google, ottenute da una Takeout Action).
 
 Il valore predefinito è `random`.
@@ -162,12 +162,12 @@ per tutti gli account usati con AutoMSR.
 Il valore predefinito è `true`.
 
 #### recipient
-L'indirizzo email del destinatario dove ricevere l'email di stato. 
+L'indirizzo email del destinatario dove ricevere l'email di stato.
 Può essere un singolo indirizzo email o una lista separata da virgole d'indirizzi email.
 
 #### strategy
 La strategia usata per decidere quale mittente usare per inviare l'email di stato
-al destinatario specificato. 
+al destinatario specificato.
 Può essere uno dei seguenti:
 - `first`: sarà usato il primo indirizzo email nel file di credenziali fornito;
 - `last`: verrà usato l'ultimo indirizzo email nel file di credenziali fornito;
@@ -194,7 +194,7 @@ Se la strategia è `custom`, specifica se usare o meno TLS.
 
 ### selenium
 #### env
-Se l'ambiente sta usando un eseguibile chromedriver trovato in PATH (`local`), 
+Se l'ambiente sta usando un eseguibile chromedriver trovato in PATH (`local`),
 o un hub Selenium in ascolto su una porta, di default 4444 (`remote`).
 
 Il valore predefinito è `local`.
@@ -233,7 +233,7 @@ Il valore predefinito è nullo.
 Stringa di elementi separati da virgola, rappresentati la maschera dei premi
 desiderati nel messaggio finale. La stringa è case-insensitive.
 
-Un metodo di utility per controllare tutti i premi è disponibile nella sezione 
+Un metodo di utility per controllare tutti i premi è disponibile nella sezione
 [Mostra Premi][showPrizes].
 
 Il valore predefinito è `microsoft_giftcard, gamepass_pc, third_party_giftcard`.

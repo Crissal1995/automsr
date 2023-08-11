@@ -6,7 +6,7 @@
 README languages: **EN** [IT](README.IT.md)
 
 ## Description
-**AutoMSR** is an automation tool created for educational purpose, 
+**AutoMSR** is an automation tool created for educational purpose,
 intending to show how to use Selenium as an automation driver
 for the Microsoft Rewards service.
 
@@ -31,7 +31,7 @@ section _Microsoft Rewards_.
 Download the correct [Chromedriver][2] matching your Chrome version.
 
 ### Credentials and Profiles
-Create your `credentials.json` following the example file. 
+Create your `credentials.json` following the example file.
 The file is structured as a list of entries, where each entry represent a different
 profile to use with AutoMSR.
 
@@ -47,7 +47,7 @@ a new Chrome session.
 *This is the new method.*
 
 Each entry must provide `email` and `profile`, and then the corresponding
-Chrome profile will be used. 
+Chrome profile will be used.
 
 **This method assumes that your profile is correctly set**, so that:
 - You are logged in your [Rewards homepage][rewards];
@@ -58,15 +58,15 @@ report your name, not Login);
 To get your profile name, you must head to [chrome://version](chrome://version)
 and check *Profile Path*.
 
-A utility method has been implemented to easily check your profiles: check section 
+A utility method has been implemented to easily check your profiles: check section
 [Show Profiles][showProfiles].
 
-If both `profile` and `password` are found, this method is preferred. 
+If both `profile` and `password` are found, this method is preferred.
 
 ### Configuration
-All configuration parameters are listed below in more detail. 
+All configuration parameters are listed below in more detail.
 However, there are a few points worth noting, namely:
-1. `email/recipient`: Email (or comma separated list of emails) where to receive the 
+1. `email/recipient`: Email (or comma separated list of emails) where to receive the
 status execution of AutoMSR.
 2. `selenium/headless`: Displays (`false`) or not (`true`) the Chrome window during
 execution. It has been empirically proven that a `false`
@@ -79,7 +79,7 @@ the root of Chrome profiles.
 ### Python
 Python version must be 3.7+.
 
-You need to install the requirements with the command: 
+You need to install the requirements with the command:
 ```bash
 python3 -m pip install -r requirements.txt
 ```
@@ -102,11 +102,11 @@ For each Chrome profile found, a set of attributes is displayed:
 - `display_name`, the name displayed in Chrome;
 - `folder_name`, the name of the Profile folder in filesystem
 (becomes `profile` in `credentials.json` file);
-- `profile_root`, the root of Chrome profiles (becomes `profile_root` in 
+- `profile_root`, the root of Chrome profiles (becomes `profile_root` in
 `automsr.cfg` file).
 
 #### <a name="show-prizes"></a> Show prizes
-To show available prizes that can be used in prize/mask, you can execute the 
+To show available prizes that can be used in prize/mask, you can execute the
 following command:
 ```bash
 python3 main.py --show-prizes
@@ -124,11 +124,11 @@ The json file of credentials (should be a list of objects; see example file).
 Defaults to `credentials.json`.
 
 #### skip
-AutoMSR can skip Rewards activities, punchcards and/or Bing searches. 
+AutoMSR can skip Rewards activities, punchcards and/or Bing searches.
 This value can be a comma separated list of these keywords:
-`no` (don't skip anything), 
+`no` (don't skip anything),
 `yes`, `all` (skip everything),
-`search`, `searches` (skip Bing searches), 
+`search`, `searches` (skip Bing searches),
 `activity`, `activities` (skip Rewards activities),
 `punchcard`, `punchcards` (skip Rewards punchcards).
 
@@ -140,10 +140,10 @@ The number of times AutoMSR should retry missing or failed Rewards activities.
 Defaults to `3`.
 
 #### search_type
-How to perform Bing searches. 
-Can be either `random` 
+How to perform Bing searches.
+Can be either `random`
 (generate a random word, and then perform a search removing
-one character at the end of the string at time) or `takeout` 
+one character at the end of the string at time) or `takeout`
 (uses Google searches, parsed from a Takeout Action).
 
 Defaults to `random`.
@@ -161,12 +161,12 @@ for all accounts used with AutoMSR.
 Defaults to `true`.
 
 #### recipient
-The recipient email address where to receive the status email. 
+The recipient email address where to receive the status email.
 This can be a single email address, or a comma separated list of email addresses.
 
 #### strategy
 The strategy used to decide which sender to use in order to send the status email
-to the specified recipient(s). 
+to the specified recipient(s).
 This can be one of:
 - `first`: first email address in provided credentials file will be used;
 - `last`: last email address in provided credentials file will be used;
@@ -193,7 +193,7 @@ If strategy is `custom`, specifies wether to use or not TLS.
 
 ### selenium
 #### env
-Wether the environment is using a chromedriver executable found in PATH (`local`), 
+Wether the environment is using a chromedriver executable found in PATH (`local`),
 or a Selenium hub listening on a port, default 4444 (`remote`).
 
 Defaults to `local`.
@@ -229,10 +229,10 @@ Defaults to null.
 
 ### prize
 #### mask
-Comma-separated string representing the mask of the desired prizes 
+Comma-separated string representing the mask of the desired prizes
 in the final message obtained. The string is case-insensitive.
 
-A utility method has been implemented to easily check all prizes: check section 
+A utility method has been implemented to easily check all prizes: check section
 [Show Prizes][showPrizes].
 
 Defaults to `microsoft_giftcard, gamepass_pc, third_party_giftcard`.
