@@ -181,10 +181,19 @@ class SingleTargetExecutor:
             logger.debug("Executing promotion: %s", promotion)
             self._execute_promotion(promotion=promotion)
 
+            # simulate navigation
+            logger.debug("Re-opening Rewards homepage to simulate navigation.")
+            self.browser.go_to_rewards()
+            logger.debug("Sleeping to simulate a real user behavior.")
+            time.sleep(2)
+
     def _execute_promotion(self, promotion: Promotion) -> None:
         """
         Execute a specific promotion.
         """
+
+        # open the promotion page
+        self.browser.go_to(url=promotion.destinationUrl)
 
         if promotion.promotionType == PromotionType.QUIZ:
             raise NotImplementedError
@@ -192,7 +201,9 @@ class SingleTargetExecutor:
             PromotionType.URL_REWARD,
             PromotionType.WELCOME_TOUR,
         ):
-            raise NotImplementedError
+            logger.info("Promotion executed by just opening the destination url.")
+            logger.debug("Sleeping to simulate a real user behavior.")
+            time.sleep(3)
         else:
             raise ValueError(
                 f"Cannot execute promotion with type: {promotion.promotionType}"
