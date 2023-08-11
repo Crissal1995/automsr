@@ -1,3 +1,4 @@
+import copy
 import math
 from enum import Enum
 from typing import Dict, List, Optional
@@ -63,7 +64,12 @@ class Promotion(BaseModel):
         return (
             self.is_enabled()
             and not self.complete
-            and self.promotionType in (PromotionType.URL_REWARD, PromotionType.QUIZ)
+            and self.promotionType
+            in (
+                PromotionType.URL_REWARD,
+                PromotionType.QUIZ,
+                PromotionType.WELCOME_TOUR,
+            )
         )
 
 
@@ -130,6 +136,19 @@ class DailySetPromotions(RootModel):
     def __getitem__(self, item):
         return self.__root__[item]
 
+    def get_first_daily_set(self) -> List[Promotion]:
+        """
+        Returns the first daily set found.
+
+        This corresponds to the current daily set, and since Python 3.7 the insertion order
+        in dictionaries is preserved.
+
+        Therefore, the first item in memory is corresponding to the first item in the dashboard.
+        """
+
+        key = list(self.root.keys())[0]
+        return self.root[key]
+
 
 class Dashboard(BaseModel):
     userStatus: UserStatus
@@ -193,3 +212,35 @@ class Dashboard(BaseModel):
             return 0
 
         return self.userStatus.counters.mobileSearch[0].get_needed_searches_amount()
+
+    def get_promotions(self) -> List[Promotion]:
+        """
+        Returns the list of all promotions available in the current dashboard.
+        """
+
+        promotions: List[Promotion] = []
+
+        # First, add the daily set promotions,
+        # as they have more priority being part of the streak
+        promotions.extend(self.dailySetPromotions.get_first_daily_set())
+
+        # Then, take the optional promotion, if available
+        if self.promotionalItem is not None:
+            promotions.append(self.promotionalItem)
+
+        # Then add the extra promotions
+        promotions.extend(self.morePromotions)
+
+        # Then returns a copy of the list
+        return copy.deepcopy(promotions)
+
+    def get_completable_promotions(self) -> List[Promotion]:
+        """
+        Get the list of all completable promotions in the current dashboard.
+        """
+
+        promotions = self.get_promotions()
+        completable_promotions = [
+            promotion for promotion in promotions if promotion.is_completable()
+        ]
+        return completable_promotions

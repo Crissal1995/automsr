@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from attr import define, field
 from selenium.webdriver import Keys
@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from automsr.browser.browser import Browser
 from automsr.config import Config, Profile
-from automsr.datatypes.dashboard import Dashboard
+from automsr.datatypes.dashboard import Dashboard, Promotion, PromotionType
 from automsr.search import RandomSearchGenerator
 
 logger = logging.getLogger(__name__)
@@ -33,8 +33,8 @@ class SingleTargetExecutor:
         Execute the following steps:
         - Open a new browser session with Selenium and a Chrome driver.
         - Retrieval of dashboard json from Rewards page
-        - TODO Execution of all completable punchcards
-        - TODO Execution of all completable promotions
+        - Execution of all completable punchcards
+        - Execution of all completable promotions
         - Execution of searches:
             - PC searches (desktop user agent)
             - Mobile searches (mobile user agent)
@@ -45,6 +45,11 @@ class SingleTargetExecutor:
 
         # Retrieve the current dashboard
         dashboard = self.get_dashboard()
+
+        # TODO Execute punchcards
+
+        # Execute promotions
+        self.execute_promotions(dashboard=dashboard)
 
         # Execute both PC and Mobile searches, if needed
         self.execute_pc_searches(dashboard=dashboard)
@@ -164,6 +169,34 @@ class SingleTargetExecutor:
             logger.debug("Restoring original user-agent: %s", old_user_agent)
             assert old_user_agent is not None
             self.browser.change_user_agent(user_agent=old_user_agent)
+
+    def execute_promotions(self, dashboard: Dashboard) -> None:
+        """
+        Execute all completable promotions.
+        """
+
+        promotions: List[Promotion] = dashboard.get_completable_promotions()
+
+        for promotion in promotions:
+            logger.debug("Executing promotion: %s", promotion)
+            self._execute_promotion(promotion=promotion)
+
+    def _execute_promotion(self, promotion: Promotion) -> None:
+        """
+        Execute a specific promotion.
+        """
+
+        if promotion.promotionType == PromotionType.QUIZ:
+            raise NotImplementedError
+        elif promotion.promotionType in (
+            PromotionType.URL_REWARD,
+            PromotionType.WELCOME_TOUR,
+        ):
+            raise NotImplementedError
+        else:
+            raise ValueError(
+                f"Cannot execute promotion with type: {promotion.promotionType}"
+            )
 
 
 @define
