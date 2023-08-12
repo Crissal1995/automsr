@@ -241,7 +241,7 @@ class SingleTargetExecutor:
                 pass
             else:
                 return self._execute_quiz_promotion(
-                    promotion=promotion, quiz_type=QuizType.CHOICE_BETWEEN_TWO
+                    quiz_type=QuizType.CHOICE_BETWEEN_TWO
                 )
 
             # If the quiz is not a choice-between-two, try with the three-questions-N-answers
@@ -262,8 +262,7 @@ class SingleTargetExecutor:
                 pass
             else:
                 return self._execute_quiz_promotion(
-                    promotion=promotion,
-                    quiz_type=QuizType.THREE_QUESTIONS_EIGHT_ANSWERS,
+                    quiz_type=QuizType.THREE_QUESTIONS_EIGHT_ANSWERS
                 )
 
             # Check if the quiz is 4-answers
@@ -273,7 +272,7 @@ class SingleTargetExecutor:
                 raise CannotDetermineQuizTypeException() from e
             else:
                 return self._execute_quiz_promotion(
-                    promotion=promotion, quiz_type=QuizType.THREE_QUESTIONS_FOUR_ANSWERS
+                    quiz_type=QuizType.THREE_QUESTIONS_FOUR_ANSWERS
                 )
 
         elif promotion.promotionType in (
@@ -286,9 +285,7 @@ class SingleTargetExecutor:
                 f"Cannot execute promotion with type: {promotion.promotionType}"
             )
 
-    def _execute_quiz_promotion(
-        self, promotion: Promotion, quiz_type: QuizType
-    ) -> None:
+    def _execute_quiz_promotion(self, quiz_type: QuizType) -> None:
         """
         Execute a specific promotion that is a quiz with a known type.
 
@@ -307,10 +304,11 @@ class SingleTargetExecutor:
             QuizType.THREE_QUESTIONS_FOUR_ANSWERS,
             QuizType.THREE_QUESTIONS_EIGHT_ANSWERS,
         ):
-            is_quiz_finished = False
+            # safety breaks
             loop_break = 100
             loop_counter = 1
 
+            # store the previous status to determine if some progress were made
             old_status: Optional[QuestionStatus] = None
 
             # Create the `max_answer_index` based on the provided quiz type.
@@ -323,7 +321,7 @@ class SingleTargetExecutor:
 
             current_answer_index = 0
 
-            while not is_quiz_finished and loop_counter < loop_break:
+            while loop_counter < loop_break:
                 questions_span = driver.find_element(by=By.ID, value="#rqHeaderCredits")
                 status = QuestionStatus.from_web_element(questions_span)
                 if status.is_done():
@@ -337,6 +335,7 @@ class SingleTargetExecutor:
                     current_answer_index = 0
                 else:
                     logger.debug("No new question was triggered.")
+                    old_status = status
 
                 # click the corresponding answer
                 answer_id = f"rqAnswerOption{current_answer_index}"
@@ -348,6 +347,9 @@ class SingleTargetExecutor:
 
                 # wait some time for JS to reload the page
                 time.sleep(2)
+
+                # update the loop counter
+                loop_counter += 1
 
             # if we are here, we didn't finish the quiz
             logger.warning("Quiz not finished!")
