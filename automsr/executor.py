@@ -210,7 +210,7 @@ class SingleTargetExecutor:
         promotions: List[Promotion] = dashboard.get_completable_promotions()
 
         for promotion in promotions:
-            logger.debug("Executing promotion: %s", promotion.title)
+            logger.info("Executing promotion: %s", promotion.title)
             self._execute_promotion(promotion=promotion)
 
             # simulate navigation
