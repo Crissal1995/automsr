@@ -11,7 +11,13 @@ from tqdm import tqdm
 
 from automsr.browser.browser import Browser
 from automsr.config import Config, Profile
-from automsr.datatypes.dashboard import Dashboard, Promotion, PromotionType, QuizType
+from automsr.datatypes.dashboard import (
+    Dashboard,
+    Promotion,
+    PromotionType,
+    QuestionStatus,
+    QuizType,
+)
 from automsr.search import RandomSearchGenerator
 
 logger = logging.getLogger(__name__)
@@ -297,10 +303,55 @@ class SingleTargetExecutor:
         if quiz_type is QuizType.CHOICE_BETWEEN_TWO:
             answer = driver.find_element(by=By.ID, value="btoption0")
             answer.click()
-        elif quiz_type is QuizType.THREE_QUESTIONS_FOUR_ANSWERS:
-            raise NotImplementedError
-        elif quiz_type is QuizType.THREE_QUESTIONS_EIGHT_ANSWERS:
-            raise NotImplementedError
+        elif quiz_type in (
+            QuizType.THREE_QUESTIONS_FOUR_ANSWERS,
+            QuizType.THREE_QUESTIONS_EIGHT_ANSWERS,
+        ):
+            is_quiz_finished = False
+            loop_break = 100
+            loop_counter = 1
+
+            old_status: Optional[QuestionStatus] = None
+
+            # Create the `max_answer_index` based on the provided quiz type.
+            if quiz_type is QuizType.THREE_QUESTIONS_FOUR_ANSWERS:
+                max_answer_index = 4
+            elif quiz_type is QuizType.THREE_QUESTIONS_EIGHT_ANSWERS:
+                max_answer_index = 8
+            else:
+                raise ValueError(f"Invalid quiz type provided: {quiz_type}")
+
+            current_answer_index = 0
+
+            while not is_quiz_finished and loop_counter < loop_break:
+                questions_span = driver.find_element(by=By.ID, value="#rqHeaderCredits")
+                status = QuestionStatus.from_web_element(questions_span)
+                if status.is_done():
+                    logger.info("Quiz finished.")
+                    return
+                elif old_status is not None and status.is_new_question_triggered(
+                    old_status=old_status
+                ):
+                    logger.info("New question was triggered.")
+                    logger.debug("Resetting current-answer-index to 0.")
+                    current_answer_index = 0
+                else:
+                    logger.debug("No new question was triggered.")
+
+                # click the corresponding answer
+                answer_id = f"rqAnswerOption{current_answer_index}"
+                answer_element = driver.find_element(by=By.ID, value=answer_id)
+                answer_element.click()
+
+                # update the answer index
+                current_answer_index = (current_answer_index + 1) % max_answer_index
+
+                # wait some time for JS to reload the page
+                time.sleep(2)
+
+            # if we are here, we didn't finish the quiz
+            logger.warning("Quiz not finished!")
+            return
         else:
             raise ValueError(f"Quiz type not supported: {quiz_type}")
 
