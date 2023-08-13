@@ -58,7 +58,7 @@ class Defaults:
 class Profile(BaseModel):
     email: ValidatedEmail
     profile: str
-    include: bool = True
+    skip: bool = False
 
 
 class AutomsrConfig(BaseModel):

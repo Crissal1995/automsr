@@ -224,16 +224,28 @@ class SingleTargetExecutor:
         Execute a specific promotion.
         """
 
+        driver = self.browser.driver
+
         # Open the promotion page
-        self.browser.go_to(url=promotion.destinationUrl)
+        # This action doesn't work; it's not sufficient to just open the destination url,
+        # but we need to click the web element to execute the promotion.
+        # self.browser.go_to(url=promotion.destinationUrl)
+
+        css_selector_value = f'.rewards-card-container[data-bi-id="{promotion.name}"]'
+        logger.debug(
+            "Looking for promotion using the css selector: %s", css_selector_value
+        )
+        promotion_element = driver.find_element(
+            by=By.CSS_SELECTOR, value=css_selector_value
+        )
+        logger.debug("Promotion found! Clicking it to trigger the promotion start.")
+        promotion_element.click()
 
         # Sleep to simulate user behavior and to let JS load the page
         time.sleep(3)
 
         # Determine which promotion is currently on
         if promotion.promotionType == PromotionType.QUIZ:
-            driver = self.browser.driver
-
             # Try to determine which quiz we are dealing with
             try:
                 _ = driver.find_element(by=By.ID, value="btoption0")

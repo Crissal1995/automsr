@@ -5,6 +5,7 @@ automsr:
   profiles:
     - email: crissal@outlook.com  # profile email, will be only used to log it during execution
       profile: "Profile 1"  # profile name found in chrome's profiles directory
+      skip: false  # skip or not the following account from execution
 
 selenium:
   profiles_root: path/to/chrome/profiles  # pointer to the root of profiles
