@@ -159,6 +159,7 @@ class Browser:
         service = Service(chromedriver_path=chromedriver_path)
         try:
             driver = ChromeWebDriver(options=chromium_options, service=service)
+            driver.implicitly_wait(time_to_wait=10)
         except WebDriverException as e:
             exception = CannotStartBrowserException(
                 "Cannot create a new Chrome Session! Maybe there is already one process running?"
