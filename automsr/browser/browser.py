@@ -210,3 +210,12 @@ class Browser:
         """
 
         return str(self.driver.execute_script("return navigator.userAgent;"))
+
+    def change_window(self, index: int = -1) -> None:
+        """
+        Switch Window to the last one.
+        """
+
+        windows = self.driver.window_handles
+        window = windows[index]
+        self.driver.switch_to.window(window)
