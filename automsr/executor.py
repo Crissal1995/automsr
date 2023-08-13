@@ -241,6 +241,8 @@ class SingleTargetExecutor:
         logger.debug("Promotion found! Clicking it to trigger the promotion start.")
         promotion_element.click()
 
+        # TODO switch to new-created tab, otherwise the page is stuck to Rewards homepage :)
+
         # Sleep to simulate user behavior and to let JS load the page
         time.sleep(3)
 
@@ -265,7 +267,7 @@ class SingleTargetExecutor:
                 # if we find the button, we click it and then wait a little bit for JS
                 # to load the answers in the DOM
                 start_button.click()
-                time.sleep(1.5)
+                time.sleep(2)
 
             # Check if the quiz is 8-answers
             try:
