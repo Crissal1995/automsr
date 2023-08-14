@@ -4,9 +4,11 @@ from pathlib import Path
 
 from automsr.datatypes.dashboard import Dashboard, LevelsInfoEnum
 
+DASHBOARD_ROOT = Path(__file__).parent / "dashboards"
+
 
 def load_dashboard(name: str) -> Dashboard:
-    dashboards_path = Path(__file__).parent / "dashboards"
+    dashboards_path = DASHBOARD_ROOT
     dashboard_path = dashboards_path / name
     if not dashboard_path.is_file():
         raise FileNotFoundError(dashboard_path)
@@ -49,3 +51,13 @@ class TestDatatypes(unittest.TestCase):
         model = load_dashboard("no-promotions-done.json")
         promotions = model.get_completable_promotions()
         self.assertEqual(8, len(promotions))
+
+    def test_dashboard_loading(self) -> None:
+        """
+        Test that all dashboards are loaded correctly.
+        """
+
+        for dashboard_file in DASHBOARD_ROOT.iterdir():
+            if dashboard_file.suffix != ".json":
+                continue
+            _ = Dashboard(**json.load(open(dashboard_file)))

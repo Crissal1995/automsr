@@ -3,10 +3,7 @@ import math
 from enum import Enum, auto
 from typing import Dict, List, Optional
 
-from attr import define
 from pydantic import BaseModel, Field, RootModel, constr
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
 
 Date = constr(pattern=r"\d{2}/\d{2}/\d{4}")
 
@@ -44,107 +41,6 @@ class QuizType(Enum):
     # They can be either questions with four or eight answers.
     THREE_QUESTIONS_FOUR_ANSWERS = auto()
     THREE_QUESTIONS_EIGHT_ANSWERS = auto()
-
-
-class QuestionClass(Enum):
-    """
-    Enum to map Question classes to enum values.
-
-    A `FILLED_CIRCLE` represent an ongoing or done question,
-    while an `EMPTY_CIRCLE` a to-do question.
-    """
-
-    FILLED_CIRCLE = "filledCircle"
-    EMPTY_CIRCLE = "emptyCircle"
-
-
-@define
-class Question:
-    """
-    Status for a question found in a Quiz promotion.
-    """
-
-    web_id: str
-    web_class: QuestionClass
-
-    def is_todo(self) -> bool:
-        """
-        Returns True if the question is to-do.
-        """
-
-        return self.web_class is QuestionClass.EMPTY_CIRCLE
-
-    def is_done_or_ongoing(self) -> bool:
-        """
-        Returns True if the question is ongoing or done.
-        """
-
-        return not self.is_todo()
-
-    @classmethod
-    def from_web_element(cls, element: WebElement) -> "Question":
-        """
-        Parse a WebElement and create a Question object.
-        """
-
-        web_id = element.get_attribute("id")
-        web_class_str = element.get_attribute("class")
-        assert web_id is not None
-        assert web_class_str is not None
-        web_class = QuestionClass(web_class_str)
-
-        return cls(web_id=web_id, web_class=web_class)
-
-
-@define
-class QuestionStatus:
-    """
-    State wrapper for Questions Status for a Quiz promotion.
-    """
-
-    questions: List[Question]
-    is_hidden: bool
-
-    def is_done(self) -> bool:
-        """
-        Returns True if the current Question is completed.
-        """
-
-        return self.is_hidden
-
-    def is_new_question_triggered(self, old_status: "QuestionStatus") -> bool:
-        """
-        Returns True if a new question was triggered, with respect to a previous status.
-        """
-
-        previously_done_questions = sum(
-            [question.is_done_or_ongoing() for question in old_status.questions]
-        )
-        currently_done_questions = sum(
-            [question.is_done_or_ongoing() for question in self.questions]
-        )
-        return previously_done_questions < currently_done_questions
-
-    @classmethod
-    def from_web_element(cls, element: WebElement) -> "QuestionStatus":
-        """
-        Parse a Span element and create a state object representing the questions' status.
-        """
-
-        questions_web_element = element.find_elements(by=By.TAG_NAME, value="span")
-        all_items = len(questions_web_element)
-        assert all_items == 3
-
-        questions = [
-            Question.from_web_element(question) for question in questions_web_element
-        ]
-
-        class_ = element.get_attribute("class")
-        assert class_ is not None
-        class_elements = class_.split()
-        is_hidden = "b_hide" in class_elements
-
-        return cls(questions=questions, is_hidden=is_hidden)
 
 
 class Promotion(BaseModel):

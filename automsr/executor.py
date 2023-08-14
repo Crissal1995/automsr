@@ -15,7 +15,6 @@ from automsr.datatypes.dashboard import (
     Dashboard,
     Promotion,
     PromotionType,
-    QuestionStatus,
     QuizType,
 )
 from automsr.search import RandomSearchGenerator
@@ -225,23 +224,7 @@ class SingleTargetExecutor:
         """
 
         driver = self.browser.driver
-
-        # Open the promotion page
-        # This action doesn't work; it's not sufficient to just open the destination url,
-        # but we need to click the web element to execute the promotion.
-        # self.browser.go_to(url=promotion.destinationUrl)
-
-        css_selector_value = f'.rewards-card-container[data-bi-id="{promotion.name}"]'
-        logger.debug(
-            "Looking for promotion using the css selector: %s", css_selector_value
-        )
-        promotion_element = driver.find_element(
-            by=By.CSS_SELECTOR, value=css_selector_value
-        )
-        logger.debug("Promotion found! Clicking it to trigger the promotion start.")
-        promotion_element.click()
-
-        # TODO switch to new-created tab, otherwise the page is stuck to Rewards homepage :)
+        self.browser.open_promotion(promotion=promotion)
 
         # Sleep to simulate user behavior and to let JS load the page
         time.sleep(3)
@@ -261,13 +244,22 @@ class SingleTargetExecutor:
             # If the quiz is not a choice-between-two, try with the three-questions-N-answers
             try:
                 start_button = driver.find_element(by=By.ID, value="rqStartQuiz")
-            except NoSuchElementException as e:
-                raise CannotFindStartButtonException() from e
-            else:
                 # if we find the button, we click it and then wait a little bit for JS
                 # to load the answers in the DOM
                 start_button.click()
                 time.sleep(2)
+            except NoSuchElementException as e:
+                # if we are here, the quiz can be either already started,
+                # or something's broken; in the latter case, we raise an error
+                try:
+                    driver.find_element(by=By.ID, value="currentQuestionContainer")
+                except NoSuchElementException:
+                    logger.error(
+                        "Cannot find neither the start button, nor the quiz container!"
+                    )
+                    raise CannotFindStartButtonException() from e
+                else:
+                    logger.info("Quiz already started.")
 
             # Check if the quiz is 8-answers
             try:
@@ -322,9 +314,6 @@ class SingleTargetExecutor:
             loop_break = 100
             loop_counter = 1
 
-            # store the previous status to determine if some progress were made
-            old_status: Optional[QuestionStatus] = None
-
             # Create the `max_answer_index` based on the provided quiz type.
             if quiz_type is QuizType.THREE_QUESTIONS_FOUR_ANSWERS:
                 max_answer_index = 4
@@ -336,31 +325,22 @@ class SingleTargetExecutor:
             current_answer_index = 0
 
             while loop_counter < loop_break:
-                questions_span = driver.find_element(by=By.ID, value="#rqHeaderCredits")
-                status = QuestionStatus.from_web_element(questions_span)
-                if status.is_done():
+                # check if quiz is finished
+                try:
+                    driver.find_element(by=By.ID, value="quizCompleteContainer")
+                except NoSuchElementException:
+                    logger.debug("Quiz still in progress.")
+                else:
                     logger.info("Quiz finished.")
                     return
-                elif old_status is not None and status.is_new_question_triggered(
-                    old_status=old_status
-                ):
-                    logger.info("New question was triggered.")
-                    logger.debug("Resetting current-answer-index to 0.")
-                    current_answer_index = 0
-                else:
-                    logger.debug("No new question was triggered.")
-                    old_status = status
 
-                # click the corresponding answer
+                # if not, continue with clicking answers
                 answer_id = f"rqAnswerOption{current_answer_index}"
                 answer_element = driver.find_element(by=By.ID, value=answer_id)
                 answer_element.click()
 
                 # update the answer index
                 current_answer_index = (current_answer_index + 1) % max_answer_index
-
-                # wait some time for JS to reload the page
-                time.sleep(2)
 
                 # update the loop counter
                 loop_counter += 1

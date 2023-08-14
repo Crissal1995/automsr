@@ -3,10 +3,12 @@ from pathlib import Path
 from typing import Any
 
 from attr import define
+from datatypes.dashboard import Promotion
 from selenium.common import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
+from selenium.webdriver.common.by import By
 
 from automsr.config import Config, Defaults, Profile
 
@@ -159,7 +161,7 @@ class Browser:
         service = Service(chromedriver_path=chromedriver_path)
         try:
             driver = ChromeWebDriver(options=chromium_options, service=service)
-            driver.implicitly_wait(time_to_wait=10)
+            driver.implicitly_wait(time_to_wait=3)
         except WebDriverException as e:
             exception = CannotStartBrowserException(
                 "Cannot create a new Chrome Session! Maybe there is already one process running?"
@@ -211,11 +213,48 @@ class Browser:
 
         return str(self.driver.execute_script("return navigator.userAgent;"))
 
-    def change_window(self, index: int = -1) -> None:
+    def change_window(self, handle_name: str) -> None:
         """
-        Switch Window to the last one.
+        Switch window to the one specified by the handle name.
         """
 
         windows = self.driver.window_handles
-        window = windows[index]
+        window_index = windows.index(handle_name)
+        window = windows[window_index]
         self.driver.switch_to.window(window)
+
+    def open_promotion(self, promotion: Promotion) -> None:
+        """
+        Open correctly a Promotion found in the Rewards homepage.
+        """
+
+        current_url: str = self.driver.current_url
+        rewards_url: str = self.urls.rewards
+
+        if not current_url.startswith(rewards_url):
+            logger.debug("Changing current page to Rewards homepage.")
+            self.go_to_rewards()
+
+        css_selector_value = f'.rewards-card-container[data-bi-id="{promotion.name}"]'
+        logger.debug(
+            "Looking for promotion using the css selector: %s", css_selector_value
+        )
+        promotion_element = self.driver.find_element(
+            by=By.CSS_SELECTOR, value=css_selector_value
+        )
+        logger.debug("Promotion found! Clicking it to trigger the promotion start.")
+
+        # store window handles before the click
+        handles_before = self.driver.window_handles
+
+        # click the element
+        promotion_element.click()
+
+        # store window handles after the click
+        handles_after = self.driver.window_handles
+
+        logger.debug("Window handles before click: %s", handles_before)
+        logger.debug("Window handles after click: %s", handles_after)
+
+        handle = set(handles_after).difference(handles_before).pop()
+        self.change_window(handle_name=handle)
