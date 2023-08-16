@@ -67,7 +67,7 @@ jobs:
       - name: Build
         run: $POETRY_BIN build
       - name: Publish
-        run: $POETRY_BIN publish --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_TOKEN }} --dry-run
+        run: $POETRY_BIN publish --dry-run
       - name: Commit Version bump
         uses: EndBug/add-and-commit@v9.1.3
         with:
