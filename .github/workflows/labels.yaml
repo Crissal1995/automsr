@@ -1,0 +1,57 @@
+---
+name: Check labels
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - unlabeled
+
+jobs:
+  labels:
+    name: Check labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get PR labels
+        id: pr-labels
+        uses: joerick/pr-labels-action@v1.0.9
+      - name: Get only one SemVer tag
+        run: |
+          json="${{ steps.pr-labels.outputs.labels-object }}"
+
+          noimpact=$(echo $json | jq .noimpact )
+          patch=$(echo $json | jq .patch )
+          minor=$(echo $json | jq .minor )
+          major=$(echo $json | jq .major )
+
+          tags_count=0
+
+          if [[ $noimpact == "true"  ]]; then
+            echo "Tag is noimpact"
+            ((tags_count++))
+          fi
+
+          if [[ $patch == "true"  ]]; then
+            echo "Tag is patch"
+            ((tags_count++))
+          fi
+
+          if [[ $minor == "true"  ]]; then
+            echo "Tag is minor"
+            ((tags_count++))
+          fi
+
+          if [[ $major == "true"  ]]; then
+            echo "Tag is major"
+            ((tags_count++))
+          fi
+
+          if [[ $tags_count -ne 1 ]]; then
+            echo "Was expecting one tag to be set; found: $tags_count"
+            exit 1
+          fi

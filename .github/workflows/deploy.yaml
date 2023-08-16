@@ -1,0 +1,52 @@
+---
+name: Deploy
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy on successful merge
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    env:
+      POETRY_HOME: /etc/poetry
+      POETRY_BIN: /etc/poetry/bin/poetry
+    steps:
+      - name: Get PR labels
+        id: pr-labels
+        uses: joerick/pr-labels-action@v1.0.9
+      - name: Get highest SemVer tag
+        run: |
+          json="${{ steps.pr-labels.outputs.labels-object }}"
+          minor=$(echo $json | jq )
+          if [[ jq  ]]; then
+          fi
+
+      - name: Don't deploy if label "semver-noimpact" is found
+        if: contains(steps.pr-labels.outputs.labels, ' noimpact ')
+        run: |
+          echo "No deploy was required since the change was labelled as no-impact."
+          exit 0
+
+
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python -
+          ${POETRY_BIN} --version
+      - name: Debug, force exit
+        run: exit 1
+
+      # TODO
+#      - name: Bump version
+#        run: poetry version todoTag
