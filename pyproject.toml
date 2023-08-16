@@ -1,0 +1,49 @@
+[tool.poetry]
+name = "automsr"
+version = "8.0.0"
+description = "Automate Rewards points collection"
+authors = ["Cristiano Salerno <cristianosalerno1@gmail.com>"]
+license = "MIT License"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+selenium = "^4.11.2"
+tqdm = "^4.65.0"
+pydantic = "^2.1.1"
+types-pyyaml = "^6.0.12.11"
+types-tqdm = "^4.65.0.2"
+email-validator = "^2.0.0.post2"
+
+[tool.poetry.scripts]
+automsr = "automsr.cli:cli"
+automsr-profiles = "automsr.browser.profile:print_profiles"
+
+[tool.poetry.group.lint]
+optional = true
+
+[tool.poetry.group.lint.dependencies]
+black = "^23.7.0"
+ruff = "^0.0.282"
+mypy = "^1.4.1"
+
+[tool.poetry.group.test]
+optional = true
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+coverage = "^7.3.0"
+tox = "^4.9.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+select = ["E", "F", "I", "W"]
+line-length = 120  # more lenient than Black
+
+[tool.mypy]
+exclude = [".?v(irtualv?)?env"]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"

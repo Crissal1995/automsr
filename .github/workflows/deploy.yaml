@@ -1,0 +1,84 @@
+---
+name: Deploy
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy on successful merge
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
+    env:
+      POETRY_HOME: /etc/poetry
+      POETRY_BIN: /etc/poetry/bin/poetry
+    steps:
+      - name: Get PR labels
+        id: pr-labels
+        uses: joerick/pr-labels-action@v1.0.9
+      - name: Get highest SemVer tag
+        id: get-semver
+        env:
+          json: ${{ steps.pr-labels.outputs.labels-object }}
+        run: |
+          noimpact=$(echo $json | jq .noimpact )
+          patch=$(echo $json | jq .patch )
+          minor=$(echo $json | jq .minor )
+          major=$(echo $json | jq .major )
+
+          if [[ $noimpact == "true"  ]]; then
+            echo "Found tag: noimpact"
+            echo "No deploy will be performed."
+            exit 0
+
+          elif [[ $patch == "true" ]]; then
+            echo "Found tag: patch"
+            echo "tag=patch" >> "$GITHUB_OUTPUT"
+
+          elif [[ $minor == "true" ]]; then
+            echo "Found tag: minor"
+            echo "tag=minor" >> "$GITHUB_OUTPUT"
+
+          elif [[ $major == "true" ]]; then
+            echo "Found tag: major"
+            echo "tag=major" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python -
+          ${POETRY_BIN} --version
+      - name: Bump version
+        id: bump-version
+        env:
+          tag: ${{ steps.get-semver.outputs.tag }}
+        run: |
+          poetry version $tag
+          new_tag=$(poetry version --short)
+          new_tag_with_prefix="v$new_tag"
+          echo "new_tag=$new_tag_with_prefix" >> "$GITHUB_OUTPUT"
+      - name: Build
+        run: poetry build
+      - name: Publish
+        run: poetry publish --username ${{ secrets.PYPI_USERNAME }} --password ${{ secrets.PYPI_TOKEN }}
+      - name: Commit Version bump
+        uses: EndBug/add-and-commit@v9.1.3
+        with:
+          author_name: Cristiano Salerno
+          author_email: cristianosalerno1@gmail.com
+          message: "Automatic version bump"
+          add: "pyproject.toml"  # the only file affected by `poetry version <tag>`
+      - name: Create Release
+        env:
+          tag: ${{ steps.bump-version.outputs.new_tag }}
+        run: gh release create $tag --generate-notes
