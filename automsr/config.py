@@ -126,7 +126,7 @@ class Config(BaseModel):
         >>> _data = {
         ...     "automsr": {"profiles": profiles},
         ...     "email": {},
-        ...     "selenium": {"chrome_path": Path("chrome.exe"), "chromedriver_path": Path("chromedriver.exe")},
+        ...     "selenium": {"profiles_root": Path("profiles"), "chromedriver_path": Path("chromedriver.exe")},
         ... }
         >>> Config.from_dict(_data)  # doctest: +ELLIPSIS
         Config(version='v1', automsr=..., email=..., selenium=...)

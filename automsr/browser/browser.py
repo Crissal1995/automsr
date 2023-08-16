@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 from attr import define
-from datatypes.dashboard import Promotion
 from selenium.common import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -11,6 +10,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
 from selenium.webdriver.common.by import By
 
 from automsr.config import Config, Defaults, Profile
+from automsr.datatypes.dashboard import Promotion
 
 logger = logging.getLogger(__name__)
 

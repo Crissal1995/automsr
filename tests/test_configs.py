@@ -1,7 +1,7 @@
 import unittest
 from pathlib import Path
 
-from config import Config
+from automsr.config import Config
 
 
 def load_config(name: str) -> Config:
