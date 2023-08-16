@@ -31,6 +31,8 @@ optional = true
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.0"
+coverage = "^7.3.0"
+tox = "^4.9.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -41,3 +43,6 @@ select = ["E", "F", "I", "W"]
 line-length = 120  # more lenient than Black
 
 [tool.mypy]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
