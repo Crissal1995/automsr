@@ -33,22 +33,22 @@ jobs:
 
           if [[ $noimpact == "true"  ]]; then
             echo "Tag is noimpact"
-            ((tags_count++))
+            tags_count=$((tags_count + 1))
           fi
 
           if [[ $patch == "true"  ]]; then
             echo "Tag is patch"
-            ((tags_count++))
+            tags_count=$((tags_count + 1))
           fi
 
           if [[ $minor == "true"  ]]; then
             echo "Tag is minor"
-            ((tags_count++))
+            tags_count=$((tags_count + 1))
           fi
 
           if [[ $major == "true"  ]]; then
             echo "Tag is major"
-            ((tags_count++))
+            tags_count=$((tags_count + 1))
           fi
 
           if [[ $tags_count -ne 1 ]]; then
