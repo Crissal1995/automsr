@@ -26,6 +26,8 @@ class TestConfigs(unittest.TestCase):
         config = load_config("config.example.yaml")
         self.assertEqual(len(config.automsr.profiles), 1)
         self.assertEqual(config.version, "v1")
+        self.assertIsNotNone(config.email.sender_password)
+        assert config.email.sender_password is not None  # duplicate because of mypy
         self.assertEqual(
             config.email.sender_password.get_secret_value(), "my_secret_password"
         )

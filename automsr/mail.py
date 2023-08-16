@@ -113,14 +113,14 @@ class RewardsEmailMessage(EmailMessage):
         )
 
 
-@define
+@define(slots=False)
 class EmailConnection:
     sender: str
     password: str
     recipient: str
     host: str
-    port: int
-    tls: bool = False
+    port: int = field(converter=int)
+    tls: bool = field(default=False, converter=bool)
     smtp: smtplib.SMTP = field(init=False)
 
     def open(self) -> None:
@@ -170,18 +170,18 @@ class EmailConnection:
         self.close()
 
 
-@define
+@define(slots=False)
 class OutlookEmailConnection(EmailConnection):
     host: str = "smtp-mail.outlook.com"
-    port: str = 587
-    tls: str = True
+    port: int = 587
+    tls: bool = True
 
 
-@define
+@define(slots=False)
 class GmailEmailConnection(EmailConnection):
     host: str = "smtp.gmail.com"
-    port: str = 587
-    tls: str = True
+    port: int = 587
+    tls: bool = True
 
 
 @define
@@ -221,8 +221,12 @@ class EmailConnectionFactory:
             return None
 
         sender = config.sender
+        assert sender is not None
         domain = sender.split("@")[1]
         logger.debug("Sender domain: %s", domain)
+
+        assert config.sender_password is not None
+        assert config.recipient is not None
 
         # Handle Gmail emails
         if domain == "gmail.com":
@@ -245,6 +249,10 @@ class EmailConnectionFactory:
         # Handle custom domains
         else:
             logger.debug("Custom domain found")
+            assert config.host is not None
+            assert config.port is not None
+            assert config.tls is not None
+
             return EmailConnection(
                 sender=sender,
                 password=config.sender_password.get_secret_value(),

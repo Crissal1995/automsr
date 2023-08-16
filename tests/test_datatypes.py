@@ -38,6 +38,8 @@ class TestDatatypes(unittest.TestCase):
         model = load_dashboard("08-08-2023.json")
         self.assertIsNotNone(model.userStatus.counters.mobileSearch)
         mobile_searches = model.userStatus.counters.mobileSearch
+        self.assertIsNotNone(mobile_searches)
+        assert mobile_searches is not None  # duplicate because of mypy
         self.assertEqual(len(mobile_searches), 1)
         mobile_search = mobile_searches[0]
         self.assertTrue(mobile_search.is_completable())

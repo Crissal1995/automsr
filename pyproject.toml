@@ -43,6 +43,7 @@ select = ["E", "F", "I", "W"]
 line-length = 120  # more lenient than Black
 
 [tool.mypy]
+exclude = [".?v(irtualv?)?env"]
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules"

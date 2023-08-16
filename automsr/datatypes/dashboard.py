@@ -144,7 +144,7 @@ class DailySetPromotions(RootModel):
     # `root` is needed to parse automatically `Date` keys, since they are dynamic
     # Minimum 2 items (daily set for today and tomorrow),
     # but occasionally 3 items are available (yesterday, today, tomorrow)
-    root: Dict[Date, List[Promotion]] = Field(min_length=2, max_length=3)
+    root: Dict[Date, List[Promotion]] = Field(min_length=2, max_length=3)  # type: ignore
 
     def __iter__(self):
         return iter(self.__root__)
@@ -271,7 +271,10 @@ class Dashboard(BaseModel):
         if not self.can_search_on_mobile():
             return 0
 
-        return self.userStatus.counters.mobileSearch[0].get_needed_searches_amount()
+        mobile_searches = self.userStatus.counters.mobileSearch
+        assert mobile_searches is not None
+        mobile_search = mobile_searches[0]
+        return mobile_search.get_needed_searches_amount()
 
     def get_promotions(self) -> List[Promotion]:
         """
