@@ -79,4 +79,5 @@ jobs:
       - name: Create Release
         env:
           tag: ${{ steps.bump-version.outputs.new_tag }}
+          GH_TOKEN: ${{ github.token }}
         run: gh release create $tag --generate-notes --latest --draft
