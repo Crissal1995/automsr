@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     env:
-      POETRY_HOME: /etc/poetry
-      POETRY_BIN: /etc/poetry/bin/poetry
+      POETRY_HOME: /home/runner/poetry
+      POETRY_BIN: /home/runner/poetry/bin/poetry
     steps:
       - name: Get PR labels
         id: pr-labels
