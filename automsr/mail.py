@@ -6,12 +6,8 @@ from enum import Enum
 from typing import Optional
 
 from attr import define, field
-from config import Config
 
-from automsr.exception import (
-    AuthenticationError,
-    EmailError,
-)
+from automsr.config import Config
 
 logger = logging.getLogger(__name__)
 NO_SENDER_ERR = "No sender email found!"
@@ -132,23 +128,10 @@ class EmailConnection:
         Open an SMTP connection and try to log in with mail server.
         """
 
-        try:
-            # send an ehlo message to the server
-            self.smtp.ehlo()
-
-            # if TLS is enabled, start it
-            if self.tls:
-                self.smtp.starttls()
-
-            # actual login
-            self.smtp.login(self.sender, self.password)
-
-        except smtplib.SMTPAuthenticationError:
-            raise AuthenticationError("Invalid credentials provided!")
-        except TimeoutError:
-            raise EmailError(HOST_NOT_REACHABLE)
-        else:
-            logger.debug("SMTP connection opened")
+        self.smtp.ehlo()
+        if self.tls:
+            self.smtp.starttls()
+        self.smtp.login(self.sender, self.password)
 
     def close(self) -> None:
         """
@@ -218,17 +201,17 @@ class EmailConnectionFactory:
         >>> _config = Config.from_yaml(config_path)
         >>> factory = EmailConnectionFactory(config=_config)
         >>> factory.get_connection().__class__
-        <class 'mail.GmailEmailConnection'>
+        <class 'automsr.mail.GmailEmailConnection'>
 
         >>> _config.email.sender = "foo@outlook.com"
         >>> factory = EmailConnectionFactory(config=_config)
         >>> factory.get_connection().__class__
-        <class 'mail.OutlookEmailConnection'>
+        <class 'automsr.mail.OutlookEmailConnection'>
 
         >>> _config.email.sender = "foo@foobar.com"
         >>> factory = EmailConnectionFactory(config=_config)
         >>> factory.get_connection().__class__
-        <class 'mail.EmailConnection'>
+        <class 'automsr.mail.EmailConnection'>
         """
 
         config = self.config.email
