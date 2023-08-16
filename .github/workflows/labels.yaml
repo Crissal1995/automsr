@@ -32,22 +32,22 @@ jobs:
           tags_count=0
 
           if [[ $noimpact == "true"  ]]; then
-            echo "Tag is noimpact"
+            echo "Found tag: noimpact"
             tags_count=$((tags_count + 1))
           fi
 
           if [[ $patch == "true"  ]]; then
-            echo "Tag is patch"
+            echo "Found tag: patch"
             tags_count=$((tags_count + 1))
           fi
 
           if [[ $minor == "true"  ]]; then
-            echo "Tag is minor"
+            echo "Found tag: minor"
             tags_count=$((tags_count + 1))
           fi
 
           if [[ $major == "true"  ]]; then
-            echo "Tag is major"
+            echo "Found tag: major"
             tags_count=$((tags_count + 1))
           fi
 
