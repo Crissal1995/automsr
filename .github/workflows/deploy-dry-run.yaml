@@ -47,6 +47,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}  # to enable force-push for `add-and-commit` action
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -76,8 +78,8 @@ jobs:
           message: "Automatic version bump"
           add: "pyproject.toml"  # the only file affected by `poetry version <tag>`
           push: false  # we don't want to pollute origin
-      - name: Create Release
-        env:
-          tag: ${{ steps.bump-version.outputs.new_tag }}
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create $tag --generate-notes --latest --draft
+#      - name: Create Draft Release
+#        env:
+#          tag: ${{ steps.bump-version.outputs.new_tag }}
+#          GH_TOKEN: ${{ github.token }}
+#        run: gh release create $tag --generate-notes --latest
