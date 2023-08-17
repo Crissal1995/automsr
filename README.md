@@ -3,6 +3,7 @@
 [![Tests](https://github.com/Crissal1995/auto_msrewards/actions/workflows/tests.yaml/badge.svg)](https://github.com/Crissal1995/auto_msrewards/actions/workflows/tests.yaml)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
+
 README languages: **EN** [IT](README.IT.md)
 
 ## Description
