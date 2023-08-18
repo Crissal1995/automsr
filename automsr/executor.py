@@ -177,7 +177,7 @@ class SingleTargetExecutor:
         self.browser.go_to_bing()
 
         for i in tqdm(range(safe_amount)):
-            logger.debug("Executing search: %s/%s", i + 1, amount)
+            logger.debug("Executing search: %s/%s", i + 1, safe_amount)
 
             # we retrieve the element in the for-loop since the page is reloaded, thus the element can be invalidated
             element: WebElement = self.browser.driver.find_element(
@@ -210,13 +210,17 @@ class SingleTargetExecutor:
 
         for promotion in promotions:
             logger.info("Executing promotion: %s", promotion.title)
-            self._execute_promotion(promotion=promotion)
-
-            # simulate navigation
-            logger.debug("Re-opening Rewards homepage to simulate navigation.")
-            self.browser.go_to_rewards()
-            logger.debug("Sleeping to simulate a real user behavior.")
-            time.sleep(2)
+            try:
+                self._execute_promotion(promotion=promotion)
+            except Exception as e:
+                logger.error("Exception caught: %s", e)
+                logger.warning("Promotion '%s' will be skipped", promotion)
+            finally:
+                # simulate navigation
+                logger.debug("Re-opening Rewards homepage to simulate navigation.")
+                self.browser.go_to_rewards()
+                logger.debug("Sleeping to simulate a real user behavior.")
+                time.sleep(2)
 
     def _execute_promotion(self, promotion: Promotion) -> None:
         """
