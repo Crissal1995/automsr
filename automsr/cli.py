@@ -49,4 +49,7 @@ def cli() -> None:
 
 
 if __name__ == "__main__":
+    logging.getLogger("selenium").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
     cli()
