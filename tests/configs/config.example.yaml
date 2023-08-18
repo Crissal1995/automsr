@@ -1,21 +1,71 @@
 ---
+# Required.
+# Config version.
+# Must be equal to 'v1'.
 version: v1
 
+# Required.
 automsr:
+  # Required.
+  # List of profiles to provide to the tool.
+  # A profile represent a Chrome profile already logged in https://rewards.bing.com
+  # with a valid Microsoft account.
   profiles:
-    - email: crissal@outlook.com  # profile email, will be only used to log it during execution
-      profile: "Profile 1"  # profile name found in chrome's profiles directory
-      skip: false  # skip or not the following account from execution
+      # Required.
+      # Microsoft email.
+      # It is used only for log purposes.
+    - email: your_email@outlook.com
 
+      # Required.
+      # Chrome profile folder name.
+      # It will be used by Selenium to log in the correct profile.
+      profile: "Profile 1"
+
+      # Optional, defaults to false.
+      # Skip the execution of the tool on this profile.
+      skip: false
+
+# Required.
 selenium:
-  profiles_root: path/to/chrome/profiles  # pointer to the root of profiles
-  chromedriver_path: path/to/chromedriver  # be sure it matches your current Chrome version
+  # Required.
+  # Path to the root of Chrome profiles.
+  profiles_root: path/to/chrome/profiles
 
+  # Required.
+  # Path to the chromedriver executable.
+  # Be sure it matches the version of Chrome.
+  chromedriver_path: path/to/chromedriver
+
+# Required.
 email:
-  enable: true  # receive an email with the status of the execution
+  # Optional, defaults to false.
+  # Receive an email with the status of the execution.
+  enable: true
+
+  # Optional, defaults to empty.
+  # Who should be the recipient of the message.
   recipient: an_address@gmail.com
+
+  # Optional, defaults to empty.
+  # Who is the sender of the message.
   sender: my_address@gmail.com
-  sender_password: my_secret_password  # be careful sharing this config with others!
-  host: my_host.smtp.something  # must specify if not using a gmail/outlook sender address
-  port: 587  # must specify if not using a gmail/outlook sender address
-  tls: false  # specify if tls is enabled on a custom smtp server
+
+  # Optional, defaults to empty.
+  # Sender password.
+  # If set, be careful sharing this config with other people.
+  sender_password: my_secret_password
+
+  # Optional, defaults to empty.
+  # SMTP host.
+  # Must specify it if the sender domain is not gmail/outlook.
+  host: my_host.smtp.something
+
+  # Optional, defaults to empty.
+  # SMTP port.
+  # Must specify it if the sender domain is not gmail/outlook.
+  port: 587
+
+  # Optional, defaults to empty.
+  # Enable TLS or not with the custom SMTP server.
+  # Must specify it if the sender domain is not gmail/outlook.
+  tls: false
