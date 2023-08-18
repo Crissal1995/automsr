@@ -3,7 +3,8 @@ name = "automsr"
 version = "8.1.0"
 description = "Automate Rewards points collection"
 authors = ["Cristiano Salerno <cristianosalerno1@gmail.com>"]
-license = "MIT License"
+license = "MIT"
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8"
