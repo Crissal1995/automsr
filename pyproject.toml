@@ -15,6 +15,7 @@ pydantic = "^2.1.1"
 types-pyyaml = "^6.0.12.11"
 types-tqdm = "^4.65.0.2"
 email-validator = "^2.0.0.post2"
+pyyaml = "^6.0.1"
 
 [tool.poetry.scripts]
 automsr = "automsr.cli:cli"
