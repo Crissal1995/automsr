@@ -9,44 +9,58 @@ on:
       - main
 
 jobs:
+  tag:
+    name: Get tag
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true  # execute deploy only if PR is merged
+    outputs:
+      tag: ${{ steps.get-tag.outputs.tag }}
+    steps:
+    - name: Get PR labels
+      id: pr-labels
+      uses: joerick/pr-labels-action@v1.0.9
+    - name: Get highest SemVer tag
+      id: get-tag
+      env:
+        json: ${{ steps.pr-labels.outputs.labels-object }}
+      run: |
+        no_impact=$(echo $json | jq .noimpact )
+        patch=$(echo $json | jq .patch )
+        minor=$(echo $json | jq .minor )
+        major=$(echo $json | jq .major )
+
+        if [[ $no_impact == "true"  ]]; then
+          echo "Found tag: no_impact"
+          echo "No deploy will be performed."
+          echo "tag=no_impact" >> "$GITHUB_OUTPUT"
+
+        elif [[ $patch == "true" ]]; then
+          echo "Found tag: patch"
+          echo "tag=patch" >> "$GITHUB_OUTPUT"
+
+        elif [[ $minor == "true" ]]; then
+          echo "Found tag: minor"
+          echo "tag=minor" >> "$GITHUB_OUTPUT"
+
+        elif [[ $major == "true" ]]; then
+          echo "Found tag: major"
+          echo "tag=major" >> "$GITHUB_OUTPUT"
+
+        if [[ $tags_count -ne 1 ]]; then
+          echo "Was expecting one and only one SemVer tag to be set. Found: $tags_count"
+          exit 1
+        fi
+
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    needs:
+      - tag
+    if: needs.tag.outputs.tag != "" && needs.tag.outputs.tag != "no_impact"
     env:
       POETRY_HOME: /home/runner/poetry
       POETRY_BIN: /home/runner/poetry/bin/poetry
     steps:
-      - name: Get PR labels
-        id: pr-labels
-        uses: joerick/pr-labels-action@v1.0.9
-      - name: Get highest SemVer tag
-        id: get-semver
-        env:
-          json: ${{ steps.pr-labels.outputs.labels-object }}
-        run: |
-          noimpact=$(echo $json | jq .noimpact )
-          patch=$(echo $json | jq .patch )
-          minor=$(echo $json | jq .minor )
-          major=$(echo $json | jq .major )
-
-          if [[ $noimpact == "true"  ]]; then
-            echo "Found tag: noimpact"
-            echo "No deploy will be performed."
-            exit 0
-
-          elif [[ $patch == "true" ]]; then
-            echo "Found tag: patch"
-            echo "tag=patch" >> "$GITHUB_OUTPUT"
-
-          elif [[ $minor == "true" ]]; then
-            echo "Found tag: minor"
-            echo "tag=minor" >> "$GITHUB_OUTPUT"
-
-          elif [[ $major == "true" ]]; then
-            echo "Found tag: major"
-            echo "tag=major" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -62,7 +76,7 @@ jobs:
       - name: Bump version
         id: bump-version
         env:
-          tag: ${{ steps.get-semver.outputs.tag }}
+          tag: ${{ needs.tag.outputs.tag }}
         run: |
           $POETRY_BIN version $tag
           new_tag=$($POETRY_BIN version --short)
