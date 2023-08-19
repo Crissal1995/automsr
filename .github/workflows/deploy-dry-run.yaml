@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - tag
-    if: needs.tag.outputs.tag != "" && needs.tag.outputs.tag != "no_impact"
+    if: needs.tag.outputs.tag != 'no_impact'
     env:
       POETRY_HOME: /home/runner/poetry
       POETRY_BIN: /home/runner/poetry/bin/poetry
