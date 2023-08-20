@@ -1,6 +1,8 @@
 # AutoMSR
+
+![PyPI - Version](https://img.shields.io/pypi/v/automsr)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/automsr)
 [![Checks](https://github.com/Crissal1995/automsr/actions/workflows/checks.yaml/badge.svg)](https://github.com/Crissal1995/automsr/actions/workflows/checks.yaml)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ## Description
 
