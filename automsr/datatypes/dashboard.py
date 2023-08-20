@@ -295,15 +295,14 @@ class Dashboard(BaseModel):
         #   show up in the Rewards homepage, it is better to not include it
         #   in the parsed promotions.
 
-        # Then, take the optional promotion, if available
-        if self.promotionalItem is not None:
-            promotions.append(self.promotionalItem)
-
         # Then add the extra promotions
         promotions.extend(self.morePromotions)
 
         # Then returns a copy of the list
         return copy.deepcopy(promotions)
+
+    def get_promotional_item(self) -> Optional[Promotion]:
+        return self.promotionalItem
 
     def get_completable_promotions(self) -> List[Promotion]:
         """
