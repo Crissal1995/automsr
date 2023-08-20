@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from attr import define
 from selenium.common import WebDriverException
@@ -223,9 +223,13 @@ class Browser:
         window = windows[window_index]
         self.driver.switch_to.window(window)
 
-    def open_promotion(self, promotion: Promotion) -> None:
+    def open_promotion(
+        self, promotion: Promotion, element_id: Optional[str] = None
+    ) -> None:
         """
         Open correctly a Promotion found in the Rewards homepage.
+
+        If the `element-id` is provided, use that to retrieve the WebElement from the page.
         """
 
         current_url: str = self.driver.current_url
@@ -235,13 +239,22 @@ class Browser:
             logger.debug("Changing current page to Rewards homepage.")
             self.go_to_rewards()
 
-        css_selector_value = f'.rewards-card-container[data-bi-id="{promotion.name}"]'
-        logger.debug(
-            "Looking for promotion using the css selector: %s", css_selector_value
-        )
-        promotion_element = self.driver.find_element(
-            by=By.CSS_SELECTOR, value=css_selector_value
-        )
+        if element_id is not None:
+            logger.debug("Searching for promotion with id: %s", element_id)
+            if not element_id:
+                raise ValueError("Empty element id!")
+            promotion_element = self.driver.find_element(by=By.ID, value=element_id)
+        else:
+            css_selector_value = (
+                f'.rewards-card-container[data-bi-id="{promotion.name}"]'
+            )
+            logger.debug(
+                "Searching for promotion with css selector: %s", css_selector_value
+            )
+            promotion_element = self.driver.find_element(
+                by=By.CSS_SELECTOR, value=css_selector_value
+            )
+
         logger.debug("Promotion found! Clicking it to trigger the promotion start.")
 
         # store window handles before the click
@@ -252,9 +265,6 @@ class Browser:
 
         # store window handles after the click
         handles_after = self.driver.window_handles
-
-        logger.debug("Window handles before click: %s", handles_before)
-        logger.debug("Window handles after click: %s", handles_after)
 
         handle = set(handles_after).difference(handles_before).pop()
         self.change_window(handle_name=handle)

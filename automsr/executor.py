@@ -206,6 +206,25 @@ class SingleTargetExecutor:
         Execute all completable promotions.
         """
 
+        # handle promotional items differently, since there is another way
+        # to retrieve the corresponding WebElement
+        promotional_item = dashboard.get_promotional_item()
+        if promotional_item is not None:
+            try:
+                self.browser.open_promotion(
+                    promotion=promotional_item, element_id="promo-item"
+                )
+            except Exception as e:
+                logger.error("Exception caught: %s", e)
+                logger.warning("Promotion '%s' will be skipped", promotional_item)
+            finally:
+                # simulate navigation
+                logger.debug("Re-opening Rewards homepage to simulate navigation.")
+                self.browser.go_to_rewards()
+                logger.debug("Sleeping to simulate a real user behavior.")
+                time.sleep(2)
+
+        # handle all other promotions
         promotions: List[Promotion] = dashboard.get_completable_promotions()
 
         for promotion in promotions:
