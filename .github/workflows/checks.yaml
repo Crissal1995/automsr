@@ -47,3 +47,43 @@ jobs:
           python-version: "3.10"
       - run: pip install tox-gh==1.3.1
       - run: tox -e coverage
+
+  version:
+    name: Block manual version bumps
+    runs-on: ubuntu-latest
+    env:
+      POETRY_HOME: /home/runner/poetry
+      POETRY_BIN: /home/runner/poetry/bin/poetry
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python -
+          ${POETRY_BIN} --version
+      - name: Get current version
+        id: current-version
+        run: |
+          current_tag=$($POETRY_BIN version --short)
+          current_tag_with_prefix="v$current_tag"
+          echo "tag=$current_tag_with_prefix" >> "$GITHUB_OUTPUT"
+      - name: Assert current version is released
+        env:
+          tag: ${{ steps.current-version.outputs.tag }}
+        run: gh release view "$tag"
+      - name: Assert current version is latest
+        env:
+          tag: ${{ steps.current-version.outputs.tag }}
+        run: |
+          gh release view
+          latest_tag=$(gh release view --json tagName --jq .tagName)
+          echo "Latest tag found: $latest_tag"
+
+          if [[ "$latest_tag" != "$tag" ]]; then
+            echo "Expecting tag to be: $latest_tag, but found: $tag"
+            echo "You need to use SemVer labels in your PR, and avoid manually bumping Poetry version!"
+            echo "::error file=pyproject.toml,line=3,col=1,endColumn=8::Revert manual version bump!"
+          fi
