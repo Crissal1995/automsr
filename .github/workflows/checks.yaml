@@ -73,10 +73,12 @@ jobs:
       - name: Assert current version is released
         env:
           tag: ${{ steps.current-version.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
         run: gh release view "$tag"
       - name: Assert current version is latest
         env:
           tag: ${{ steps.current-version.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh release view
           latest_tag=$(gh release view --json tagName --jq .tagName)
@@ -86,4 +88,5 @@ jobs:
             echo "Expecting tag to be: $latest_tag, but found: $tag"
             echo "You need to use SemVer labels in your PR, and avoid manually bumping Poetry version!"
             echo "::error file=pyproject.toml,line=3,col=1,endColumn=8::Revert manual version bump!"
+            exit 1
           fi
