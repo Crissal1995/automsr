@@ -51,23 +51,18 @@ jobs:
   version:
     name: Block manual version bumps
     runs-on: ubuntu-latest
-    env:
-      POETRY_HOME: /home/runner/poetry
-      POETRY_BIN: /home/runner/poetry/bin/poetry
     steps:
       - uses: actions/checkout@v3
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python -
-          ${POETRY_BIN} --version
+      - name: Setup Poetry
+        uses: abatilo/actions-poetry@v2
       - name: Get current version
         id: current-version
         run: |
-          current_tag=$($POETRY_BIN version --short)
+          current_tag=$(poetry version --short)
           current_tag_with_prefix="v$current_tag"
           echo "tag=$current_tag_with_prefix" >> "$GITHUB_OUTPUT"
       - name: Assert current version is released
