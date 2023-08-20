@@ -7,11 +7,6 @@ license = "MIT"
 readme = "README.md"
 repository = "https://github.com/Crissal1995/automsr"
 
-[virtualenvs]
-# needed for actions-poetry to cache dependencies
-create = true
-in-project = true
-
 [tool.poetry.dependencies]
 python = "^3.8"
 selenium = "^4.11.2"
