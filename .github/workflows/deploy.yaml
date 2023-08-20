@@ -29,22 +29,32 @@ jobs:
         minor=$(echo $json | jq .minor )
         major=$(echo $json | jq .major )
 
+        tags_count=0
+
         if [[ $no_impact == "true"  ]]; then
           echo "Found tag: no_impact"
           echo "No deploy will be performed."
           echo "tag=no_impact" >> "$GITHUB_OUTPUT"
+          tags_count=$((tags_count + 1))
+        fi
 
-        elif [[ $patch == "true" ]]; then
+        if [[ $patch == "true" ]]; then
           echo "Found tag: patch"
           echo "tag=patch" >> "$GITHUB_OUTPUT"
+          tags_count=$((tags_count + 1))
+        fi
 
-        elif [[ $minor == "true" ]]; then
+        if [[ $minor == "true" ]]; then
           echo "Found tag: minor"
           echo "tag=minor" >> "$GITHUB_OUTPUT"
+          tags_count=$((tags_count + 1))
+        fi
 
-        elif [[ $major == "true" ]]; then
+        if [[ $major == "true" ]]; then
           echo "Found tag: major"
           echo "tag=major" >> "$GITHUB_OUTPUT"
+          tags_count=$((tags_count + 1))
+        fi
 
         if [[ $tags_count -ne 1 ]]; then
           echo "Was expecting one and only one SemVer tag to be set. Found: $tags_count"
