@@ -3,114 +3,171 @@ import logging
 import smtplib
 from email.message import EmailMessage
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from attr import define, field
 
 from automsr.config import Config
 
 logger = logging.getLogger(__name__)
+
 NO_SENDER_ERR = "No sender email found!"
 NO_SENDER_PSW_ERR = "No sender password found!"
 NO_RECIPIENT_ERR = "No recipient specified!"
 NO_HOST_ERR = "No SMTP host specified!"
 NO_PORT_ERR = "No port specified!"
-HOST_NOT_REACHABLE = "Cannot reach host! Check internet connection or hostname"
-SHOULD_NOT_CREATE_CONN = (
-    "Cannot create Email Connection if should not send any email! Check config"
-)
+HOST_NOT_REACHABLE = "Cannot reach host! Check internet connection or hostname."
+SHOULD_NOT_CREATE_CONN = "Cannot create Email Connection if should not send any email! Check config settings."
 
 
-class RewardsStatusEnum(Enum):
-    FAILURE = "FAILURE"
-    SUCCESS = "SUCCESS"
+class HtmlColor(Enum):
+    """
+    Class to map HTML colors to hex values.
+    """
+
+    RED = "#FF160D"
+    GREEN = "#00D107"
+
+
+class ExecutionOutcome(Enum):
+    """
+    Possible outcome for an AutoMSR execution.
+
+    It could be either success or failure.
+    """
+
+    FAILURE = "failure"
+    SUCCESS = "success"
+
+    def as_color(self) -> HtmlColor:
+        """
+        Return the object as its Html color representation.
+
+        >>> ExecutionOutcome.FAILURE.as_color() == HtmlColor.RED
+        True
+        >>> ExecutionOutcome.SUCCESS.as_color() == HtmlColor.GREEN
+        True
+        """
+
+        if self is self.FAILURE:
+            return HtmlColor.RED
+        elif self is self.SUCCESS:
+            return HtmlColor.GREEN
+        else:
+            raise NotImplementedError(self)
 
 
 @define
-class RewardsStatus:
+class ExecutionStatus:
+    """
+    Status of an execution related to a single profile.
+    """
+
+    outcome: ExecutionOutcome
     email: str
-    status: RewardsStatusEnum
-    message: str = ""
+    message: str
 
-    def _set_status_and_message(self, status: RewardsStatusEnum, message: str):
-        self.status = status
-        self.message = message
+    def to_plain_message(self) -> str:
+        """
+        Return a text plain message representing the object.
 
-    def set_success(self, message: str = ""):
-        self._set_status_and_message(RewardsStatusEnum.SUCCESS, message)
+        >>> ExecutionStatus(
+        ...     outcome=ExecutionOutcome.SUCCESS,
+        ...     email="foo@bar.com",
+        ...     message="Hello world"
+        ... ).to_plain_message()
+        'foo@bar.com - Outcome: success - Message: Hello world'
+        """
 
-    def set_failure(self, message: str = ""):
-        self._set_status_and_message(RewardsStatusEnum.FAILURE, message)
+        return f"{self.email} - Outcome: {self.outcome.value} - Message: {self.message}"
 
-    def to_plain(self):
-        msg = f"{self.email} - {self.status.value}"
-        if self.message:
-            msg += f" - {self.message}"
-        return msg
+    def to_html_message(self):
+        """
+        Return an HTML-rich message representing the object.
 
-    def to_html(self):
-        color = "red" if self.status is RewardsStatusEnum.FAILURE else "green"
-        msg = f'<p><b>{self.email} - <font color="{color}">{self.status.value}</font></b></p>'
-        if self.message:
-            msg += f"<p><b>Message:</b> {self.message}</p>"
-        return msg
+        >>> ExecutionStatus(
+        ...     outcome=ExecutionOutcome.SUCCESS,
+        ...     email="foo@bar.com",
+        ...     message="Hello world"
+        ... ).to_html_message()
+        '<p>foo@bar.com - Outcome: <font color="#00D107">success</font> - Message: Hello world</p>'
+        """
+
+        color = self.outcome.as_color().value
+        message = " - ".join(
+            [
+                f"{self.email}",
+                f'Outcome: <font color="{color}">{self.outcome.value}</font>',
+                f"Message: {self.message}",
+            ]
+        )
+        complete_message = f"<p>{message}</p>"
+        return complete_message
 
 
-class RewardsEmailMessage(EmailMessage):
-    """An email message customized for Auto MSR"""
+@define
+class ExecutionMessage:
+    """
+    Email message wrapper, customized for the tool logic.
+    """
 
-    now = datetime.date.today()
-    prefix = "[AUTOMSR]"
+    sender: str
+    recipient: str
+    statuses: List[ExecutionStatus]
+    subject: str = field(
+        factory=lambda: f"AutoMSR {datetime.date.today()} Report message"
+    )
 
-    success_subject = f"{prefix} {now} SUCCESS"
-    failure_subject = f"{prefix} {now} FAILURE"
+    def get_message(self) -> EmailMessage:
+        """
+        Returns a valid Email Message compatible with RFC 5322.
 
-    @classmethod
-    def get_message(
-        cls,
-        from_email: str,
-        to_email: str,
-        subject: str,
-        content: str = "",
-        content_html: str = "",
-    ):
-        msg = cls()
+        >>> _message = ExecutionMessage(
+        ...     sender="sender@example.com",
+        ...     recipient="recipient@example.com",
+        ...     statuses=[],
+        ...     subject="My Subject",
+        ... ).get_message()
+        >>> print(_message.as_string())  # doctest: +ELLIPSIS
+        From: sender@example.com
+        To: recipient@example.com
+        Subject: My Subject
+        MIME-Version: 1.0
+        ...
 
-        # setup message
-        msg["From"] = from_email
-        msg["To"] = to_email
+        >>> from unittest.mock import patch
+        >>> with patch("mail.datetime", wraps=datetime) as mock:
+        ...     mock.date.today.return_value = "2023-01-01"
+        ...     _message = ExecutionMessage(
+        ...         sender="sender@example.com",
+        ...         recipient="recipient@example.com",
+        ...         statuses=[],
+        ...     ).get_message()
+        ...     print(_message.as_string())  # doctest: +ELLIPSIS
+        From: sender@example.com
+        To: recipient@example.com
+        Subject: AutoMSR 2023-01-01 Report message
+        MIME-Version: 1.0
+        ...
+        """
 
-        msg["Subject"] = subject
+        message = EmailMessage()
 
-        msg.set_content(content)
-        if content_html:
-            msg.add_alternative(content_html, subtype="html")
+        message.add_header("From", self.sender)
+        message.add_header("To", self.recipient)
+        message.add_header("Subject", self.subject)
 
-        return msg
-
-    @classmethod
-    def get_success_message(
-        cls, from_email: str, to_email: str, content: str = "", content_html: str = ""
-    ):
-        return cls.get_message(
-            from_email=from_email,
-            to_email=to_email,
-            subject=cls.success_subject,
-            content=content,
-            content_html=content_html,
+        complete_message_text_plain = "\n\n".join(
+            [status.to_plain_message() for status in self.statuses]
+        )
+        complete_message_html = "<br>".join(
+            [status.to_html_message() for status in self.statuses]
         )
 
-    @classmethod
-    def get_failure_message(
-        cls, from_email: str, to_email: str, content: str = "", content_html: str = ""
-    ):
-        return cls.get_message(
-            from_email=from_email,
-            to_email=to_email,
-            subject=cls.failure_subject,
-            content=content,
-            content_html=content_html,
-        )
+        message.set_content(complete_message_text_plain)
+        message.add_alternative(complete_message_html, subtype="html")
+
+        return message
 
 
 @define(slots=False)
@@ -155,18 +212,18 @@ class EmailConnection:
         self.close()
         logger.info("Email connection was successful")
 
-    def send_success_message(self):
-        msg = RewardsEmailMessage.get_success_message(self.sender, self.recipient)
-        self.smtp.send_message(msg)
-
-    def send_failure_message(self):
-        msg = RewardsEmailMessage.get_failure_message(self.sender, self.recipient)
-        self.smtp.send_message(msg)
+    def send_message(self, message: ExecutionMessage) -> None:
+        """
+        Send a Message using the provided credentials and SMTP.
+        """
+        smtp_message = message.get_message()
+        self.smtp.send_message(msg=smtp_message)
+        logger.info("Message sent!")
 
     def __enter__(self):
         return self.open()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, _):
         self.close()
 
 
