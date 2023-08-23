@@ -273,6 +273,11 @@ class EmailConnectionFactory:
         >>> factory = EmailConnectionFactory(config=_config)
         >>> factory.get_connection().__class__ is EmailConnection
         True
+
+        >>> _config.email.enable = False
+        >>> factory = EmailConnectionFactory(config=_config)
+        >>> factory.get_connection() is None
+        True
         """
 
         config = self.config.email
