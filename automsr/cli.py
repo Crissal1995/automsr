@@ -1,4 +1,5 @@
 import logging
+import sys
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any, Callable
@@ -49,7 +50,8 @@ def profiles(args: Args) -> None:
     Method to invoke when `profiles` is executed.
     """
 
-    executor = ProfilesExecutor()
+    config = Config.from_yaml(args.config)
+    executor = ProfilesExecutor(profiles_root_path=config.selenium.profiles_root)
     executor.print_profiles(output_format=args.format)
 
 
@@ -105,26 +107,30 @@ def add_profiles_flags(parser: ArgumentParser) -> None:
 def cli() -> None:
     # Construct the base parser
     parser = ArgumentParser()
-    subparsers = parser.add_subparsers(
-        required=False, title="subcommands", description="valid subcommands"
-    )
+    subparsers = parser.add_subparsers(required=True, help="Available subcommands.")
 
     # Construct the `run` parser
-    run_parser = subparsers.add_parser(name="run")
+    run_parser = subparsers.add_parser(
+        name="run",
+        help="Run AutoMSR on profiles specified in the config file, then exit.",
+    )
     add_common_flags(parser=run_parser)
     add_run_flags(parser=run_parser)
 
     # Construct the `profiles` parser
-    profiles_parser = subparsers.add_parser(name="profiles")
+    profiles_parser = subparsers.add_parser(
+        name="profiles",
+        help="Retrieve the Chrome profiles found in the local machine with their full path.",
+    )
     add_common_flags(parser=profiles_parser)
     add_profiles_flags(parser=profiles_parser)
 
-    # Make the default parser the same as the `run` parser
-    add_common_flags(parser=parser)
-    add_run_flags(parser=parser)
-
     # Parse arguments
-    raw_args = vars(parser.parse_args())
+    try:
+        raw_args = vars(parser.parse_args())
+    except TypeError:
+        parser.print_help()
+        sys.exit(1)
     args = Args(**raw_args)
 
     # Handle verbosity
