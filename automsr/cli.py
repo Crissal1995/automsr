@@ -57,7 +57,7 @@ def add_common_flags(parser: ArgumentParser) -> None:
     """
     Add common flags to a generic parser.
 
-    They include:
+    Flags provided:
     * -c, --config
     * -v, --verbose
     """
@@ -106,7 +106,7 @@ def cli() -> None:
     # Construct the base parser
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(
-        required=True, title="subcommands", description="valid subcommands"
+        required=False, title="subcommands", description="valid subcommands"
     )
 
     # Construct the `run` parser
@@ -118,6 +118,10 @@ def cli() -> None:
     profiles_parser = subparsers.add_parser(name="profiles")
     add_common_flags(parser=profiles_parser)
     add_profiles_flags(parser=profiles_parser)
+
+    # Make the default parser the same as the `run` parser
+    add_common_flags(parser=parser)
+    add_run_flags(parser=parser)
 
     # Parse arguments
     raw_args = vars(parser.parse_args())
