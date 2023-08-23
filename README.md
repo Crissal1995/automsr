@@ -1,7 +1,7 @@
 # AutoMSR
 
-![PyPI - Version](https://img.shields.io/pypi/v/automsr)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/automsr)
+[![PyPI - Version](https://img.shields.io/pypi/v/automsr)](https://pypi.org/project/automsr/#history)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/automsr)](https://pypi.org/project/automsr)
 [![Checks](https://github.com/Crissal1995/automsr/actions/workflows/checks.yaml/badge.svg)](https://github.com/Crissal1995/automsr/actions/workflows/checks.yaml)
 
 ## Description
@@ -34,7 +34,7 @@ TL;DR: the usage of AutoMSR could lead in a ban.
 ### Installation
 
 ```shell
-$ pip install automsr  # this will install the binaries `automsr` and `automsr-profiles`
+$ pip install automsr  # this will install the binary `automsr`
 ```
 
 ### Configuration
@@ -52,20 +52,30 @@ Download the correct [Chromedriver](https://chromedriver.chromium.org/downloads)
 
 ```shell
 $ automsr --help
+$ automsr run --help
+$ automsr profiles --help
 ```
 
 ### Execute AutoMSR
 
 ```shell
-$ automsr
+$ automsr run
 
 # config.yaml is somewhere else than current directory
-$ automsr --config path/to/a/config.yaml
+$ automsr run --config path/to/a/config.yaml
 ```
 
 ### Retrieve local Chrome profiles
 
 ```shell
-$ automsr-profiles
-# [{"name": "<profileName>", "path": "<absolutePathToProfileDirectory>"}]
+$ automsr profiles
+# ChromeProfile(displayed_name='yourProfileName', path=Path('generic/profile/dir'))
+
+$ automsr profiles --format pretty-json
+# [
+#     {
+#         "displayed_name": "yourProfileName",
+#         "path": generic/profile/dir"
+#     }
+# ]
 ```
