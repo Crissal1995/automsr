@@ -9,6 +9,7 @@ from attr import define, field
 from automsr.browser.profile import OutputFormat, ProfilesExecutor
 from automsr.config import Config
 from automsr.executor import MultipleTargetsExecutor
+from automsr.mail import EmailExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,23 @@ def profiles(args: Args) -> None:
     config = Config.from_yaml(args.config)
     executor = ProfilesExecutor(profiles_root_path=config.selenium.profiles_root)
     executor.print_profiles(output_format=args.format)
+
+
+def email(args: Args) -> None:
+    """
+    Method to invoke when `email` is executed.
+    """
+
+    config = Config.from_yaml(args.config)
+    executor = EmailExecutor(config=config)
+    if executor.are_messages_enabled():
+        executor.send_mock_message()
+    else:
+        logger.error(
+            "Cannot test emails if messages are not enabled!"
+            " Check your config file and retry."
+        )
+        sys.exit(1)
 
 
 def add_common_flags(parser: ArgumentParser) -> None:
@@ -104,6 +122,16 @@ def add_profiles_flags(parser: ArgumentParser) -> None:
     parser.set_defaults(func=profiles)
 
 
+def add_email_flags(parser: ArgumentParser) -> None:
+    """
+    Add `email` flags to a generic parser.
+
+    Flags provided: no one.
+    """
+
+    parser.set_defaults(func=email)
+
+
 def cli() -> None:
     # Construct the base parser
     parser = ArgumentParser()
@@ -124,6 +152,14 @@ def cli() -> None:
     )
     add_common_flags(parser=profiles_parser)
     add_profiles_flags(parser=profiles_parser)
+
+    # Construct the `email` parser
+    email_parser = subparsers.add_parser(
+        name="email",
+        help="Send a test email to the recipient specified in the config file.",
+    )
+    add_common_flags(parser=email_parser)
+    add_email_flags(parser=email_parser)
 
     # Parse arguments
     try:

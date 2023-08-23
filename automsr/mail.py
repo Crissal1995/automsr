@@ -1,5 +1,6 @@
 import datetime
 import logging
+import random
 import smtplib
 from email.message import EmailMessage
 from enum import Enum
@@ -170,11 +171,10 @@ class ExecutionMessage:
         return message
 
 
-@define(slots=False)
+@define
 class EmailConnection:
     sender: str
     password: str
-    recipient: str
     host: str
     port: int = field(converter=int)
     tls: bool = field(default=False, converter=bool)
@@ -185,6 +185,7 @@ class EmailConnection:
         Open an SMTP connection and try to log in with mail server.
         """
 
+        self.smtp = smtplib.SMTP(host=self.host, port=self.port)
         self.smtp.ehlo()
         if self.tls:
             self.smtp.starttls()
@@ -218,27 +219,15 @@ class EmailConnection:
         """
         smtp_message = message.get_message()
         self.smtp.send_message(msg=smtp_message)
-        logger.info("Message sent!")
+        logger.debug("Message sent correctly with smtp!")
 
     def __enter__(self):
         return self.open()
 
-    def __exit__(self, _):
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        # Check docs for more info on these parameters:
+        # https://docs.python.org/3/reference/datamodel.html#object.__exit__
         self.close()
-
-
-@define(slots=False)
-class OutlookEmailConnection(EmailConnection):
-    host: str = "smtp-mail.outlook.com"
-    port: int = 587
-    tls: bool = True
-
-
-@define(slots=False)
-class GmailEmailConnection(EmailConnection):
-    host: str = "smtp.gmail.com"
-    port: int = 587
-    tls: bool = True
 
 
 @define
@@ -248,6 +237,14 @@ class EmailConnectionFactory:
     """
 
     config: Config
+
+    gmail_host = "smtp.gmail.com"
+    gmail_port = 587
+    gmail_tls = True
+
+    outlook_host = "smtp-mail.outlook.com"
+    outlook_port = 587
+    outlook_tls = True
 
     def get_connection(self) -> Optional[EmailConnection]:
         """
@@ -261,17 +258,18 @@ class EmailConnectionFactory:
 
         >>> _config.email.sender = "foo@gmail.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__ is GmailEmailConnection
+        >>> factory.get_connection().host == EmailConnectionFactory.gmail_host
         True
 
         >>> _config.email.sender = "foo@outlook.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__ is OutlookEmailConnection
+        >>> factory.get_connection().host == EmailConnectionFactory.outlook_host
         True
 
         >>> _config.email.sender = "foo@foobar.com"
+        >>> _config.email.host = "smtp.foobar.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__ is EmailConnection
+        >>> factory.get_connection().host == "smtp.foobar.com"
         True
 
         >>> _config.email.enable = False
@@ -292,24 +290,28 @@ class EmailConnectionFactory:
         logger.debug("Sender domain: %s", domain)
 
         assert config.sender_password is not None
-        assert config.recipient is not None
+        password = config.sender_password.get_secret_value()
 
         # Handle Gmail emails
         if domain == "gmail.com":
             logger.debug("Gmail domain found")
-            return GmailEmailConnection(
+            return EmailConnection(
                 sender=sender,
-                password=config.sender_password.get_secret_value(),
-                recipient=config.recipient,
+                password=password,
+                host=self.gmail_host,
+                port=self.gmail_port,
+                tls=self.gmail_tls,
             )
 
         # Handle Outlook emails
         elif domain.split(".")[0] in ("live", "outlook", "hotmail"):
             logger.debug("Outlook domain found")
-            return OutlookEmailConnection(
+            return EmailConnection(
                 sender=sender,
-                password=config.sender_password.get_secret_value(),
-                recipient=config.recipient,
+                password=password,
+                host=self.outlook_host,
+                port=self.outlook_port,
+                tls=self.outlook_tls,
             )
 
         # Handle custom domains
@@ -321,9 +323,94 @@ class EmailConnectionFactory:
 
             return EmailConnection(
                 sender=sender,
-                password=config.sender_password.get_secret_value(),
-                recipient=config.recipient,
+                password=password,
                 host=config.host,
                 port=config.port,
                 tls=config.tls,
             )
+
+    def get_connection_strict(self) -> EmailConnection:
+        """
+        Get an Email Connection, or raise if it would be null.
+        """
+
+        connection = self.get_connection()
+        if connection is None:
+            raise ValueError(
+                "Connection is null! Probably you must set `email/enable: true` in your config file."
+            )
+        return connection
+
+
+@define
+class EmailExecutor:
+    config: Config
+
+    def are_messages_enabled(self) -> bool:
+        """
+        Return whether the email messages are enabled, so that:
+        - `email/enable` is `true` in config file;
+        - `email/recipient` is a valid non-null string;
+        - an email connection can be established with sender's SMTP server
+        """
+
+        if not self.config.email.enable:
+            return False
+
+        if not self.config.email.recipient:
+            return False
+
+        factory = EmailConnectionFactory(config=self.config)
+        connection = factory.get_connection_strict()
+        try:
+            connection.test_connection()
+        except smtplib.SMTPException:
+            return False
+        else:
+            return True
+
+    def send_message(self, statuses: List[ExecutionStatus]) -> None:
+        """
+        Send a message with the content of object's `statuses`.
+
+        Assumes that messages are enabled for the current session.
+        """
+
+        recipient: Optional[str] = self.config.email.recipient
+        assert recipient is not None
+
+        connection: EmailConnection = EmailConnectionFactory(
+            config=self.config
+        ).get_connection_strict()
+        with connection:
+            message = ExecutionMessage(
+                sender=connection.sender,
+                recipient=recipient,
+                statuses=statuses,
+            )
+            connection.send_message(message=message)
+            logger.info("Message sent correctly!")
+
+    def send_mock_message(self, *, seed: int = 0) -> None:
+        """
+        Send a mock message in order to make the
+        message display something relevant for the user.
+        """
+
+        random.seed(seed)
+
+        statuses: List[ExecutionStatus] = []
+        for profile in self.config.automsr.profiles:
+            email_address = profile.email
+            outcome = random.choice(list(ExecutionOutcome))
+            message = "Mock result."
+
+            status = ExecutionStatus(
+                outcome=outcome,
+                email=email_address,
+                message=message,
+            )
+            statuses.append(status)
+
+        logger.info("Mock message sending...")
+        self.send_message(statuses=statuses)
