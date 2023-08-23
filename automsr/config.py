@@ -30,7 +30,9 @@ def validate_url(value: str) -> str:
 def validate_email(value: Optional[str]) -> Optional[str]:
     if value is None:
         return None
-    validated_email: _ValidatedEmail = _validate_email(value)
+    validated_email: _ValidatedEmail = _validate_email(
+        value, check_deliverability=False
+    )
     return validated_email.normalized
 
 
