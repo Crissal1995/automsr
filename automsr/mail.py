@@ -254,21 +254,25 @@ class EmailConnectionFactory:
         Get an email connection based on the config.
 
         >>> from pathlib import Path
-        >>> config_path = Path("tests/configs/config.example.yaml")
+        >>> current_path = Path(__file__)
+        >>> tests_path = current_path.parent.parent / "tests"
+        >>> config_path = tests_path / "configs/config.example.yaml"
         >>> _config = Config.from_yaml(config_path)
+
+        >>> _config.email.sender = "foo@gmail.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__
-        <class 'automsr.mail.GmailEmailConnection'>
+        >>> factory.get_connection().__class__ is GmailEmailConnection
+        True
 
         >>> _config.email.sender = "foo@outlook.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__
-        <class 'automsr.mail.OutlookEmailConnection'>
+        >>> factory.get_connection().__class__ is OutlookEmailConnection
+        True
 
         >>> _config.email.sender = "foo@foobar.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__
-        <class 'automsr.mail.EmailConnection'>
+        >>> factory.get_connection().__class__ is EmailConnection
+        True
         """
 
         config = self.config.email
