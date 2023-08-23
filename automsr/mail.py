@@ -120,7 +120,7 @@ class ExecutionMessage:
 
     def get_message(self) -> EmailMessage:
         """
-        Returns a valid Email Message compatible with RFC 5322.
+        Returns a valid Email Message complaint with RFC 5322.
 
         >>> _message = ExecutionMessage(
         ...     sender="sender@example.com",
