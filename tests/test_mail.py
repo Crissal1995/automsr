@@ -11,6 +11,9 @@ class MailTestCase(unittest.TestCase):
     Base class for Test Cases related to the module `mail`.
     """
 
+    def setUp(self) -> None:
+        self.maxDiff = None
+
     def test_plain_message(self) -> None:
         """
         Test that, given a profile and some steps, the corresponding
@@ -49,15 +52,34 @@ class MailTestCase(unittest.TestCase):
         expected_message = textwrap.dedent(
             """\
             <h3>Profile: foo@bar.com</h3>
-            <p>Overall outcome: ❌ FAILURE</p>
+            <p><strong>Overall outcome: ❌ FAILURE</strong></p>
             <h4>Steps outcome</h4>
-            <ul>
-            <li><code>GET_DASHBOARD</code>: ✔️ SUCCESS</li>
-            <li><code>PROMOTIONS</code>: ❌ FAILURE</li>
-            <li>Explanation: Something broke :(</li>
-            <li><code>END_SESSION</code>: ❌ FAILURE</li>
-            <li>Explanation: Something broke again?!</li>
-            </ul>"""
+            <table>
+            <thead>
+            <tr>
+            <th style="text-align: center;">Step</th>
+            <th style="text-align: center;">Outcome</th>
+            <th>Explanation</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+            <td style="text-align: center;">GET_DASHBOARD</td>
+            <td style="text-align: center;">✔️</td>
+            <td></td>
+            </tr>
+            <tr>
+            <td style="text-align: center;">PROMOTIONS</td>
+            <td style="text-align: center;">❌</td>
+            <td>Something broke :(</td>
+            </tr>
+            <tr>
+            <td style="text-align: center;">END_SESSION</td>
+            <td style="text-align: center;">❌</td>
+            <td>Something broke again?!</td>
+            </tr>
+            </tbody>
+            </table>"""
         )
 
         profile = Profile(email="foo@bar.com", profile="Profile 1")

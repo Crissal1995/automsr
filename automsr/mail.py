@@ -64,19 +64,25 @@ class StatusMessage:
 
         overall_outcome = self.status.get_outcome()
         overall_outcome_emoji = status_emojis[overall_outcome]
+        bold = (
+            "**" if overall_outcome is OutcomeType.FAILURE else ""
+        )  # highlight failures
 
         retval: List[str] = [
             f"### Profile: {self.email}",
-            f"Overall outcome: {overall_outcome_emoji} {overall_outcome.name}",
+            f"{bold}Overall outcome: {overall_outcome_emoji} {overall_outcome.name}{bold}",
             "#### Steps outcome",
+            # Table creation
+            "| Step | Outcome | Explanation |",
+            "| :---: | :---: | --- |",
         ]
 
         for step in self.status.steps:
             outcome_emoji = status_emojis[step.outcome]
-            retval.append(f"- `{step.type.name}`: {outcome_emoji} {step.outcome.name}")
+            explanation = step.explanation or ""
 
-            if step.explanation:
-                retval.append(f"  - Explanation: {step.explanation}")
+            line = f"| {step.type.name} | {outcome_emoji} | {explanation} |"
+            retval.append(line)
 
         return "\n".join(retval)
 
@@ -85,7 +91,7 @@ class StatusMessage:
         Return an HTML representation of the status.
         """
 
-        return markdown.markdown(text=self.to_markdown())
+        return markdown.markdown(text=self.to_markdown(), extensions=["extra"])
 
 
 @define
