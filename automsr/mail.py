@@ -64,24 +64,20 @@ class StatusMessage:
 
         overall_outcome = self.status.get_outcome()
         overall_outcome_emoji = status_emojis[overall_outcome]
-        bold = (
-            "**" if overall_outcome is OutcomeType.FAILURE else ""
-        )  # highlight failures
 
         retval: List[str] = [
             f"### Profile: {self.email}",
-            f"{bold}Overall outcome: {overall_outcome_emoji} {overall_outcome.name}{bold}",
-            "#### Steps outcome",
+            f"**Overall outcome: {overall_outcome_emoji} {overall_outcome.name}**",
             # Table creation
-            "| Step | Outcome | Explanation |",
-            "| :---: | :---: | --- |",
+            "",
+            "| Outcome | Step | Explanation |",
+            "| :---: | :--- | :--- |",
         ]
 
         for step in self.status.steps:
             outcome_emoji = status_emojis[step.outcome]
             explanation = step.explanation or ""
-
-            line = f"| {step.type.name} | {outcome_emoji} | {explanation} |"
+            line = f"| {outcome_emoji} | {step.type.name} | {explanation} |"
             retval.append(line)
 
         return "\n".join(retval)
@@ -392,14 +388,18 @@ class EmailExecutor:
 
         statuses: List[StatusMessage] = []
         for profile in self.config.automsr.profiles:
-            steps = [
-                Step(
-                    type=random.choice(list(StepType)),
-                    outcome=random.choice(list(OutcomeType)),
-                    explanation=fake.sentence(nb_words=4),
-                )
-                for _ in range(5)
-            ]
+            steps: List[Step] = []
+
+            for _ in range(5):
+                step_type = random.choice(list(StepType))
+                outcome = random.choice(list(OutcomeType))
+                if outcome is OutcomeType.FAILURE:
+                    explanation = fake.sentence(nb_words=4)
+                else:
+                    explanation = None
+                step = Step(type=step_type, outcome=outcome, explanation=explanation)
+                steps.append(step)
+
             status = StatusMessage(status=Status(profile=profile, steps=steps))
             statuses.append(status)
 
