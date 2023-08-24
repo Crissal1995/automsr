@@ -98,7 +98,7 @@ class ExecutionMessage:
     recipient: str
     status_messages: List[StatusMessage]
     subject: str = field(
-        factory=lambda: f"🤖 AutoMSR {datetime.date.today()} Report message"
+        factory=lambda: f"AutoMSR {datetime.date.today()} Report message"
     )
 
     def get_message(self) -> EmailMessage:
@@ -119,7 +119,7 @@ class ExecutionMessage:
         ...
 
         >>> from unittest.mock import patch
-        >>> with patch("mail.datetime", wraps=datetime) as mock:
+        >>> with patch("automsr.mail.datetime", wraps=datetime) as mock:
         ...     mock.date.today.return_value = "2023-01-01"
         ...     _message = ExecutionMessage(
         ...         sender="sender@example.com",
