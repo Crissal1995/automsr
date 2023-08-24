@@ -93,7 +93,7 @@ class SingleTargetExecutor:
             if step is ExecutionStep.PROMOTIONS:
                 func = partial(self.execute_promotions, dashboard=dashboard)
             elif step is ExecutionStep.PUNCHCARDS:
-                func = partial(self.execute_punchcards)
+                func = partial(self.execute_punchcards, dashboard=dashboard)
             elif step is ExecutionStep.PC_SEARCHES:
                 func = partial(self.execute_pc_searches, dashboard=dashboard)
             elif step is ExecutionStep.MOBILE_SEARCHES:
