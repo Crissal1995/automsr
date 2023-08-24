@@ -20,10 +20,35 @@ class ExecutionStep(Enum):
     Type of execution step found during the normal execution.
     """
 
-    PROMOTIONS = auto()
+    START_SESSION = auto()
+    GET_DASHBOARD = auto()
     PUNCHCARDS = auto()
+    PROMOTIONS = auto()
     PC_SEARCHES = auto()
     MOBILE_SEARCHES = auto()
+    END_SESSION = auto()
+
+    @classmethod
+    def get_ordered_steps(cls) -> List["ExecutionStep"]:
+        """
+        Returns the step ordered as expected by the `run` flow.
+        """
+
+        return [
+            # start the session
+            cls.START_SESSION,
+            # retrieve the dashboard
+            cls.GET_DASHBOARD,
+            # complete the punchcards, if any
+            cls.PUNCHCARDS,
+            # complete the promotions, including daily
+            cls.PROMOTIONS,
+            # complete searches
+            cls.PC_SEARCHES,
+            cls.MOBILE_SEARCHES,
+            # end the session
+            cls.END_SESSION,
+        ]
 
 
 @define
@@ -32,7 +57,6 @@ class ExecutionStepStatus:
     Status of a single step of an entire execution.
     """
 
-    profile: Profile
     step: ExecutionStep
     outcome: ExecutionOutcome
 
