@@ -52,20 +52,31 @@ class ExecutionStatusMessage:
     message: str
 
     @classmethod
-    def from_execution_status(cls, value: ExecutionStatus) -> "ExecutionStatusMessage":
+    def from_execution_status(cls, status: ExecutionStatus) -> "ExecutionStatusMessage":
         """
         Parse an Execution Status object and returns a wrapper capable of generating
         email messages from it.
-        """
 
-        raise NotImplementedError
+        >>> from automsr.config import Profile
+        >>> from automsr.datatypes.execution import ExecutionStepStatus, ExecutionStatus, ExecutionStep
+        >>> profile = Profile(email="foo@bar.com", profile="Profile 1")
+        >>> steps = [
+        ...     ExecutionStepStatus(step=ExecutionStep.PROMOTIONS, outcome=ExecutionOutcome.SUCCESS),
+        ...     ExecutionStepStatus(step=ExecutionStep.PUNCHCARDS, outcome=ExecutionOutcome.FAILURE, explanation="This is an explanation."),
+        ... ]
+        >>> execution_status = ExecutionStatus(profile=profile, steps=steps)
+        >>> status_message = ExecutionStatusMessage.from_execution_status(status=execution_status)
+        >>> status_message.to_plain_message()
+        'foo@bar.com - Outcome: failure - Message: 1) PROMOTIONS - outcome: success. 2) PUNCHCARDS - outcome: failure - explanation: This is an explanation.'
+        >>> status_message.to_html_message()
+        '<p>foo@bar.com - Outcome: <font color="#FF160D">failure</font> - Message: 1) PROMOTIONS - outcome: success. 2) PUNCHCARDS - outcome: failure - explanation: This is an explanation.</p>'
+        """  # noqa: E501
 
-    def get_message(self) -> str:
-        """
-        Returns an overall message based on the status of the children steps.
-        """
+        outcome = status.get_outcome()
+        email = status.profile.email
+        message = status.get_message()
 
-        raise NotImplementedError
+        return cls(outcome=outcome, email=email, message=message)
 
     def to_plain_message(self) -> str:
         """

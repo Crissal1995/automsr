@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import List
+from typing import List, Optional
 
 from attr import define
 
@@ -59,6 +59,7 @@ class ExecutionStepStatus:
 
     step: ExecutionStep
     outcome: ExecutionOutcome
+    explanation: Optional[str] = None
 
 
 @define
@@ -81,3 +82,28 @@ class ExecutionStatus:
             return ExecutionOutcome.SUCCESS
         else:
             return ExecutionOutcome.FAILURE
+
+    def get_message(self, *, separator: str = ". ") -> str:
+        """
+        Return a message related to the outcome of the execution.
+
+        >>> profile = Profile(email="foo@bar.com", profile="Profile 1")
+        >>> steps = [
+        ...     ExecutionStepStatus(step=ExecutionStep.PROMOTIONS, outcome=ExecutionOutcome.SUCCESS),
+        ...     ExecutionStepStatus(step=ExecutionStep.PUNCHCARDS, outcome=ExecutionOutcome.FAILURE, explanation="This is an explanation."),
+        ... ]
+        >>> ExecutionStatus(profile=profile, steps=steps).get_message()
+        '1) PROMOTIONS - outcome: success. 2) PUNCHCARDS - outcome: failure - explanation: This is an explanation.'
+        """  # noqa: E501
+
+        lines: List[str] = []
+
+        for i, step in enumerate(self.steps, start=1):
+            line = f"{i}) {step.step.name} - outcome: {step.outcome.value}"
+            if step.explanation:
+                line += f" - explanation: {step.explanation}"
+
+            lines.append(line)
+
+        retval = separator.join(lines)
+        return retval
