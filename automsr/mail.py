@@ -3,117 +3,89 @@ import logging
 import random
 import smtplib
 from email.message import EmailMessage
-from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
+import markdown
 from attr import define, field
+from faker import Faker  # type: ignore
 
 from automsr.config import Config
-from automsr.datatypes.execution import ExecutionOutcome, ExecutionStatus
+from automsr.datatypes.execution import OutcomeType, Status, Step, StepType
 
 logger = logging.getLogger(__name__)
 
 
-class HtmlColor(Enum):
-    """
-    Class to map HTML colors to hex values.
-    """
-
-    RED = "#FF160D"
-    GREEN = "#00D107"
-
-    @classmethod
-    def from_outcome(cls, outcome: ExecutionOutcome) -> "HtmlColor":
-        """
-        Given an input outcome, return the corresponding html color representation.
-
-        >>> HtmlColor.from_outcome(ExecutionOutcome.FAILURE) is HtmlColor.RED
-        True
-        >>> HtmlColor.from_outcome(ExecutionOutcome.SUCCESS) is HtmlColor.GREEN
-        True
-        """
-
-        if outcome is ExecutionOutcome.FAILURE:
-            return HtmlColor.RED
-        elif outcome is ExecutionOutcome.SUCCESS:
-            return HtmlColor.GREEN
-        else:
-            raise NotImplementedError(outcome)
-
-
 @define
-class ExecutionStatusMessage:
+class StatusMessage:
     """
-    Wrapper for an ExecutionStatus object to make it messages-aware.
+    Wrapper for a status object to make it messages-aware.
     """
 
-    outcome: ExecutionOutcome
-    email: str
-    message: str
+    status: Status
 
-    @classmethod
-    def from_execution_status(cls, status: ExecutionStatus) -> "ExecutionStatusMessage":
+    @property
+    def email(self) -> str:
         """
-        Parse an Execution Status object and returns a wrapper capable of generating
-        email messages from it.
-
-        >>> from automsr.config import Profile
-        >>> from automsr.datatypes.execution import ExecutionStepStatus, ExecutionStatus, ExecutionStep
-        >>> profile = Profile(email="foo@bar.com", profile="Profile 1")
-        >>> steps = [
-        ...     ExecutionStepStatus(step=ExecutionStep.PROMOTIONS, outcome=ExecutionOutcome.SUCCESS),
-        ...     ExecutionStepStatus(step=ExecutionStep.PUNCHCARDS, outcome=ExecutionOutcome.FAILURE, explanation="This is an explanation."),
-        ... ]
-        >>> execution_status = ExecutionStatus(profile=profile, steps=steps)
-        >>> status_message = ExecutionStatusMessage.from_execution_status(status=execution_status)
-        >>> status_message.to_plain_message()
-        'foo@bar.com - Outcome: failure - Message: 1) PROMOTIONS - outcome: success. 2) PUNCHCARDS - outcome: failure - explanation: This is an explanation.'
-        >>> status_message.to_html_message()
-        '<p>foo@bar.com - Outcome: <font color="#FF160D">failure</font> - Message: 1) PROMOTIONS - outcome: success. 2) PUNCHCARDS - outcome: failure - explanation: This is an explanation.</p>'
-        """  # noqa: E501
-
-        outcome = status.get_outcome()
-        email = status.profile.email
-        message = status.get_message()
-
-        return cls(outcome=outcome, email=email, message=message)
-
-    def to_plain_message(self) -> str:
-        """
-        Return a text plain message representing the object.
-
-        >>> ExecutionStatusMessage(
-        ...     outcome=ExecutionOutcome.SUCCESS,
-        ...     email="foo@bar.com",
-        ...     message="Hello world"
-        ... ).to_plain_message()
-        'foo@bar.com - Outcome: success - Message: Hello world'
+        Email address related to this object.
         """
 
-        return f"{self.email} - Outcome: {self.outcome.value} - Message: {self.message}"
+        return self.status.profile.email
 
-    def to_html_message(self) -> str:
+    def to_plain_text(self) -> str:
         """
-        Return an HTML-rich message representing the object.
-
-        >>> ExecutionStatusMessage(
-        ...     outcome=ExecutionOutcome.SUCCESS,
-        ...     email="foo@bar.com",
-        ...     message="Hello world"
-        ... ).to_html_message()
-        '<p>foo@bar.com - Outcome: <font color="#00D107">success</font> - Message: Hello world</p>'
+        Return a plain-text representation of the status.
         """
 
-        color: str = HtmlColor.from_outcome(outcome=self.outcome).value
-        message = " - ".join(
-            [
-                f"{self.email}",
-                f'Outcome: <font color="{color}">{self.outcome.value}</font>',
-                f"Message: {self.message}",
-            ]
-        )
-        complete_message = f"<p>{message}</p>"
-        return complete_message
+        retval: List[str] = [
+            f"Email: {self.email}",
+            f"Overall outcome: {self.status.get_outcome().name}",
+        ]
+
+        steps = self.status.steps
+        for step in steps:
+            line = f"Step {step.type.name} has outcome {step.outcome.name}."
+            if step.explanation:
+                line += f" Explanation: {step.explanation}"
+            retval.append(line)
+
+        message = "\n".join(retval)
+        message += "\n"  # add a final newline character
+        return message
+
+    def to_markdown(self) -> str:
+        """
+        Return a Markdown representation of the status.
+        """
+
+        status_emojis: Dict[OutcomeType, str] = {
+            OutcomeType.SUCCESS: "✔️",
+            OutcomeType.FAILURE: "❌",
+        }
+
+        overall_outcome = self.status.get_outcome()
+        overall_outcome_emoji = status_emojis[overall_outcome]
+
+        retval: List[str] = [
+            f"### Profile: {self.email}",
+            f"Overall outcome: {overall_outcome_emoji} {overall_outcome.name}",
+            "#### Steps outcome",
+        ]
+
+        for step in self.status.steps:
+            outcome_emoji = status_emojis[step.outcome]
+            retval.append(f"- `{step.type.name}`: {outcome_emoji} {step.outcome.name}")
+
+            if step.explanation:
+                retval.append(f"  - Explanation: {step.explanation}")
+
+        return "\n".join(retval)
+
+    def to_html(self) -> str:
+        """
+        Return an HTML representation of the status.
+        """
+
+        return markdown.markdown(text=self.to_markdown())
 
 
 @define
@@ -124,9 +96,9 @@ class ExecutionMessage:
 
     sender: str
     recipient: str
-    status_messages: List[ExecutionStatusMessage]
+    status_messages: List[StatusMessage]
     subject: str = field(
-        factory=lambda: f"AutoMSR {datetime.date.today()} Report message"
+        factory=lambda: f"🤖 AutoMSR {datetime.date.today()} Report message"
     )
 
     def get_message(self) -> EmailMessage:
@@ -168,14 +140,14 @@ class ExecutionMessage:
         message.add_header("To", self.recipient)
         message.add_header("Subject", self.subject)
 
-        complete_message_text_plain = "\n\n".join(
-            [message.to_plain_message() for message in self.status_messages]
+        complete_message_plain_text = "\n\n".join(
+            [message.to_plain_text() for message in self.status_messages]
         )
         complete_message_html = "<br>".join(
-            [message.to_html_message() for message in self.status_messages]
+            [message.to_html() for message in self.status_messages]
         )
 
-        message.set_content(complete_message_text_plain)
+        message.set_content(complete_message_plain_text)
         message.add_alternative(complete_message_html, subtype="html")
 
         return message
@@ -379,7 +351,7 @@ class EmailExecutor:
         else:
             return True
 
-    def send_message(self, statuses: List[ExecutionStatusMessage]) -> None:
+    def send_message(self, statuses: List[StatusMessage]) -> None:
         """
         Send a message with the content of object's `statuses`.
 
@@ -409,17 +381,20 @@ class EmailExecutor:
 
         random.seed(seed)
 
-        statuses: List[ExecutionStatusMessage] = []
-        for profile in self.config.automsr.profiles:
-            email_address = profile.email
-            outcome = random.choice(list(ExecutionOutcome))
-            message = "Mock result."
+        fake = Faker(locale="en-US")
+        fake.seed_instance(seed)
 
-            status = ExecutionStatusMessage(
-                outcome=outcome,
-                email=email_address,
-                message=message,
-            )
+        statuses: List[StatusMessage] = []
+        for profile in self.config.automsr.profiles:
+            steps = [
+                Step(
+                    type=random.choice(list(StepType)),
+                    outcome=random.choice(list(OutcomeType)),
+                    explanation=fake.sentence(nb_words=4),
+                )
+                for _ in range(5)
+            ]
+            status = StatusMessage(status=Status(profile=profile, steps=steps))
             statuses.append(status)
 
         logger.info("Mock message sending...")
