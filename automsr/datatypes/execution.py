@@ -1,3 +1,4 @@
+import logging
 from enum import Enum, auto
 from typing import List, Optional
 
@@ -5,8 +6,10 @@ from attr import define
 
 from automsr.config import Profile
 
+logger = logging.getLogger(__name__)
 
-class ExecutionOutcome(Enum):
+
+class OutcomeType(Enum):
     """
     Possible outcome for an execution.
     """
@@ -15,7 +18,7 @@ class ExecutionOutcome(Enum):
     SUCCESS = "success"
 
 
-class ExecutionStep(Enum):
+class StepType(Enum):
     """
     Type of execution step found during the normal execution.
     """
@@ -29,7 +32,7 @@ class ExecutionStep(Enum):
     END_SESSION = auto()
 
     @classmethod
-    def get_ordered_steps(cls) -> List["ExecutionStep"]:
+    def get_ordered_steps(cls) -> List["StepType"]:
         """
         Returns the step ordered as expected by the `run` flow.
         """
@@ -52,58 +55,33 @@ class ExecutionStep(Enum):
 
 
 @define
-class ExecutionStepStatus:
+class Step:
     """
     Status of a single step of an entire execution.
     """
 
-    step: ExecutionStep
-    outcome: ExecutionOutcome
+    type: StepType
+    outcome: OutcomeType
     explanation: Optional[str] = None
 
 
 @define
-class ExecutionStatus:
+class Status:
     """
     Status of the whole execution for a profile.
     """
 
     profile: Profile
-    steps: List[ExecutionStepStatus]
+    steps: List[Step]
 
-    def get_outcome(self) -> ExecutionOutcome:
+    def get_outcome(self) -> OutcomeType:
         """
         Find the overall outcome based on the outcome of the children steps.
         """
 
         outcomes = [step.outcome for step in self.steps]
 
-        if all(outcome is ExecutionOutcome.SUCCESS for outcome in outcomes):
-            return ExecutionOutcome.SUCCESS
+        if all(outcome is OutcomeType.SUCCESS for outcome in outcomes):
+            return OutcomeType.SUCCESS
         else:
-            return ExecutionOutcome.FAILURE
-
-    def get_message(self, *, separator: str = ". ") -> str:
-        """
-        Return a message related to the outcome of the execution.
-
-        >>> profile = Profile(email="foo@bar.com", profile="Profile 1")
-        >>> steps = [
-        ...     ExecutionStepStatus(step=ExecutionStep.PROMOTIONS, outcome=ExecutionOutcome.SUCCESS),
-        ...     ExecutionStepStatus(step=ExecutionStep.PUNCHCARDS, outcome=ExecutionOutcome.FAILURE, explanation="This is an explanation."),
-        ... ]
-        >>> ExecutionStatus(profile=profile, steps=steps).get_message()
-        '1) PROMOTIONS - outcome: success. 2) PUNCHCARDS - outcome: failure - explanation: This is an explanation.'
-        """  # noqa: E501
-
-        lines: List[str] = []
-
-        for i, step in enumerate(self.steps, start=1):
-            line = f"{i}) {step.step.name} - outcome: {step.outcome.value}"
-            if step.explanation:
-                line += f" - explanation: {step.explanation}"
-
-            lines.append(line)
-
-        retval = separator.join(lines)
-        return retval
+            return OutcomeType.FAILURE
