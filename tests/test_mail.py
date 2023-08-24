@@ -53,30 +53,29 @@ class MailTestCase(unittest.TestCase):
             """\
             <h3>Profile: foo@bar.com</h3>
             <p><strong>Overall outcome: ❌ FAILURE</strong></p>
-            <h4>Steps outcome</h4>
             <table>
             <thead>
             <tr>
-            <th style="text-align: center;">Step</th>
             <th style="text-align: center;">Outcome</th>
-            <th>Explanation</th>
+            <th style="text-align: left;">Step</th>
+            <th style="text-align: left;">Explanation</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-            <td style="text-align: center;">GET_DASHBOARD</td>
             <td style="text-align: center;">✔️</td>
-            <td></td>
+            <td style="text-align: left;">GET_DASHBOARD</td>
+            <td style="text-align: left;"></td>
             </tr>
             <tr>
-            <td style="text-align: center;">PROMOTIONS</td>
             <td style="text-align: center;">❌</td>
-            <td>Something broke :(</td>
+            <td style="text-align: left;">PROMOTIONS</td>
+            <td style="text-align: left;">Something broke :(</td>
             </tr>
             <tr>
-            <td style="text-align: center;">END_SESSION</td>
             <td style="text-align: center;">❌</td>
-            <td>Something broke again?!</td>
+            <td style="text-align: left;">END_SESSION</td>
+            <td style="text-align: left;">Something broke again?!</td>
             </tr>
             </tbody>
             </table>"""
