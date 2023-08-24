@@ -12,14 +12,6 @@ from automsr.config import Config
 
 logger = logging.getLogger(__name__)
 
-NO_SENDER_ERR = "No sender email found!"
-NO_SENDER_PSW_ERR = "No sender password found!"
-NO_RECIPIENT_ERR = "No recipient specified!"
-NO_HOST_ERR = "No SMTP host specified!"
-NO_PORT_ERR = "No port specified!"
-HOST_NOT_REACHABLE = "Cannot reach host! Check internet connection or hostname."
-SHOULD_NOT_CREATE_CONN = "Cannot create Email Connection if should not send any email! Check config settings."
-
 
 class HtmlColor(Enum):
     """
