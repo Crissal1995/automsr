@@ -31,3 +31,5 @@ repos:
           - "types-pyyaml==6.0.12.11"
           - "types-tqdm==4.65.0.2"
           - "email-validator==2.0.0.post2"
+          - "email-validator==2.0.0.post2"
+          - "types-markdown==3.4.2.10"
