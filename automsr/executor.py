@@ -1,7 +1,9 @@
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from functools import partial
+from typing import Any, Callable, Dict, List, Optional
 
+import selenium.common.exceptions
 from attr import define, field
 from selenium.common import NoSuchElementException
 from selenium.webdriver import Keys
@@ -16,6 +18,12 @@ from automsr.datatypes.dashboard import (
     Promotion,
     PromotionType,
     QuizType,
+)
+from automsr.datatypes.execution import (
+    ExecutionOutcome,
+    ExecutionStatus,
+    ExecutionStep,
+    ExecutionStepStatus,
 )
 from automsr.search import RandomSearchGenerator
 
@@ -59,7 +67,49 @@ class SingleTargetExecutor:
     profile: Profile
     browser: Browser = field(init=False)
 
-    def execute(self) -> None:
+    def _get_execution_function(
+        self, step: ExecutionStep, dashboard: Optional[Dashboard] = None
+    ) -> Callable[[], Optional[Dashboard]]:
+        """
+        Return the function associated to the input execution step.
+        """
+
+        func: Callable[[], Optional[Dashboard]]
+
+        if step is ExecutionStep.START_SESSION:
+            return self.start_session
+
+        elif step is ExecutionStep.GET_DASHBOARD:
+            func = self.get_dashboard
+
+        elif step in (
+            ExecutionStep.PROMOTIONS,
+            ExecutionStep.PUNCHCARDS,
+            ExecutionStep.PC_SEARCHES,
+            ExecutionStep.MOBILE_SEARCHES,
+        ):
+            assert dashboard is not None
+
+            if step is ExecutionStep.PROMOTIONS:
+                func = partial(self.execute_promotions, dashboard=dashboard)
+            elif step is ExecutionStep.PUNCHCARDS:
+                func = partial(self.execute_punchcards)
+            elif step is ExecutionStep.PC_SEARCHES:
+                func = partial(self.execute_pc_searches, dashboard=dashboard)
+            elif step is ExecutionStep.MOBILE_SEARCHES:
+                func = partial(self.execute_mobile_searches, dashboard=dashboard)
+            else:
+                raise ValueError(step)
+
+        elif step is ExecutionStep.END_SESSION:
+            func = self.end_session
+
+        else:
+            raise ValueError(step)
+
+        return func
+
+    def execute(self) -> ExecutionStatus:
         """
         Execute the following steps:
         - Open a new browser session with Selenium and a Chrome driver.
@@ -69,25 +119,62 @@ class SingleTargetExecutor:
         - Execution of searches:
             - PC searches (desktop user agent)
             - Mobile searches (mobile user agent)
+
+        Returns the Status of the execution for the current profile.
         """
 
-        # Start a new session
-        self.start_session()
+        # Construct the list of statuses for each step.
+        steps_status: List[ExecutionStepStatus] = []
 
-        # Retrieve the current dashboard
-        dashboard = self.get_dashboard()
+        # Get the list of steps in the correct order of execution
+        steps: List[ExecutionStep] = ExecutionStep.get_ordered_steps()
 
-        # TODO Execute punchcards
+        # Declare the variables needed in the following loop.
+        dashboard: Optional[Dashboard] = None
+        for step in steps:
+            # Get the function to use.
+            function = self._get_execution_function(step=step, dashboard=dashboard)
 
-        # Execute promotions
-        self.execute_promotions(dashboard=dashboard)
+            try:
+                # If the step is get-dashboard, we will expect a return value.
+                if step is ExecutionStep.GET_DASHBOARD:
+                    dashboard = function()
+                    assert isinstance(dashboard, Dashboard)
 
-        # Execute both PC and Mobile searches, if needed
-        self.execute_pc_searches(dashboard=dashboard)
-        self.execute_mobile_searches(dashboard=dashboard)
+                # Otherwise, just execute the function.
+                else:
+                    retval = function()
+                    assert retval is None
 
-        # End session
-        self.end_session()
+            # Catch exceptions block.
+            # Selenium errors will be treated as normal errors, but won't fail the entire execution;
+            #  only the corresponding step will be marked as failed.
+            except selenium.common.exceptions.WebDriverException as e:
+                logger.error("Selenium exception caught: %s", e)
+                step_status = ExecutionStepStatus(
+                    step=step, outcome=ExecutionOutcome.FAILURE
+                )
+
+            # This is needed for Punchcards.
+            except NotImplementedError:
+                logger.warning("Step not implemented yet: %s", step)
+                step_status = ExecutionStepStatus(
+                    step=step, outcome=ExecutionOutcome.FAILURE
+                )
+
+            # If no exception is raised, the step is successful.
+            # Otherwise, any uncaught exception will be propagated to the caller.
+            else:
+                step_status = ExecutionStepStatus(
+                    step=step, outcome=ExecutionOutcome.SUCCESS
+                )
+
+            # Append the created step status to the list of statuses.
+            steps_status.append(step_status)
+
+        # Create the overall status for the current profile, and return it to the caller.
+        status = ExecutionStatus(profile=self.profile, steps=steps_status)
+        return status
 
     def start_session(self) -> None:
         """
@@ -98,6 +185,9 @@ class SingleTargetExecutor:
         self.browser = Browser.from_config(config=self.config, profile=self.profile)
         self.browser.test_driver()
         self.browser.go_to(self.config.automsr.rewards_homepage)
+
+        # Simulate the user landing on the page and waiting a little bit
+        time.sleep(2)
 
     def end_session(self) -> None:
         """
@@ -373,6 +463,13 @@ class SingleTargetExecutor:
             return
         else:
             raise ValueError(f"Quiz type not supported: {quiz_type}")
+
+    def execute_punchcards(self, dashboard: Dashboard) -> None:
+        """
+        Execute all completable Punchcards, if any.
+        """
+
+        raise NotImplementedError
 
 
 @define
