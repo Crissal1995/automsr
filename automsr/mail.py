@@ -81,7 +81,7 @@ class ExecutionStatusMessage:
 
         return f"{self.email} - Outcome: {self.outcome.value} - Message: {self.message}"
 
-    def to_html_message(self):
+    def to_html_message(self) -> str:
         """
         Return an HTML-rich message representing the object.
 

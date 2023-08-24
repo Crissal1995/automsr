@@ -417,8 +417,32 @@ class SingleTargetExecutor:
         logger.info("Resolving promotion as quiz with type: %s", quiz_type)
 
         if quiz_type is QuizType.CHOICE_BETWEEN_TWO:
-            answer = driver.find_element(by=By.ID, value="btoption0")
-            answer.click()
+            button_id = "btoption0"
+
+            # safety breaks
+            loop_break = 5
+            loop_counter = 1
+
+            while loop_counter < loop_break:
+                button = driver.find_element(by=By.ID, value=button_id)
+                _class = button.get_attribute("class")
+                is_quiz_completed = _class is not None and "selectedOption" in _class
+
+                if is_quiz_completed:
+                    logger.info("Quiz finished")
+                    return
+                else:
+                    button.click()
+
+                    # Wait some seconds to let the page reload
+                    time.sleep(1)
+
+                loop_counter += 1
+
+            # if we are here, we didn't finish the quiz
+            logger.warning("Quiz not finished!")
+            return
+
         elif quiz_type in (
             QuizType.THREE_QUESTIONS_FOUR_ANSWERS,
             QuizType.THREE_QUESTIONS_EIGHT_ANSWERS,
