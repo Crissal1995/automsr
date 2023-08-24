@@ -79,3 +79,9 @@ $ automsr profiles --format pretty-json
 #     }
 # ]
 ```
+
+### Check that email sending works
+
+```shell
+$ automsr email
+```
