@@ -9,6 +9,7 @@ from typing import List, Optional
 from attr import define, field
 
 from automsr.config import Config
+from automsr.datatypes.execution import ExecutionOutcome, ExecutionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -21,50 +22,56 @@ class HtmlColor(Enum):
     RED = "#FF160D"
     GREEN = "#00D107"
 
-
-class ExecutionOutcome(Enum):
-    """
-    Possible outcome for an AutoMSR execution.
-
-    It could be either success or failure.
-    """
-
-    FAILURE = "failure"
-    SUCCESS = "success"
-
-    def as_color(self) -> HtmlColor:
+    @classmethod
+    def from_outcome(cls, outcome: ExecutionOutcome) -> "HtmlColor":
         """
-        Return the object as its Html color representation.
+        Given an input outcome, return the corresponding html color representation.
 
-        >>> ExecutionOutcome.FAILURE.as_color() == HtmlColor.RED
+        >>> HtmlColor.from_outcome(ExecutionOutcome.FAILURE) is HtmlColor.RED
         True
-        >>> ExecutionOutcome.SUCCESS.as_color() == HtmlColor.GREEN
+        >>> HtmlColor.from_outcome(ExecutionOutcome.SUCCESS) is HtmlColor.GREEN
         True
         """
 
-        if self is self.FAILURE:
+        if outcome is ExecutionOutcome.FAILURE:
             return HtmlColor.RED
-        elif self is self.SUCCESS:
+        elif outcome is ExecutionOutcome.SUCCESS:
             return HtmlColor.GREEN
         else:
-            raise NotImplementedError(self)
+            raise NotImplementedError(outcome)
 
 
 @define
-class ExecutionStatus:
+class ExecutionStatusMessage:
     """
-    Status of an execution related to a single profile.
+    Wrapper for an ExecutionStatus object to make it messages-aware.
     """
 
     outcome: ExecutionOutcome
     email: str
     message: str
 
+    @classmethod
+    def from_execution_status(cls, value: ExecutionStatus) -> "ExecutionStatusMessage":
+        """
+        Parse an Execution Status object and returns a wrapper capable of generating
+        email messages from it.
+        """
+
+        raise NotImplementedError
+
+    def get_message(self) -> str:
+        """
+        Returns an overall message based on the status of the children steps.
+        """
+
+        raise NotImplementedError
+
     def to_plain_message(self) -> str:
         """
         Return a text plain message representing the object.
 
-        >>> ExecutionStatus(
+        >>> ExecutionStatusMessage(
         ...     outcome=ExecutionOutcome.SUCCESS,
         ...     email="foo@bar.com",
         ...     message="Hello world"
@@ -78,7 +85,7 @@ class ExecutionStatus:
         """
         Return an HTML-rich message representing the object.
 
-        >>> ExecutionStatus(
+        >>> ExecutionStatusMessage(
         ...     outcome=ExecutionOutcome.SUCCESS,
         ...     email="foo@bar.com",
         ...     message="Hello world"
@@ -86,7 +93,7 @@ class ExecutionStatus:
         '<p>foo@bar.com - Outcome: <font color="#00D107">success</font> - Message: Hello world</p>'
         """
 
-        color = self.outcome.as_color().value
+        color: str = HtmlColor.from_outcome(outcome=self.outcome).value
         message = " - ".join(
             [
                 f"{self.email}",
@@ -106,7 +113,7 @@ class ExecutionMessage:
 
     sender: str
     recipient: str
-    statuses: List[ExecutionStatus]
+    status_messages: List[ExecutionStatusMessage]
     subject: str = field(
         factory=lambda: f"AutoMSR {datetime.date.today()} Report message"
     )
@@ -118,7 +125,7 @@ class ExecutionMessage:
         >>> _message = ExecutionMessage(
         ...     sender="sender@example.com",
         ...     recipient="recipient@example.com",
-        ...     statuses=[],
+        ...     status_messages=[],
         ...     subject="My Subject",
         ... ).get_message()
         >>> print(_message.as_string())  # doctest: +ELLIPSIS
@@ -134,7 +141,7 @@ class ExecutionMessage:
         ...     _message = ExecutionMessage(
         ...         sender="sender@example.com",
         ...         recipient="recipient@example.com",
-        ...         statuses=[],
+        ...         status_messages=[],
         ...     ).get_message()
         ...     print(_message.as_string())  # doctest: +ELLIPSIS
         From: sender@example.com
@@ -151,10 +158,10 @@ class ExecutionMessage:
         message.add_header("Subject", self.subject)
 
         complete_message_text_plain = "\n\n".join(
-            [status.to_plain_message() for status in self.statuses]
+            [message.to_plain_message() for message in self.status_messages]
         )
         complete_message_html = "<br>".join(
-            [status.to_html_message() for status in self.statuses]
+            [message.to_html_message() for message in self.status_messages]
         )
 
         message.set_content(complete_message_text_plain)
@@ -361,7 +368,7 @@ class EmailExecutor:
         else:
             return True
 
-    def send_message(self, statuses: List[ExecutionStatus]) -> None:
+    def send_message(self, statuses: List[ExecutionStatusMessage]) -> None:
         """
         Send a message with the content of object's `statuses`.
 
@@ -378,7 +385,7 @@ class EmailExecutor:
             message = ExecutionMessage(
                 sender=connection.sender,
                 recipient=recipient,
-                statuses=statuses,
+                status_messages=statuses,
             )
             connection.send_message(message=message)
             logger.info("Message sent correctly!")
@@ -391,13 +398,13 @@ class EmailExecutor:
 
         random.seed(seed)
 
-        statuses: List[ExecutionStatus] = []
+        statuses: List[ExecutionStatusMessage] = []
         for profile in self.config.automsr.profiles:
             email_address = profile.email
             outcome = random.choice(list(ExecutionOutcome))
             message = "Mock result."
 
-            status = ExecutionStatus(
+            status = ExecutionStatusMessage(
                 outcome=outcome,
                 email=email_address,
                 message=message,
