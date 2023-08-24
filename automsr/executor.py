@@ -20,10 +20,10 @@ from automsr.datatypes.dashboard import (
     QuizType,
 )
 from automsr.datatypes.execution import (
-    ExecutionOutcome,
-    ExecutionStatus,
-    ExecutionStep,
-    ExecutionStepStatus,
+    OutcomeType,
+    Status,
+    Step,
+    StepType,
 )
 from automsr.search import RandomSearchGenerator
 
@@ -68,7 +68,7 @@ class SingleTargetExecutor:
     browser: Browser = field(init=False)
 
     def _get_execution_function(
-        self, step: ExecutionStep, dashboard: Optional[Dashboard] = None
+        self, step: StepType, dashboard: Optional[Dashboard] = None
     ) -> Callable[[], Optional[Dashboard]]:
         """
         Return the function associated to the input execution step.
@@ -76,32 +76,32 @@ class SingleTargetExecutor:
 
         func: Callable[[], Optional[Dashboard]]
 
-        if step is ExecutionStep.START_SESSION:
+        if step is StepType.START_SESSION:
             return self.start_session
 
-        elif step is ExecutionStep.GET_DASHBOARD:
+        elif step is StepType.GET_DASHBOARD:
             func = self.get_dashboard
 
         elif step in (
-            ExecutionStep.PROMOTIONS,
-            ExecutionStep.PUNCHCARDS,
-            ExecutionStep.PC_SEARCHES,
-            ExecutionStep.MOBILE_SEARCHES,
+            StepType.PROMOTIONS,
+            StepType.PUNCHCARDS,
+            StepType.PC_SEARCHES,
+            StepType.MOBILE_SEARCHES,
         ):
             assert dashboard is not None
 
-            if step is ExecutionStep.PROMOTIONS:
+            if step is StepType.PROMOTIONS:
                 func = partial(self.execute_promotions, dashboard=dashboard)
-            elif step is ExecutionStep.PUNCHCARDS:
+            elif step is StepType.PUNCHCARDS:
                 func = partial(self.execute_punchcards, dashboard=dashboard)
-            elif step is ExecutionStep.PC_SEARCHES:
+            elif step is StepType.PC_SEARCHES:
                 func = partial(self.execute_pc_searches, dashboard=dashboard)
-            elif step is ExecutionStep.MOBILE_SEARCHES:
+            elif step is StepType.MOBILE_SEARCHES:
                 func = partial(self.execute_mobile_searches, dashboard=dashboard)
             else:
                 raise ValueError(step)
 
-        elif step is ExecutionStep.END_SESSION:
+        elif step is StepType.END_SESSION:
             func = self.end_session
 
         else:
@@ -109,7 +109,7 @@ class SingleTargetExecutor:
 
         return func
 
-    def execute(self) -> ExecutionStatus:
+    def execute(self) -> Status:
         """
         Execute the following steps:
         - Open a new browser session with Selenium and a Chrome driver.
@@ -124,10 +124,10 @@ class SingleTargetExecutor:
         """
 
         # Construct the list of statuses for each step.
-        steps_status: List[ExecutionStepStatus] = []
+        steps_status: List[Step] = []
 
         # Get the list of steps in the correct order of execution
-        steps: List[ExecutionStep] = ExecutionStep.get_ordered_steps()
+        steps: List[StepType] = StepType.get_ordered_steps()
 
         # Declare the variables needed in the following loop.
         dashboard: Optional[Dashboard] = None
@@ -137,7 +137,7 @@ class SingleTargetExecutor:
 
             try:
                 # If the step is get-dashboard, we will expect a return value.
-                if step is ExecutionStep.GET_DASHBOARD:
+                if step is StepType.GET_DASHBOARD:
                     dashboard = function()
                     assert isinstance(dashboard, Dashboard)
 
@@ -151,29 +151,23 @@ class SingleTargetExecutor:
             #  only the corresponding step will be marked as failed.
             except selenium.common.exceptions.WebDriverException as e:
                 logger.error("Selenium exception caught: %s", e)
-                step_status = ExecutionStepStatus(
-                    step=step, outcome=ExecutionOutcome.FAILURE
-                )
+                step_status = Step(type=step, outcome=OutcomeType.FAILURE)
 
             # This is needed for Punchcards.
             except NotImplementedError:
                 logger.warning("Step not implemented yet: %s", step)
-                step_status = ExecutionStepStatus(
-                    step=step, outcome=ExecutionOutcome.FAILURE
-                )
+                step_status = Step(type=step, outcome=OutcomeType.FAILURE)
 
             # If no exception is raised, the step is successful.
             # Otherwise, any uncaught exception will be propagated to the caller.
             else:
-                step_status = ExecutionStepStatus(
-                    step=step, outcome=ExecutionOutcome.SUCCESS
-                )
+                step_status = Step(type=step, outcome=OutcomeType.SUCCESS)
 
             # Append the created step status to the list of statuses.
             steps_status.append(step_status)
 
         # Create the overall status for the current profile, and return it to the caller.
-        status = ExecutionStatus(profile=self.profile, steps=steps_status)
+        status = Status(profile=self.profile, steps=steps_status)
         return status
 
     def start_session(self) -> None:
