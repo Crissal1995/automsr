@@ -176,10 +176,11 @@ def cli() -> None:
         level = logging.INFO
     logging.basicConfig(level=level)
 
-    # Set selenium and urllib3 logging level to WARNING,
-    # regardless of the tool's selected logging level
+    # Set external libraries' logging level to WARNING.
     logging.getLogger("selenium").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("faker").setLevel(logging.WARNING)
+    logging.getLogger("MARKDOWN").setLevel(logging.WARNING)
 
     # Execute subparser functionality
     args.func(args)
