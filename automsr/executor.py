@@ -25,6 +25,7 @@ from automsr.datatypes.execution import (
     Step,
     StepType,
 )
+from automsr.mail import EmailExecutor
 from automsr.search import RandomSearchGenerator
 
 logger = logging.getLogger(__name__)
@@ -151,12 +152,16 @@ class SingleTargetExecutor:
             #  only the corresponding step will be marked as failed.
             except selenium.common.exceptions.WebDriverException as e:
                 logger.error("Selenium exception caught: %s", e)
-                step_status = Step(type=step, outcome=OutcomeType.FAILURE)
+                step_status = Step(
+                    type=step, outcome=OutcomeType.FAILURE, explanation=str(e)
+                )
 
             # This is needed for Punchcards.
-            except NotImplementedError:
+            except NotImplementedError as e:
                 logger.warning("Step not implemented yet: %s", step)
-                step_status = Step(type=step, outcome=OutcomeType.FAILURE)
+                step_status = Step(
+                    type=step, outcome=OutcomeType.FAILURE, explanation=str(e)
+                )
 
             # If no exception is raised, the step is successful.
             # Otherwise, any uncaught exception will be propagated to the caller.
@@ -505,7 +510,15 @@ class MultipleTargetsExecutor:
         Spawn a SingleTargetExecutor for every profile specified in the `config` file.
         """
 
+        statuses: List[Status] = []
+
         for profile in self.config.automsr.profiles:
             logger.info("Profile under execution: %s", profile)
             executor = SingleTargetExecutor(config=self.config, profile=profile)
-            executor.execute()
+            status = executor.execute()
+            logger.info("Status of execution for profile %s: %s", profile, status)
+            statuses.append(status)
+
+        email_executor = EmailExecutor(config=self.config)
+        if email_executor.are_messages_enabled():
+            email_executor.send_message(statuses=statuses)

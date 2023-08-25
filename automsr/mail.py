@@ -353,7 +353,7 @@ class EmailExecutor:
         else:
             return True
 
-    def send_message(self, statuses: List[StatusMessage]) -> None:
+    def send_message(self, statuses: List[Status]) -> None:
         """
         Send a message with the content of object's `statuses`.
 
@@ -363,6 +363,8 @@ class EmailExecutor:
         recipient: Optional[str] = self.config.email.recipient
         assert recipient is not None
 
+        status_messages = [StatusMessage(status=status) for status in statuses]
+
         connection: EmailConnection = EmailConnectionFactory(
             config=self.config
         ).get_connection_strict()
@@ -370,7 +372,7 @@ class EmailExecutor:
             message = ExecutionMessage(
                 sender=connection.sender,
                 recipient=recipient,
-                status_messages=statuses,
+                status_messages=status_messages,
             )
             connection.send_message(message=message)
             logger.info("Message sent correctly!")
@@ -386,7 +388,7 @@ class EmailExecutor:
         fake = Faker(locale="en-US")
         fake.seed_instance(seed)
 
-        statuses: List[StatusMessage] = []
+        statuses: List[Status] = []
         for profile in self.config.automsr.profiles:
             steps: List[Step] = []
 
@@ -400,7 +402,7 @@ class EmailExecutor:
                 step = Step(type=step_type, outcome=outcome, explanation=explanation)
                 steps.append(step)
 
-            status = StatusMessage(status=Status(profile=profile, steps=steps))
+            status = Status(profile=profile, steps=steps)
             statuses.append(status)
 
         logger.info("Mock message sending...")
