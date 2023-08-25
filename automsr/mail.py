@@ -378,6 +378,7 @@ class EmailExecutor:
                 sender=connection.sender,
                 recipient=recipient,
                 status_messages=status_messages,
+                subject="AutoMSR Mock Report message",
             )
             connection.send_message(message=message)
             logger.info("Message sent correctly!")
