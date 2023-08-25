@@ -345,7 +345,11 @@ class EmailExecutor:
             return False
 
         factory = EmailConnectionFactory(config=self.config)
-        connection = factory.get_connection_strict()
+
+        connection = factory.get_connection()
+        if not connection:
+            return False
+
         try:
             connection.test_connection()
         except smtplib.SMTPException:
