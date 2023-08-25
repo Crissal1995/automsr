@@ -78,9 +78,30 @@ class Status:
     def get_outcome(self) -> OutcomeType:
         """
         Find the overall outcome based on the outcome of the children steps.
+
+        >>> from unittest.mock import ANY
+        >>> profile = Profile(email="foo@bar.com", profile="profile 1")
+        >>> success = Step(type=ANY, outcome=OutcomeType.SUCCESS)
+        >>> failure = Step(type=ANY, outcome=OutcomeType.FAILURE)
+        >>> skipped = Step(type=ANY, outcome=OutcomeType.SKIPPED)
+
+        >>> Status(profile=profile, steps=[]).get_outcome().name
+        'SKIPPED'
+        >>> Status(profile=profile, steps=[success]).get_outcome().name
+        'SUCCESS'
+        >>> Status(profile=profile, steps=[success, skipped]).get_outcome().name
+        'SUCCESS'
+        >>> Status(profile=profile, steps=[skipped, skipped]).get_outcome().name
+        'SKIPPED'
+        >>> Status(profile=profile, steps=[skipped, skipped, failure]).get_outcome().name
+        'FAILURE'
         """
 
         outcomes = [step.outcome for step in self.steps]
+
+        # If no step is present, the status defaults to SKIPPED.
+        if not outcomes:
+            return OutcomeType.SKIPPED
 
         # The outcome is SKIPPED if all the outcomes are SKIPPED.
         if all(outcome is OutcomeType.SKIPPED for outcome in outcomes):
