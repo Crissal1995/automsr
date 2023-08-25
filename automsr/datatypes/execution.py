@@ -82,8 +82,14 @@ class Status:
 
         outcomes = [step.outcome for step in self.steps]
 
-        if any(outcome is OutcomeType.FAILURE for outcome in outcomes):
-            return OutcomeType.FAILURE
-        else:
-            # treat skipped outcomes as success
+        # The outcome is SKIPPED if all the outcomes are SKIPPED.
+        if all(outcome is OutcomeType.SKIPPED for outcome in outcomes):
+            return OutcomeType.SKIPPED
+
+        # The outcome is SUCCESS if no outcome is FAILURE,
+        # so they are either SUCCESS or SKIPPED.
+        if not any(outcome is OutcomeType.FAILURE for outcome in outcomes):
             return OutcomeType.SUCCESS
+
+        # If we are here, at least one outcome is FAILURE.
+        return OutcomeType.FAILURE
