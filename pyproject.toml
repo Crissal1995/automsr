@@ -16,6 +16,8 @@ types-pyyaml = "^6.0.12.11"
 types-tqdm = "^4.65.0.2"
 email-validator = "^2.0.0.post2"
 pyyaml = "^6.0.1"
+markdown = "^3.4.4"
+faker = "^19.3.1"
 
 [tool.poetry.scripts]
 automsr = "automsr.cli:cli"
@@ -28,6 +30,7 @@ optional = true
 black = "^23.7.0"
 ruff = "^0.0.282"
 mypy = "^1.4.1"
+types-markdown = "^3.4.2.10"
 
 [tool.poetry.group.test]
 optional = true

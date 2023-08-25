@@ -1,123 +1,164 @@
 import datetime
 import logging
+import random
 import smtplib
 from email.message import EmailMessage
-from enum import Enum
-from typing import Optional
+from typing import Dict, List, Optional
 
+import markdown
 from attr import define, field
+from faker import Faker  # type: ignore
 
 from automsr.config import Config
+from automsr.datatypes.execution import OutcomeType, Status, Step, StepType
 
 logger = logging.getLogger(__name__)
-NO_SENDER_ERR = "No sender email found!"
-NO_SENDER_PSW_ERR = "No sender password found!"
-NO_RECIPIENT_ERR = "No recipient specified!"
-NO_HOST_ERR = "No SMTP host specified!"
-NO_PORT_ERR = "No port specified!"
-HOST_NOT_REACHABLE = "Cannot reach host! Check internet connection or hostname"
-SHOULD_NOT_CREATE_CONN = (
-    "Cannot create Email Connection if should not send any email! Check config"
-)
-
-
-class RewardsStatusEnum(Enum):
-    FAILURE = "FAILURE"
-    SUCCESS = "SUCCESS"
 
 
 @define
-class RewardsStatus:
-    email: str
-    status: RewardsStatusEnum
-    message: str = ""
+class StatusMessage:
+    """
+    Wrapper for a status object to make it messages-aware.
+    """
 
-    def _set_status_and_message(self, status: RewardsStatusEnum, message: str):
-        self.status = status
-        self.message = message
+    status: Status
 
-    def set_success(self, message: str = ""):
-        self._set_status_and_message(RewardsStatusEnum.SUCCESS, message)
+    @property
+    def email(self) -> str:
+        """
+        Email address related to this object.
+        """
 
-    def set_failure(self, message: str = ""):
-        self._set_status_and_message(RewardsStatusEnum.FAILURE, message)
+        return self.status.profile.email
 
-    def to_plain(self):
-        msg = f"{self.email} - {self.status.value}"
-        if self.message:
-            msg += f" - {self.message}"
-        return msg
+    def to_plain_text(self) -> str:
+        """
+        Return a plain-text representation of the status.
+        """
 
-    def to_html(self):
-        color = "red" if self.status is RewardsStatusEnum.FAILURE else "green"
-        msg = f'<p><b>{self.email} - <font color="{color}">{self.status.value}</font></b></p>'
-        if self.message:
-            msg += f"<p><b>Message:</b> {self.message}</p>"
-        return msg
+        retval: List[str] = [
+            f"Email: {self.email}",
+            f"Overall outcome: {self.status.get_outcome().name}",
+        ]
+
+        steps = self.status.steps
+        for step in steps:
+            line = f"Step {step.type.name} has outcome {step.outcome.name}."
+            if step.explanation:
+                line += f" Explanation: {step.explanation}"
+            retval.append(line)
+
+        message = "\n".join(retval)
+        message += "\n"  # add a final newline character
+        return message
+
+    def to_markdown(self) -> str:
+        """
+        Return a Markdown representation of the status.
+        """
+
+        status_emojis: Dict[OutcomeType, str] = {
+            OutcomeType.SUCCESS: "✔️",
+            OutcomeType.FAILURE: "❌",
+        }
+
+        overall_outcome = self.status.get_outcome()
+        overall_outcome_emoji = status_emojis[overall_outcome]
+
+        retval: List[str] = [
+            f"### Profile: {self.email}",
+            f"**Overall outcome: {overall_outcome_emoji} {overall_outcome.name}**",
+            # Table creation
+            "",
+            "| Outcome | Step | Explanation |",
+            "| :---: | :--- | :--- |",
+        ]
+
+        for step in self.status.steps:
+            outcome_emoji = status_emojis[step.outcome]
+            explanation = step.explanation or ""
+            line = f"| {outcome_emoji} | {step.type.name} | {explanation} |"
+            retval.append(line)
+
+        return "\n".join(retval)
+
+    def to_html(self) -> str:
+        """
+        Return an HTML representation of the status.
+        """
+
+        return markdown.markdown(text=self.to_markdown(), extensions=["extra"])
 
 
-class RewardsEmailMessage(EmailMessage):
-    """An email message customized for Auto MSR"""
+@define
+class ExecutionMessage:
+    """
+    Email message wrapper, customized for the tool logic.
+    """
 
-    now = datetime.date.today()
-    prefix = "[AUTOMSR]"
+    sender: str
+    recipient: str
+    status_messages: List[StatusMessage]
+    subject: str = field(
+        factory=lambda: f"AutoMSR {datetime.date.today()} Report message"
+    )
 
-    success_subject = f"{prefix} {now} SUCCESS"
-    failure_subject = f"{prefix} {now} FAILURE"
+    def get_message(self) -> EmailMessage:
+        """
+        Returns a valid Email Message complaint with RFC 5322.
 
-    @classmethod
-    def get_message(
-        cls,
-        from_email: str,
-        to_email: str,
-        subject: str,
-        content: str = "",
-        content_html: str = "",
-    ):
-        msg = cls()
+        >>> _message = ExecutionMessage(
+        ...     sender="sender@example.com",
+        ...     recipient="recipient@example.com",
+        ...     status_messages=[],
+        ...     subject="My Subject",
+        ... ).get_message()
+        >>> print(_message.as_string())  # doctest: +ELLIPSIS
+        From: sender@example.com
+        To: recipient@example.com
+        Subject: My Subject
+        MIME-Version: 1.0
+        ...
 
-        # setup message
-        msg["From"] = from_email
-        msg["To"] = to_email
+        >>> from unittest.mock import patch
+        >>> with patch("automsr.mail.datetime", wraps=datetime) as mock:
+        ...     mock.date.today.return_value = "2023-01-01"
+        ...     _message = ExecutionMessage(
+        ...         sender="sender@example.com",
+        ...         recipient="recipient@example.com",
+        ...         status_messages=[],
+        ...     ).get_message()
+        ...     print(_message.as_string())  # doctest: +ELLIPSIS
+        From: sender@example.com
+        To: recipient@example.com
+        Subject: AutoMSR 2023-01-01 Report message
+        MIME-Version: 1.0
+        ...
+        """
 
-        msg["Subject"] = subject
+        message = EmailMessage()
 
-        msg.set_content(content)
-        if content_html:
-            msg.add_alternative(content_html, subtype="html")
+        message.add_header("From", self.sender)
+        message.add_header("To", self.recipient)
+        message.add_header("Subject", self.subject)
 
-        return msg
-
-    @classmethod
-    def get_success_message(
-        cls, from_email: str, to_email: str, content: str = "", content_html: str = ""
-    ):
-        return cls.get_message(
-            from_email=from_email,
-            to_email=to_email,
-            subject=cls.success_subject,
-            content=content,
-            content_html=content_html,
+        complete_message_plain_text = "\n\n".join(
+            [message.to_plain_text() for message in self.status_messages]
+        )
+        complete_message_html = "<br>".join(
+            [message.to_html() for message in self.status_messages]
         )
 
-    @classmethod
-    def get_failure_message(
-        cls, from_email: str, to_email: str, content: str = "", content_html: str = ""
-    ):
-        return cls.get_message(
-            from_email=from_email,
-            to_email=to_email,
-            subject=cls.failure_subject,
-            content=content,
-            content_html=content_html,
-        )
+        message.set_content(complete_message_plain_text)
+        message.add_alternative(complete_message_html, subtype="html")
+
+        return message
 
 
-@define(slots=False)
+@define
 class EmailConnection:
     sender: str
     password: str
-    recipient: str
     host: str
     port: int = field(converter=int)
     tls: bool = field(default=False, converter=bool)
@@ -128,6 +169,7 @@ class EmailConnection:
         Open an SMTP connection and try to log in with mail server.
         """
 
+        self.smtp = smtplib.SMTP(host=self.host, port=self.port)
         self.smtp.ehlo()
         if self.tls:
             self.smtp.starttls()
@@ -155,33 +197,21 @@ class EmailConnection:
         self.close()
         logger.info("Email connection was successful")
 
-    def send_success_message(self):
-        msg = RewardsEmailMessage.get_success_message(self.sender, self.recipient)
-        self.smtp.send_message(msg)
-
-    def send_failure_message(self):
-        msg = RewardsEmailMessage.get_failure_message(self.sender, self.recipient)
-        self.smtp.send_message(msg)
+    def send_message(self, message: ExecutionMessage) -> None:
+        """
+        Send a Message using the provided credentials and SMTP.
+        """
+        smtp_message = message.get_message()
+        self.smtp.send_message(msg=smtp_message)
+        logger.debug("Message sent correctly with smtp!")
 
     def __enter__(self):
         return self.open()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        # Check docs for more info on these parameters:
+        # https://docs.python.org/3/reference/datamodel.html#object.__exit__
         self.close()
-
-
-@define(slots=False)
-class OutlookEmailConnection(EmailConnection):
-    host: str = "smtp-mail.outlook.com"
-    port: int = 587
-    tls: bool = True
-
-
-@define(slots=False)
-class GmailEmailConnection(EmailConnection):
-    host: str = "smtp.gmail.com"
-    port: int = 587
-    tls: bool = True
 
 
 @define
@@ -192,26 +222,44 @@ class EmailConnectionFactory:
 
     config: Config
 
+    gmail_host = "smtp.gmail.com"
+    gmail_port = 587
+    gmail_tls = True
+
+    outlook_host = "smtp-mail.outlook.com"
+    outlook_port = 587
+    outlook_tls = True
+
     def get_connection(self) -> Optional[EmailConnection]:
         """
         Get an email connection based on the config.
 
         >>> from pathlib import Path
-        >>> config_path = Path("tests/configs/config.example.yaml")
+        >>> current_path = Path(__file__)
+        >>> tests_path = current_path.parent.parent / "tests"
+        >>> config_path = tests_path / "configs/config.example.yaml"
         >>> _config = Config.from_yaml(config_path)
+
+        >>> _config.email.sender = "foo@gmail.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__
-        <class 'automsr.mail.GmailEmailConnection'>
+        >>> factory.get_connection().host == EmailConnectionFactory.gmail_host
+        True
 
         >>> _config.email.sender = "foo@outlook.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__
-        <class 'automsr.mail.OutlookEmailConnection'>
+        >>> factory.get_connection().host == EmailConnectionFactory.outlook_host
+        True
 
         >>> _config.email.sender = "foo@foobar.com"
+        >>> _config.email.host = "smtp.foobar.com"
         >>> factory = EmailConnectionFactory(config=_config)
-        >>> factory.get_connection().__class__
-        <class 'automsr.mail.EmailConnection'>
+        >>> factory.get_connection().host == "smtp.foobar.com"
+        True
+
+        >>> _config.email.enable = False
+        >>> factory = EmailConnectionFactory(config=_config)
+        >>> factory.get_connection() is None
+        True
         """
 
         config = self.config.email
@@ -226,24 +274,28 @@ class EmailConnectionFactory:
         logger.debug("Sender domain: %s", domain)
 
         assert config.sender_password is not None
-        assert config.recipient is not None
+        password = config.sender_password.get_secret_value()
 
         # Handle Gmail emails
         if domain == "gmail.com":
             logger.debug("Gmail domain found")
-            return GmailEmailConnection(
+            return EmailConnection(
                 sender=sender,
-                password=config.sender_password.get_secret_value(),
-                recipient=config.recipient,
+                password=password,
+                host=self.gmail_host,
+                port=self.gmail_port,
+                tls=self.gmail_tls,
             )
 
         # Handle Outlook emails
         elif domain.split(".")[0] in ("live", "outlook", "hotmail"):
             logger.debug("Outlook domain found")
-            return OutlookEmailConnection(
+            return EmailConnection(
                 sender=sender,
-                password=config.sender_password.get_secret_value(),
-                recipient=config.recipient,
+                password=password,
+                host=self.outlook_host,
+                port=self.outlook_port,
+                tls=self.outlook_tls,
             )
 
         # Handle custom domains
@@ -255,9 +307,103 @@ class EmailConnectionFactory:
 
             return EmailConnection(
                 sender=sender,
-                password=config.sender_password.get_secret_value(),
-                recipient=config.recipient,
+                password=password,
                 host=config.host,
                 port=config.port,
                 tls=config.tls,
             )
+
+    def get_connection_strict(self) -> EmailConnection:
+        """
+        Get an Email Connection, or raise if it would be null.
+        """
+
+        connection = self.get_connection()
+        if connection is None:
+            raise ValueError(
+                "Connection is null! Probably you must set `email/enable: true` in your config file."
+            )
+        return connection
+
+
+@define
+class EmailExecutor:
+    config: Config
+
+    def are_messages_enabled(self) -> bool:
+        """
+        Return whether the email messages are enabled, so that:
+        - `email/enable` is `true` in config file;
+        - `email/recipient` is a valid non-null string;
+        - an email connection can be established with sender's SMTP server
+        """
+
+        if not self.config.email.enable:
+            return False
+
+        if not self.config.email.recipient:
+            return False
+
+        factory = EmailConnectionFactory(config=self.config)
+        connection = factory.get_connection_strict()
+        try:
+            connection.test_connection()
+        except smtplib.SMTPException:
+            return False
+        else:
+            return True
+
+    def send_message(self, statuses: List[Status]) -> None:
+        """
+        Send a message with the content of object's `statuses`.
+
+        Assumes that messages are enabled for the current session.
+        """
+
+        recipient: Optional[str] = self.config.email.recipient
+        assert recipient is not None
+
+        status_messages = [StatusMessage(status=status) for status in statuses]
+
+        connection: EmailConnection = EmailConnectionFactory(
+            config=self.config
+        ).get_connection_strict()
+        with connection:
+            message = ExecutionMessage(
+                sender=connection.sender,
+                recipient=recipient,
+                status_messages=status_messages,
+            )
+            connection.send_message(message=message)
+            logger.info("Message sent correctly!")
+
+    def send_mock_message(self, *, seed: int = 0) -> None:
+        """
+        Send a mock message in order to make the
+        message display something relevant for the user.
+        """
+
+        random.seed(seed)
+
+        fake = Faker(locale="en-US")
+        fake.seed_instance(seed)
+
+        statuses: List[Status] = []
+        for profile in self.config.automsr.profiles:
+            steps: List[Step] = []
+
+            for _ in range(5):
+                step_type = random.choice(list(StepType))
+                outcome = random.choice(list(OutcomeType))
+                if outcome is OutcomeType.FAILURE:
+                    explanation = fake.sentence(nb_words=4)
+                else:
+                    explanation = None
+                step = Step(type=step_type, outcome=outcome, explanation=explanation)
+                steps.append(step)
+
+            status = Status(profile=profile, steps=steps)
+            statuses.append(status)
+
+        logger.info("Mock message sending...")
+        self.send_message(statuses=statuses)
