@@ -60,6 +60,7 @@ class StatusMessage:
         status_emojis: Dict[OutcomeType, str] = {
             OutcomeType.SUCCESS: "✔️",
             OutcomeType.FAILURE: "❌",
+            OutcomeType.SKIPPED: "⏭️",
         }
 
         overall_outcome = self.status.get_outcome()
@@ -396,18 +397,23 @@ class EmailExecutor:
         for profile in self.config.automsr.profiles:
             steps: List[Step] = []
 
-            for _ in range(5):
-                step_type = random.choice(list(StepType))
-                outcome = random.choice(list(OutcomeType))
-                if outcome is OutcomeType.FAILURE:
-                    explanation = fake.sentence(nb_words=4)
+            step_types: List[StepType] = StepType.get_ordered_steps()
+
+            for step_type in step_types:
+                if profile.skip:
+                    outcome = OutcomeType.SKIPPED
                 else:
+                    outcome = random.choice(list(OutcomeType))
+
+                if outcome is OutcomeType.SUCCESS:
                     explanation = None
+                else:
+                    explanation = fake.sentence(nb_words=4)
                 step = Step(type=step_type, outcome=outcome, explanation=explanation)
                 steps.append(step)
 
             status = Status(profile=profile, steps=steps)
             statuses.append(status)
 
-        logger.info("Mock message sending...")
+        logger.info("Sending mock message...")
         self.send_message(statuses=statuses)

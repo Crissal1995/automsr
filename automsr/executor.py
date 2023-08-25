@@ -130,6 +130,18 @@ class SingleTargetExecutor:
         # Get the list of steps in the correct order of execution
         steps: List[StepType] = StepType.get_ordered_steps()
 
+        # If the profile is marked as skipped, return this result.
+        if self.profile.skip:
+            logger.info("Profile marked as skipped.")
+            steps_status = [
+                Step(type=step_type, outcome=OutcomeType.SKIPPED) for step_type in steps
+            ]
+            status = Status(
+                profile=self.profile,
+                steps=steps_status,
+            )
+            return status
+
         # Declare the variables needed in the following loop.
         dashboard: Optional[Dashboard] = None
         for step in steps:
@@ -157,10 +169,11 @@ class SingleTargetExecutor:
                 )
 
             # This is needed for Punchcards.
-            except NotImplementedError as e:
-                logger.warning("Step not implemented yet: %s", step)
+            except NotImplementedError:
+                explanation = f"Step not implemented yet: {step}"
+                logger.warning(explanation)
                 step_status = Step(
-                    type=step, outcome=OutcomeType.FAILURE, explanation=str(e)
+                    type=step, outcome=OutcomeType.SKIPPED, explanation=explanation
                 )
 
             # If no exception is raised, the step is successful.
