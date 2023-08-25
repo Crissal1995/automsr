@@ -396,7 +396,11 @@ class EmailExecutor:
             step_types: List[StepType] = StepType.get_ordered_steps()
 
             for step_type in step_types:
-                outcome = random.choice(list(OutcomeType))
+                if profile.skip:
+                    outcome = OutcomeType.SKIPPED
+                else:
+                    outcome = random.choice(list(OutcomeType))
+
                 if outcome is OutcomeType.SUCCESS:
                     explanation = None
                 else:
