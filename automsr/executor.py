@@ -157,10 +157,11 @@ class SingleTargetExecutor:
                 )
 
             # This is needed for Punchcards.
-            except NotImplementedError as e:
-                logger.warning("Step not implemented yet: %s", step)
+            except NotImplementedError:
+                explanation = f"Step not implemented yet: {step}"
+                logger.warning(explanation)
                 step_status = Step(
-                    type=step, outcome=OutcomeType.FAILURE, explanation=str(e)
+                    type=step, outcome=OutcomeType.SKIPPED, explanation=explanation
                 )
 
             # If no exception is raised, the step is successful.

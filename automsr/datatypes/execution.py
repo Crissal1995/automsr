@@ -16,6 +16,7 @@ class OutcomeType(Enum):
 
     FAILURE = "failure"
     SUCCESS = "success"
+    SKIPPED = "skipped"
 
 
 class StepType(Enum):
@@ -81,7 +82,8 @@ class Status:
 
         outcomes = [step.outcome for step in self.steps]
 
-        if all(outcome is OutcomeType.SUCCESS for outcome in outcomes):
-            return OutcomeType.SUCCESS
-        else:
+        if any(outcome is OutcomeType.FAILURE for outcome in outcomes):
             return OutcomeType.FAILURE
+        else:
+            # treat skipped outcomes as success
+            return OutcomeType.SUCCESS
