@@ -52,8 +52,6 @@ Download the correct [Chromedriver](https://chromedriver.chromium.org/downloads)
 
 ```shell
 $ automsr --help
-$ automsr run --help
-$ automsr profiles --help
 ```
 
 ### Execute AutoMSR
