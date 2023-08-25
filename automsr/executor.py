@@ -130,6 +130,18 @@ class SingleTargetExecutor:
         # Get the list of steps in the correct order of execution
         steps: List[StepType] = StepType.get_ordered_steps()
 
+        # If the profile is marked as skipped, return this result.
+        if self.profile.skip:
+            logger.info("Profile marked as skipped.")
+            steps_status = [
+                Step(type=step_type, outcome=OutcomeType.SKIPPED) for step_type in steps
+            ]
+            status = Status(
+                profile=self.profile,
+                steps=steps_status,
+            )
+            return status
+
         # Declare the variables needed in the following loop.
         dashboard: Optional[Dashboard] = None
         for step in steps:
