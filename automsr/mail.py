@@ -358,9 +358,14 @@ class EmailExecutor:
         else:
             return True
 
-    def send_message(self, statuses: List[Status]) -> None:
+    def send_message(
+        self, statuses: List[Status], *, subject: Optional[str] = None
+    ) -> None:
         """
         Send a message with the content of object's `statuses`.
+
+        It is also possible to change the subject of the message
+        providing a non-null `subject`.
 
         Assumes that messages are enabled for the current session.
         """
@@ -378,8 +383,9 @@ class EmailExecutor:
                 sender=connection.sender,
                 recipient=recipient,
                 status_messages=status_messages,
-                subject="AutoMSR Mock Report message",
             )
+            if subject is not None:
+                message.subject = subject
             connection.send_message(message=message)
             logger.info("Message sent correctly!")
 
@@ -417,4 +423,4 @@ class EmailExecutor:
             statuses.append(status)
 
         logger.info("Sending mock message...")
-        self.send_message(statuses=statuses)
+        self.send_message(statuses=statuses, subject="AutoMSR Mock Report message")
