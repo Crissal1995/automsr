@@ -44,6 +44,8 @@ class StatusMessage:
         steps = self.status.steps
         for step in steps:
             line = f"Step {step.type.name} has outcome {step.outcome.name}."
+            if step.duration:
+                line += f" Duration: {step.duration}."
             if step.explanation:
                 line += f" Explanation: {step.explanation}"
             retval.append(line)
@@ -71,14 +73,17 @@ class StatusMessage:
             f"**Overall outcome: {overall_outcome_emoji} {overall_outcome.name}**",
             # Table creation
             "",
-            "| Outcome | Step | Explanation |",
-            "| :---: | :--- | :--- |",
+            "| Outcome | Step | Duration | Explanation |",
+            "| :---: | :--- | :--- | :--- |",
         ]
 
         for step in self.status.steps:
             outcome_emoji = status_emojis[step.outcome]
             explanation = step.explanation or ""
-            line = f"| {outcome_emoji} | {step.type.name} | {explanation} |"
+            duration = step.duration or "N/A"
+            line = (
+                f"| {outcome_emoji} | {step.type.name} | {duration} | {explanation} |"
+            )
             retval.append(line)
 
         return "\n".join(retval)
@@ -416,7 +421,19 @@ class EmailExecutor:
                     explanation = None
                 else:
                     explanation = fake.sentence(nb_words=4)
-                step = Step(type=step_type, outcome=outcome, explanation=explanation)
+
+                if outcome is OutcomeType.SKIPPED:
+                    duration = None
+                else:
+                    seconds = fake.random_number(digits=3, fix_len=True)
+                    duration = datetime.timedelta(seconds=seconds)
+
+                step = Step(
+                    type=step_type,
+                    outcome=outcome,
+                    explanation=explanation,
+                    duration=duration,
+                )
                 steps.append(step)
 
             status = Status(profile=profile, steps=steps)

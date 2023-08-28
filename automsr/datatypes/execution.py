@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 from enum import Enum, auto
 from typing import List, Optional
 
@@ -64,6 +65,7 @@ class Step:
     type: StepType
     outcome: OutcomeType
     explanation: Optional[str] = None
+    duration: Optional[timedelta] = None
 
 
 @define

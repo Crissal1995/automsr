@@ -1,5 +1,6 @@
 import textwrap
 import unittest
+from datetime import timedelta
 
 from automsr.config import Profile
 from automsr.datatypes.execution import OutcomeType, Status, Step, StepType
@@ -25,7 +26,7 @@ class MailTestCase(unittest.TestCase):
             Email: foo@bar.com
             Overall outcome: FAILURE
             Step GET_DASHBOARD has outcome SUCCESS.
-            Step PROMOTIONS has outcome FAILURE. Explanation: Something broke :(
+            Step PROMOTIONS has outcome FAILURE. Duration: 0:02:03. Explanation: Something broke :(
         """
         )
 
@@ -36,6 +37,7 @@ class MailTestCase(unittest.TestCase):
                 outcome=OutcomeType.FAILURE,
                 type=StepType.PROMOTIONS,
                 explanation="Something broke :(",
+                duration=timedelta(seconds=123),
             ),
         ]
         status = Status(profile=profile, steps=steps)
@@ -58,6 +60,7 @@ class MailTestCase(unittest.TestCase):
             <tr>
             <th style="text-align: center;">Outcome</th>
             <th style="text-align: left;">Step</th>
+            <th style="text-align: left;">Duration</th>
             <th style="text-align: left;">Explanation</th>
             </tr>
             </thead>
@@ -65,16 +68,19 @@ class MailTestCase(unittest.TestCase):
             <tr>
             <td style="text-align: center;">✔️</td>
             <td style="text-align: left;">GET_DASHBOARD</td>
+            <td style="text-align: left;">N/A</td>
             <td style="text-align: left;"></td>
             </tr>
             <tr>
             <td style="text-align: center;">❌</td>
             <td style="text-align: left;">PROMOTIONS</td>
+            <td style="text-align: left;">0:00:44</td>
             <td style="text-align: left;">Something broke :(</td>
             </tr>
             <tr>
             <td style="text-align: center;">❌</td>
             <td style="text-align: left;">END_SESSION</td>
+            <td style="text-align: left;">0:00:55</td>
             <td style="text-align: left;">Something broke again?!</td>
             </tr>
             </tbody>
@@ -88,11 +94,13 @@ class MailTestCase(unittest.TestCase):
                 outcome=OutcomeType.FAILURE,
                 type=StepType.PROMOTIONS,
                 explanation="Something broke :(",
+                duration=timedelta(seconds=44),
             ),
             Step(
                 outcome=OutcomeType.FAILURE,
                 type=StepType.END_SESSION,
                 explanation="Something broke again?!",
+                duration=timedelta(seconds=55),
             ),
         ]
         status = Status(profile=profile, steps=steps)
