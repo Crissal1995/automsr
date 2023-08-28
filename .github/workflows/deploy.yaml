@@ -8,6 +8,12 @@ on:
     branches:
       - main
 
+# Enable only one "Deploy" workflow to run at the time.
+# More info here: https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}  # Workflow name.
+  cancel-in-progress: false  # Don't stop an existing deployment.
+
 jobs:
   tag:
     name: Get tag
