@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import timedelta
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional
 
@@ -69,7 +70,7 @@ class SingleTargetExecutor:
     browser: Browser = field(init=False)
 
     def _get_execution_function(
-        self, step: StepType, dashboard: Optional[Dashboard] = None
+        self, step_type: StepType, dashboard: Optional[Dashboard] = None
     ) -> Callable[[], Optional[Dashboard]]:
         """
         Return the function associated to the input execution step.
@@ -77,13 +78,13 @@ class SingleTargetExecutor:
 
         func: Callable[[], Optional[Dashboard]]
 
-        if step is StepType.START_SESSION:
+        if step_type is StepType.START_SESSION:
             return self.start_session
 
-        elif step is StepType.GET_DASHBOARD:
+        elif step_type is StepType.GET_DASHBOARD:
             func = self.get_dashboard
 
-        elif step in (
+        elif step_type in (
             StepType.PROMOTIONS,
             StepType.PUNCHCARDS,
             StepType.PC_SEARCHES,
@@ -91,22 +92,22 @@ class SingleTargetExecutor:
         ):
             assert dashboard is not None
 
-            if step is StepType.PROMOTIONS:
+            if step_type is StepType.PROMOTIONS:
                 func = partial(self.execute_promotions, dashboard=dashboard)
-            elif step is StepType.PUNCHCARDS:
+            elif step_type is StepType.PUNCHCARDS:
                 func = partial(self.execute_punchcards, dashboard=dashboard)
-            elif step is StepType.PC_SEARCHES:
+            elif step_type is StepType.PC_SEARCHES:
                 func = partial(self.execute_pc_searches, dashboard=dashboard)
-            elif step is StepType.MOBILE_SEARCHES:
+            elif step_type is StepType.MOBILE_SEARCHES:
                 func = partial(self.execute_mobile_searches, dashboard=dashboard)
             else:
-                raise ValueError(step)
+                raise ValueError(step_type)
 
-        elif step is StepType.END_SESSION:
+        elif step_type is StepType.END_SESSION:
             func = self.end_session
 
         else:
-            raise ValueError(step)
+            raise ValueError(step_type)
 
         return func
 
@@ -125,32 +126,47 @@ class SingleTargetExecutor:
         """
 
         # Construct the list of statuses for each step.
-        steps_status: List[Step] = []
+        steps: List[Step] = []
 
         # Get the list of steps in the correct order of execution
-        steps: List[StepType] = StepType.get_ordered_steps()
+        step_types: List[StepType] = StepType.get_ordered_steps()
 
         # If the profile is marked as skipped, return this result.
         if self.profile.skip:
             logger.info("Profile marked as skipped.")
-            steps_status = [
-                Step(type=step_type, outcome=OutcomeType.SKIPPED) for step_type in steps
+            steps = [
+                Step(type=step_type, outcome=OutcomeType.SKIPPED)
+                for step_type in step_types
             ]
             status = Status(
                 profile=self.profile,
-                steps=steps_status,
+                steps=steps,
             )
             return status
 
         # Declare the variables needed in the following loop.
         dashboard: Optional[Dashboard] = None
-        for step in steps:
+        for step_type in step_types:
+            logger.debug("Step type under execution: %s", step_type)
+
             # Get the function to use.
-            function = self._get_execution_function(step=step, dashboard=dashboard)
+            function = self._get_execution_function(
+                step_type=step_type, dashboard=dashboard
+            )
+
+            # Declare the outcome of the step.
+            outcome: Optional[OutcomeType] = None
+
+            # Declare the explanation of the step, if non-success.
+            explanation: Optional[str] = None
+
+            # Snapshot a performance counter and returns the value in seconds.
+            start_counter: float = time.perf_counter()
+            duration: Optional[timedelta] = None
 
             try:
                 # If the step is get-dashboard, we will expect a return value.
-                if step is StepType.GET_DASHBOARD:
+                if step_type is StepType.GET_DASHBOARD:
                     dashboard = function()
                     assert isinstance(dashboard, Dashboard)
 
@@ -163,29 +179,44 @@ class SingleTargetExecutor:
             # Selenium errors will be treated as normal errors, but won't fail the entire execution;
             #  only the corresponding step will be marked as failed.
             except selenium.common.exceptions.WebDriverException as e:
+                outcome = OutcomeType.FAILURE
+                explanation = str(e)
                 logger.error("Selenium exception caught: %s", e)
-                step_status = Step(
-                    type=step, outcome=OutcomeType.FAILURE, explanation=str(e)
-                )
 
             # This is needed for Punchcards.
             except NotImplementedError:
-                explanation = f"Step not implemented yet: {step}"
+                outcome = OutcomeType.SKIPPED
+                explanation = "Step not implemented yet."
                 logger.warning(explanation)
-                step_status = Step(
-                    type=step, outcome=OutcomeType.SKIPPED, explanation=explanation
-                )
 
             # If no exception is raised, the step is successful.
             # Otherwise, any uncaught exception will be propagated to the caller.
             else:
-                step_status = Step(type=step, outcome=OutcomeType.SUCCESS)
+                outcome = OutcomeType.SUCCESS
+                logger.debug("Step completed correctly.")
 
-            # Append the created step status to the list of statuses.
-            steps_status.append(step_status)
+            # At the end of the try-except block, we will have an outcome, a duration,
+            # and possibly an explanation.
+            finally:
+                # Capture time elapsed.
+                end_counter = time.perf_counter()
+                seconds = end_counter - start_counter
+                duration = timedelta(seconds=seconds)
+
+                # Create step based on step status.
+                assert outcome is not None
+                step = Step(
+                    type=step_type,
+                    outcome=outcome,
+                    duration=duration,
+                    explanation=explanation,
+                )
+
+                # Append the created step status to the list of statuses.
+                steps.append(step)
 
         # Create the overall status for the current profile, and return it to the caller.
-        status = Status(profile=self.profile, steps=steps_status)
+        status = Status(profile=self.profile, steps=steps)
         return status
 
     def start_session(self) -> None:
