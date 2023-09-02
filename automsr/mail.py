@@ -36,10 +36,6 @@ class StatusMessage:
         Return a plain-text representation of the status.
         """
 
-        import locale
-
-        locale.setlocale(locale.LC_NUMERIC, "")
-
         points_str = "N/A" if self.status.points is None else f"{self.status.points:,}"
 
         retval: List[str] = [
