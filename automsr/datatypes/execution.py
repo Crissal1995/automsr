@@ -26,12 +26,15 @@ class StepType(Enum):
     """
 
     START_SESSION = auto()
+    END_SESSION = auto()
+
     GET_DASHBOARD = auto()
+    GET_POINTS = auto()
+
     PUNCHCARDS = auto()
     PROMOTIONS = auto()
     PC_SEARCHES = auto()
     MOBILE_SEARCHES = auto()
-    END_SESSION = auto()
 
     @classmethod
     def get_ordered_steps(cls) -> List["StepType"]:
@@ -51,6 +54,8 @@ class StepType(Enum):
             # complete searches
             cls.PC_SEARCHES,
             cls.MOBILE_SEARCHES,
+            # get the total points
+            cls.GET_POINTS,
             # end the session
             cls.END_SESSION,
         ]
@@ -76,6 +81,7 @@ class Status:
 
     profile: Profile
     steps: List[Step]
+    points: Optional[int]
 
     def get_outcome(self) -> OutcomeType:
         """
@@ -87,15 +93,15 @@ class Status:
         >>> failure = Step(type=ANY, outcome=OutcomeType.FAILURE)
         >>> skipped = Step(type=ANY, outcome=OutcomeType.SKIPPED)
 
-        >>> Status(profile=profile, steps=[]).get_outcome().name
+        >>> Status(profile=profile, steps=[], points=None).get_outcome().name
         'SKIPPED'
-        >>> Status(profile=profile, steps=[success]).get_outcome().name
+        >>> Status(profile=profile, steps=[success], points=None).get_outcome().name
         'SUCCESS'
-        >>> Status(profile=profile, steps=[success, skipped]).get_outcome().name
+        >>> Status(profile=profile, steps=[success, skipped], points=None).get_outcome().name
         'SUCCESS'
-        >>> Status(profile=profile, steps=[skipped, skipped]).get_outcome().name
+        >>> Status(profile=profile, steps=[skipped, skipped], points=None).get_outcome().name
         'SKIPPED'
-        >>> Status(profile=profile, steps=[skipped, skipped, failure]).get_outcome().name
+        >>> Status(profile=profile, steps=[skipped, skipped, failure], points=None).get_outcome().name
         'FAILURE'
         """
 

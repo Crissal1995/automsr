@@ -2,7 +2,7 @@ import logging
 import time
 from datetime import timedelta
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 import selenium.common.exceptions
 from attr import define, field
@@ -57,6 +57,14 @@ class CannotDetermineQuizTypeException(QuizException):
     """
 
 
+def get_available_points(dashboard: Dashboard) -> int:
+    """
+    Return the available points that a user can have.
+    """
+
+    return dashboard.points()
+
+
 @define
 class SingleTargetExecutor:
     """
@@ -71,12 +79,12 @@ class SingleTargetExecutor:
 
     def _get_execution_function(
         self, step_type: StepType, dashboard: Optional[Dashboard] = None
-    ) -> Callable[[], Optional[Dashboard]]:
+    ) -> Callable[[], Optional[Union[Dashboard, int]]]:
         """
         Return the function associated to the input execution step.
         """
 
-        func: Callable[[], Optional[Dashboard]]
+        func: Callable
 
         if step_type is StepType.START_SESSION:
             return self.start_session
@@ -89,6 +97,7 @@ class SingleTargetExecutor:
             StepType.PUNCHCARDS,
             StepType.PC_SEARCHES,
             StepType.MOBILE_SEARCHES,
+            StepType.GET_POINTS,
         ):
             assert dashboard is not None
 
@@ -100,6 +109,8 @@ class SingleTargetExecutor:
                 func = partial(self.execute_pc_searches, dashboard=dashboard)
             elif step_type is StepType.MOBILE_SEARCHES:
                 func = partial(self.execute_mobile_searches, dashboard=dashboard)
+            elif step_type is StepType.GET_POINTS:
+                func = partial(get_available_points, dashboard=dashboard)
             else:
                 raise ValueError(step_type)
 
@@ -141,11 +152,14 @@ class SingleTargetExecutor:
             status = Status(
                 profile=self.profile,
                 steps=steps,
+                points=None,
             )
             return status
 
         # Declare the variables needed in the following loop.
         dashboard: Optional[Dashboard] = None
+        points: Optional[int] = None
+
         for step_type in step_types:
             logger.debug("Step type under execution: %s", step_type)
 
@@ -162,17 +176,23 @@ class SingleTargetExecutor:
 
             # Snapshot a performance counter and returns the value in seconds.
             start_counter: float = time.perf_counter()
-            duration: Optional[timedelta] = None
 
             try:
-                # If the step is get-dashboard, we will expect a return value.
+                # Execute the function.
+                retval = function()
+
+                # If the step is get-dashboard, we will expect a Dashboard return value.
                 if step_type is StepType.GET_DASHBOARD:
-                    dashboard = function()
+                    dashboard = cast(Dashboard, retval)
                     assert isinstance(dashboard, Dashboard)
 
-                # Otherwise, just execute the function.
+                # If the step is get-points, we will expect an integer return value.
+                elif step_type is StepType.GET_POINTS:
+                    points = cast(int, retval)
+                    assert isinstance(points, int)
+
+                # Otherwise, we expect nothing as return value.
                 else:
-                    retval = function()
                     assert retval is None
 
             # Catch exceptions block.
@@ -216,7 +236,7 @@ class SingleTargetExecutor:
                 steps.append(step)
 
         # Create the overall status for the current profile, and return it to the caller.
-        status = Status(profile=self.profile, steps=steps)
+        status = Status(profile=self.profile, steps=steps, points=points)
         return status
 
     def start_session(self) -> None:

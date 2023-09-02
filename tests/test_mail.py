@@ -24,6 +24,7 @@ class MailTestCase(unittest.TestCase):
         expected_message = textwrap.dedent(
             """\
             Email: foo@bar.com
+            Points: 12,345
             Overall outcome: FAILURE
             Step GET_DASHBOARD has outcome SUCCESS.
             Step PROMOTIONS has outcome FAILURE. Duration: 0:02:03. Explanation: Something broke :(
@@ -31,6 +32,7 @@ class MailTestCase(unittest.TestCase):
         )
 
         profile = Profile(email="foo@bar.com", profile="Profile 1")
+        points = 12345
         steps = [
             Step(outcome=OutcomeType.SUCCESS, type=StepType.GET_DASHBOARD),
             Step(
@@ -40,7 +42,7 @@ class MailTestCase(unittest.TestCase):
                 duration=timedelta(seconds=123),
             ),
         ]
-        status = Status(profile=profile, steps=steps)
+        status = Status(profile=profile, steps=steps, points=points)
         status_message = StatusMessage(status=status)
         message = status_message.to_plain_text()
         self.assertEqual(expected_message, message)
@@ -54,6 +56,7 @@ class MailTestCase(unittest.TestCase):
         expected_message = textwrap.dedent(
             """\
             <h3>Profile: foo@bar.com</h3>
+            <p><strong>Points: N/A</strong></p>
             <p><strong>Overall outcome: ❌ FAILURE</strong></p>
             <table>
             <thead>
@@ -88,6 +91,7 @@ class MailTestCase(unittest.TestCase):
         )
 
         profile = Profile(email="foo@bar.com", profile="Profile 1")
+        points = None
         steps = [
             Step(outcome=OutcomeType.SUCCESS, type=StepType.GET_DASHBOARD),
             Step(
@@ -103,7 +107,7 @@ class MailTestCase(unittest.TestCase):
                 duration=timedelta(seconds=55),
             ),
         ]
-        status = Status(profile=profile, steps=steps)
+        status = Status(profile=profile, steps=steps, points=points)
         status_message = StatusMessage(status=status)
         message = status_message.to_html()
         self.assertEqual(expected_message, message)

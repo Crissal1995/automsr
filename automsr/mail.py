@@ -36,8 +36,15 @@ class StatusMessage:
         Return a plain-text representation of the status.
         """
 
+        import locale
+
+        locale.setlocale(locale.LC_NUMERIC, "")
+
+        points_str = "N/A" if self.status.points is None else f"{self.status.points:,}"
+
         retval: List[str] = [
             f"Email: {self.email}",
+            f"Points: {points_str}",
             f"Overall outcome: {self.status.get_outcome().name}",
         ]
 
@@ -68,8 +75,12 @@ class StatusMessage:
         overall_outcome = self.status.get_outcome()
         overall_outcome_emoji = status_emojis[overall_outcome]
 
+        points_str = "N/A" if self.status.points is None else f"{self.status.points:,}"
+
         retval: List[str] = [
             f"### Profile: {self.email}",
+            f"**Points: {points_str}**",
+            "",
             f"**Overall outcome: {overall_outcome_emoji} {overall_outcome.name}**",
             # Table creation
             "",
@@ -436,7 +447,13 @@ class EmailExecutor:
                 )
                 steps.append(step)
 
-            status = Status(profile=profile, steps=steps)
+            points_should_be_null: bool = fake.pybool()
+            if points_should_be_null:
+                points = None
+            else:
+                points = fake.random_number(digits=6)
+
+            status = Status(profile=profile, steps=steps, points=points)
             statuses.append(status)
 
         logger.info("Sending mock message...")
