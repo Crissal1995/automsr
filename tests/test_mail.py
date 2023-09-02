@@ -24,7 +24,7 @@ class MailTestCase(unittest.TestCase):
         expected_message = textwrap.dedent(
             """\
             Email: foo@bar.com
-            Points: 12345
+            Points: 12,345
             Overall outcome: FAILURE
             Step GET_DASHBOARD has outcome SUCCESS.
             Step PROMOTIONS has outcome FAILURE. Duration: 0:02:03. Explanation: Something broke :(

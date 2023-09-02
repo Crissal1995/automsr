@@ -36,7 +36,11 @@ class StatusMessage:
         Return a plain-text representation of the status.
         """
 
-        points_str = "N/A" if self.status.points is None else str(self.status.points)
+        import locale
+
+        locale.setlocale(locale.LC_NUMERIC, "")
+
+        points_str = "N/A" if self.status.points is None else f"{self.status.points:,}"
 
         retval: List[str] = [
             f"Email: {self.email}",
@@ -71,7 +75,7 @@ class StatusMessage:
         overall_outcome = self.status.get_outcome()
         overall_outcome_emoji = status_emojis[overall_outcome]
 
-        points_str = "N/A" if self.status.points is None else str(self.status.points)
+        points_str = "N/A" if self.status.points is None else f"{self.status.points:,}"
 
         retval: List[str] = [
             f"### Profile: {self.email}",
