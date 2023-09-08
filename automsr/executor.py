@@ -217,23 +217,23 @@ class SingleTargetExecutor:
 
             # At the end of the try-except block, we will have an outcome, a duration,
             # and possibly an explanation.
-            finally:
-                # Capture time elapsed.
-                end_counter = time.perf_counter()
-                seconds = end_counter - start_counter
-                duration = timedelta(seconds=seconds)
 
-                # Create step based on step status.
-                assert outcome is not None
-                step = Step(
-                    type=step_type,
-                    outcome=outcome,
-                    duration=duration,
-                    explanation=explanation,
-                )
+            # Capture time elapsed.
+            end_counter = time.perf_counter()
+            seconds = end_counter - start_counter
+            duration = timedelta(seconds=seconds)
 
-                # Append the created step status to the list of statuses.
-                steps.append(step)
+            # Create step based on step status.
+            assert outcome is not None
+            step = Step(
+                type=step_type,
+                outcome=outcome,
+                duration=duration,
+                explanation=explanation,
+            )
+
+            # Append the created step status to the list of statuses.
+            steps.append(step)
 
         # Create the overall status for the current profile, and return it to the caller.
         status = Status(profile=self.profile, steps=steps, points=points)
