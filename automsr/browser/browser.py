@@ -1,4 +1,5 @@
 import logging
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -10,7 +11,6 @@ from selenium.webdriver.chrome.webdriver import WebDriver as ChromeWebDriver
 from selenium.webdriver.common.by import By
 
 from automsr.config import Config, Defaults, Profile
-from automsr.datatypes.dashboard import Promotion
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +224,7 @@ class Browser:
         self.driver.switch_to.window(window)
 
     def open_promotion(
-        self, promotion: Promotion, element_id: Optional[str] = None
+        self, promotion_name: Optional[str] = None, element_id: Optional[str] = None
     ) -> None:
         """
         Open correctly a Promotion found in the Rewards homepage.
@@ -243,10 +243,15 @@ class Browser:
             logger.debug("Searching for promotion with id: %s", element_id)
             if not element_id:
                 raise ValueError("Empty element id!")
+
             promotion_element = self.driver.find_element(by=By.ID, value=element_id)
-        else:
+
+        elif promotion_name is not None:
+            if not promotion_name:
+                raise ValueError("Empty promotion name!")
+
             css_selector_value = (
-                f'.rewards-card-container[data-bi-id="{promotion.name}"]'
+                f'.rewards-card-container[data-bi-id="{promotion_name}"]'
             )
             logger.debug(
                 "Searching for promotion with css selector: %s", css_selector_value
@@ -254,6 +259,9 @@ class Browser:
             promotion_element = self.driver.find_element(
                 by=By.CSS_SELECTOR, value=css_selector_value
             )
+
+        else:
+            raise ValueError("Provide at least one non-null input!")
 
         logger.debug("Promotion found! Clicking it to trigger the promotion start.")
 
@@ -266,5 +274,8 @@ class Browser:
         # store window handles after the click
         handles_after = self.driver.window_handles
 
-        handle = set(handles_after).difference(handles_before).pop()
+        # wait some seconds to simulate a real user
+        time.sleep(0.5)
+
+        handle: str = set(handles_after).difference(handles_before).pop()
         self.change_window(handle_name=handle)
