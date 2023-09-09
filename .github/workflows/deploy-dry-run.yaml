@@ -13,17 +13,17 @@ on:
       - unlabeled
 
 jobs:
-  tag:
-    name: Get tag
+  impact:
+    name: Get impact
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.get-tag.outputs.tag }}
+      impact: ${{ steps.get-impact.outputs.impact }}
     steps:
     - name: Get PR labels
       id: pr-labels
       uses: joerick/pr-labels-action@v1.0.9
-    - name: Get highest SemVer tag
-      id: get-tag
+    - name: Get highest SemVer impact
+      id: get-impact
       env:
         json: ${{ steps.pr-labels.outputs.labels-object }}
       run: |
@@ -32,73 +32,127 @@ jobs:
         minor=$(echo $json | jq .minor )
         major=$(echo $json | jq .major )
 
-        tags_count=0
+        labels_count=0
 
         if [[ $no_impact == "true"  ]]; then
-          echo "Found tag: no_impact"
+          echo "Found impact: no_impact"
           echo "No deploy will be performed."
-          echo "tag=no_impact" >> "$GITHUB_OUTPUT"
-          tags_count=$((tags_count + 1))
+          echo "impact=no_impact" >> "$GITHUB_OUTPUT"
+          labels_count=$((labels_count + 1))
         fi
 
         if [[ $patch == "true" ]]; then
-          echo "Found tag: patch"
-          echo "tag=patch" >> "$GITHUB_OUTPUT"
-          tags_count=$((tags_count + 1))
+          echo "Found impact: patch"
+          echo "impact=patch" >> "$GITHUB_OUTPUT"
+          labels_count=$((labels_count + 1))
         fi
 
         if [[ $minor == "true" ]]; then
-          echo "Found tag: minor"
-          echo "tag=minor" >> "$GITHUB_OUTPUT"
-          tags_count=$((tags_count + 1))
+          echo "Found impact: minor"
+          echo "impact=minor" >> "$GITHUB_OUTPUT"
+          labels_count=$((labels_count + 1))
         fi
 
         if [[ $major == "true" ]]; then
-          echo "Found tag: major"
-          echo "tag=major" >> "$GITHUB_OUTPUT"
-          tags_count=$((tags_count + 1))
+          echo "Found impact: major"
+          echo "impact=major" >> "$GITHUB_OUTPUT"
+          labels_count=$((labels_count + 1))
         fi
 
-        if [[ $tags_count -ne 1 ]]; then
-          echo "Was expecting one and only one SemVer tag to be set. Found: $tags_count"
+        if [[ $labels_count -ne 1 ]]; then
+          echo "Was expecting one and only one SemVer impact to be set. Found: $labels_count"
           exit 1
         fi
+
+  version:
+    name: Check if version bump is correct
+    runs-on: ubuntu-latest
+    needs:
+      - impact
+    outputs:
+      version: ${{ steps.new-version.outputs.version_with_prefix }}
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Setup Poetry
+        uses: abatilo/actions-poetry@v2
+
+      - name: Checkout (base ref)
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Get old version
+        id: old-version
+        run: |
+          version=$(poetry version --short)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Get expected version
+        id: expected-version
+        env:
+          impact: ${{ needs.impact.outputs.impact }}
+        run: |
+          if [[ "$impact" != "no_impact" ]]; then
+            poetry version "$impact"
+          fi
+          version=$(poetry version --short)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout (head ref)
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Get new version
+        id: new-version
+        run: |
+          version=$(poetry version --short)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          version_with_prefix="v$version"
+          echo "version_with_prefix=$version_with_prefix" >> "$GITHUB_OUTPUT"
+
+      # Check if the new version is obtained by
+      # bumping the old version to the SemVer tag
+      # specified by the PR label.
+      - name: Check if new version is valid
+        env:
+          expected: ${{ steps.expected-version.outputs.version }}
+          actual: ${{ steps.new-version.outputs.version }}
+        run: |
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::Was expecting version $expected, but got $actual"
+            echo "::notice::Fix the version setting it to: $expected"
+            exit 1
+          else
+            echo "::notice::The version bump is correct."
+          fi
 
   deploy:
     name: Deploy Dry run
     runs-on: ubuntu-latest
     needs:
-      - tag
-    if: needs.tag.outputs.tag != 'no_impact'
+      - impact
+      - version
+    if: needs.impact.outputs.impact != 'no_impact'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.PAT }}  # to enable force-push for `add-and-commit` action
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
       - name: Setup Poetry
         uses: abatilo/actions-poetry@v2
-      - name: Bump version
-        id: bump-version
-        env:
-          tag: ${{ needs.tag.outputs.tag }}
-        run: |
-          poetry version $tag
-          new_tag=$(poetry version --short)
-          new_tag_with_prefix="v$new_tag"
-          echo "new_tag=$new_tag_with_prefix" >> "$GITHUB_OUTPUT"
+
       - name: Build
         run: poetry build
+
       - name: Publish
         run: poetry publish --dry-run
-      - name: Commit Version bump
-        uses: EndBug/add-and-commit@v9.1.3
-        with:
-          author_name: Cristiano Salerno
-          author_email: cristianosalerno1@gmail.com
-          message: "Automatic version bump"
-          add: "pyproject.toml"  # the only file affected by `poetry version <tag>`
-          push: false  # we don't want to pollute origin
