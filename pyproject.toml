@@ -21,7 +21,6 @@ faker = "^19.3.1"
 
 [tool.poetry.scripts]
 automsr = "automsr.cli:cli"
-automsr-profiles = "automsr.browser.profile:print_profiles"
 
 [tool.poetry.group.lint]
 optional = true
