@@ -153,6 +153,76 @@ class Config(BaseModel):
 
         return cls(**data)
 
+    def store(self, path: Path, *, optional_keys: bool = False) -> None:
+        """
+        Write the config file to a specified path.
+
+        The format used is YAML.
+
+        If `optional_keys` is True, then also optional keys will be added to the
+        resulting config file.
+
+        >>> _config = Config.from_dict({
+        ...     "automsr": {"profiles": [{"email": "foo@gmail.com", "profile": "my-profile"}]},
+        ...     "email": {},
+        ...     "selenium": {
+        ...         "profiles_root": "profiles/root",
+        ...         "chromedriver_path": "chromedriver",
+        ...     }
+        ... })
+        >>> import tempfile
+        >>> f = tempfile.NamedTemporaryFile(mode="w", delete=False)
+        >>> _path = Path(f.name)
+        >>> _config.store(path=_path)
+        >>> f.close()
+        >>> assert _path.is_file()
+        >>> assert Config.from_yaml(_path) is not None
+        >>> _path.unlink()
+        """
+
+        data = self.get_dict(optional_keys=optional_keys)
+        yaml.dump(
+            data=data,
+            stream=path.open(mode="w"),
+            indent=2,
+            sort_keys=False,
+            explicit_start=True,
+        )
+
+    def get_dict(self, optional_keys: bool = False) -> Dict[str, Any]:
+        """
+        Get a dictionary of the current config.
+
+        If `optional_keys` is False, non required keys
+        will be filtered out from the final config.
+        """
+
+        data = self.model_dump()
+        if optional_keys:
+            return data
+
+        version = data["version"]
+        automsr_data = dict(profiles=data["automsr"]["profiles"])
+        selenium_data = dict(
+            profiles_root=str(data["selenium"]["profiles_root"]),
+            chromedriver_path=str(data["selenium"]["chromedriver_path"]),
+        )
+        email_data = dict(
+            enable=data["email"]["enable"],
+            # also the following keys are optional,
+            # however they are mandatory if `email/enable` is true
+            recipient=data["email"]["recipient"],
+            sender=data["email"]["sender"],
+            sender_password=data["email"]["sender_password"],
+        )
+
+        return {
+            "version": version,
+            "automsr": automsr_data,
+            "selenium": selenium_data,
+            "email": email_data,
+        }
+
 
 if __name__ == "__main__":
     import doctest
