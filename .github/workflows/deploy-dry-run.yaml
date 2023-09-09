@@ -138,36 +138,21 @@ jobs:
     needs:
       - impact
       - version
-    if: needs.impact.outputs.impact != "no_impact"
+    if: needs.impact.outputs.impact != 'no_impact'
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.PAT }}  # to enable force-push for `add-and-commit` action
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+
       - name: Setup Poetry
         uses: abatilo/actions-poetry@v2
-      - name: Bump version
-        id: bump-version
-        env:
-          tag: ${{ needs.tag.outputs.tag }}
-        run: |
-          poetry version $tag
-          new_tag=$(poetry version --short)
-          new_tag_with_prefix="v$new_tag"
-          echo "new_tag=$new_tag_with_prefix" >> "$GITHUB_OUTPUT"
+
       - name: Build
         run: poetry build
+
       - name: Publish
         run: poetry publish --dry-run
-      - name: Commit Version bump
-        uses: EndBug/add-and-commit@v9.1.3
-        with:
-          author_name: Cristiano Salerno
-          author_email: cristianosalerno1@gmail.com
-          message: "Automatic version bump"
-          add: "pyproject.toml"  # the only file affected by `poetry version <tag>`
-          push: false  # we don't want to pollute origin
