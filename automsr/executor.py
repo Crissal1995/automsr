@@ -217,23 +217,23 @@ class SingleTargetExecutor:
 
             # At the end of the try-except block, we will have an outcome, a duration,
             # and possibly an explanation.
-            finally:
-                # Capture time elapsed.
-                end_counter = time.perf_counter()
-                seconds = end_counter - start_counter
-                duration = timedelta(seconds=seconds)
 
-                # Create step based on step status.
-                assert outcome is not None
-                step = Step(
-                    type=step_type,
-                    outcome=outcome,
-                    duration=duration,
-                    explanation=explanation,
-                )
+            # Capture time elapsed.
+            end_counter = time.perf_counter()
+            seconds = end_counter - start_counter
+            duration = timedelta(seconds=seconds)
 
-                # Append the created step status to the list of statuses.
-                steps.append(step)
+            # Create step based on step status.
+            assert outcome is not None
+            step = Step(
+                type=step_type,
+                outcome=outcome,
+                duration=duration,
+                explanation=explanation,
+            )
+
+            # Append the created step status to the list of statuses.
+            steps.append(step)
 
         # Create the overall status for the current profile, and return it to the caller.
         status = Status(profile=self.profile, steps=steps, points=points)
@@ -359,25 +359,6 @@ class SingleTargetExecutor:
         Execute all completable promotions.
         """
 
-        # handle promotional items differently, since there is another way
-        # to retrieve the corresponding WebElement
-        promotional_item = dashboard.get_promotional_item()
-        if promotional_item is not None:
-            try:
-                self.browser.open_promotion(
-                    promotion=promotional_item, element_id="promo-item"
-                )
-            except Exception as e:
-                logger.error("Exception caught: %s", e)
-                logger.warning("Promotion '%s' will be skipped", promotional_item)
-            finally:
-                # simulate navigation
-                logger.debug("Re-opening Rewards homepage to simulate navigation.")
-                self.browser.go_to_rewards()
-                logger.debug("Sleeping to simulate a real user behavior.")
-                time.sleep(2)
-
-        # handle all other promotions
         promotions: List[Promotion] = dashboard.get_completable_promotions()
 
         for promotion in promotions:
@@ -394,13 +375,32 @@ class SingleTargetExecutor:
                 logger.debug("Sleeping to simulate a real user behavior.")
                 time.sleep(2)
 
+        # Handle promotional items differently.
+        # Instead of relying on the dashboard, from time to time
+        #  they can spawn directly in the web interface.
+        # Because of this, we will try to execute it nevertheless; if we found it,
+        #  then we also execute it; else nothing will happen and the execution will continue.
+        try:
+            self.browser.open_promotion(element_id="promo-item")
+        except selenium.common.exceptions.NoSuchElementException:
+            logger.info("No promotion item '#promo-item' found.")
+        except Exception as e:
+            logger.error("Exception caught: %s", e)
+            logger.warning("Promotion item '#promo-item' will be skipped.")
+        finally:
+            # simulate navigation
+            logger.debug("Re-opening Rewards homepage to simulate navigation.")
+            self.browser.go_to_rewards()
+            logger.debug("Sleeping to simulate a real user behavior.")
+            time.sleep(2)
+
     def _execute_promotion(self, promotion: Promotion) -> None:
         """
         Execute a specific promotion.
         """
 
         driver = self.browser.driver
-        self.browser.open_promotion(promotion=promotion)
+        self.browser.open_promotion(promotion_name=promotion.name)
 
         # Sleep to simulate user behavior and to let JS load the page
         time.sleep(3)
