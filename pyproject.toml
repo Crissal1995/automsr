@@ -53,3 +53,7 @@ exclude = [".?v(irtualv?)?env"]
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules"
+
+[[tool.mypy.overrides]]
+module = "beaupy"
+ignore_missing_imports = true
