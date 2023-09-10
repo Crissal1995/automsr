@@ -9,9 +9,10 @@ from rich.console import Console
 
 from automsr.browser.profile import ChromeProfile, ChromeVariant, ProfilesExecutor
 
-DEFAULT_CONFIG_PATH = Path("config.yaml")
-
 logger = logging.getLogger(__name__)
+
+DEFAULT_CONFIG_PATH = Path("config.yaml")
+DEFAULT_CHROMEDRIVER_PATH = Path("chromedriver")
 
 
 @define(kw_only=True)
@@ -169,7 +170,7 @@ class InitExecutor:
 
         str_path = prompt("Path:")
         if not str_path:
-            path = Path("chromedriver")
+            path = DEFAULT_CHROMEDRIVER_PATH
         else:
             path = Path(str_path)
             if not path.is_file():
@@ -189,7 +190,10 @@ class InitExecutor:
             str_path = prompt(
                 "Path to output the Config file. Leave empty for the default, [b u]config.yaml[/]"
             )
-            path = Path(str_path)
+            if not str_path:
+                path = DEFAULT_CONFIG_PATH
+            else:
+                path = Path(str_path)
             if not path.is_file():
                 break
             else:
