@@ -18,6 +18,7 @@ email-validator = "^2.0.0.post2"
 pyyaml = "^6.0.1"
 markdown = "^3.4.4"
 faker = "^19.3.1"
+beaupy = "^3.5.4"
 
 [tool.poetry.scripts]
 automsr = "automsr.cli:cli"
