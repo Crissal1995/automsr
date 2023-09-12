@@ -13,7 +13,6 @@ from automsr.browser.profile import ChromeProfile, ChromeVariant, ProfilesExecut
 logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_PATH = Path("config.yaml")
-DEFAULT_CHROMEDRIVER_PATH = Path("chromedriver")
 
 # style to use with `questionary` prompts
 style = Style(
@@ -264,8 +263,9 @@ class InitExecutor:
             handle_null_response(path_str)
             assert path_str is not None
             if not path_str:
-                path_str = "config.yaml"
-            path = Path(path_str)
+                path = DEFAULT_CONFIG_PATH
+            else:
+                path = Path(path_str)
             logger.info("Path provided: %s", path)
 
             if path.is_file():
