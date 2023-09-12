@@ -33,5 +33,4 @@ repos:
           - "email-validator==2.0.0.post2"
           - "email-validator==2.0.0.post2"
           - "types-markdown==3.4.2.10"
-          - "rich==12.6.0"
-          - "beaupy==3.5.4"
+          - "questionary==2.0.1"
