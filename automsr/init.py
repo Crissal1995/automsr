@@ -1,11 +1,12 @@
 import logging
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
+import questionary
 from attr import asdict, define
-from beaupy import confirm, prompt, select, select_multiple
-from rich.console import Console
+from prompt_toolkit.shortcuts import CompleteStyle
+from questionary import Choice, Style
 
 from automsr.browser.profile import ChromeProfile, ChromeVariant, ProfilesExecutor
 
@@ -13,6 +14,63 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CONFIG_PATH = Path("config.yaml")
 DEFAULT_CHROMEDRIVER_PATH = Path("chromedriver")
+
+# style to use with `questionary` prompts
+style = Style(
+    [
+        ("highlighted", "fg:#673ab7 bold"),
+        ("qmark", "fg:#673ab7 bold"),
+        ("question", "bold"),
+        ("answer", "fg:yellow bold"),
+    ]
+)
+
+
+def handle_null_response(response: Optional[Any]) -> None:
+    """
+    Handle null responses provided by the user.
+
+    This is related to how `questionary` handles keyboards interrupts,
+    both in a safe or unsafe way.
+    We are always using the safe way in the execution flow.
+
+    Docs: https://questionary.readthedocs.io/en/stable/pages/advanced.html#keyboard-interrupts
+    """
+
+    # the response will be None if the user cancelled the job, e.g., with CTRL+C
+    if response is None:
+        sys.exit(1)
+
+
+def fix_unhandled_exception_in_event_loop() -> None:
+    """
+    This workaround is needed for an issue with the Python event loop
+    and python-prompt-toolkit v3.
+
+    The issue is the following:
+        "Exception [WinError 995] The I/O operation has been aborted
+        because of either a thread exit or an application request
+
+        Press ENTER to continue..."
+
+    Issue: https://github.com/prompt-toolkit/python-prompt-toolkit/issues/1023
+    Workaround: https://github.com/xonsh/xonsh/issues/3430
+    """
+
+    def enable_selector_event_loop():
+        try:
+            # These instructions from
+            # https://docs.python.org/3/library/asyncio-eventloop.html?highlight=proactor#asyncio.SelectorEventLoop
+            import asyncio
+            import selectors
+
+            selector = selectors.SelectSelector()
+            loop = asyncio.SelectorEventLoop(selector)
+            asyncio.set_event_loop(loop)
+        except:  # noqa: E722
+            pass
+
+    enable_selector_event_loop()
 
 
 @define(kw_only=True)
@@ -33,6 +91,9 @@ class InitExecutor:
         Main functionality to call; will prompt the user how to proceed
         in order to generate a config file automatically.
         """
+
+        # This is needed for python-prompt-toolkit
+        fix_unhandled_exception_in_event_loop()
 
         self.check_if_interactive_shell_is_needed()
 
@@ -90,16 +151,21 @@ class InitExecutor:
         Get the Chrome variant after asking the user to select it from a list.
         """
 
-        console = Console()
-        console.print(
-            "Which variant of Chrome are you using? Select [b u]Chrome[/] if you are unsure."
-        )
-        chrome_variants = [
-            variant.name.replace("_", " ").capitalize().replace("_", "")
-            for variant in ChromeVariant
+        chrome_variants: List[str] = [
+            variant.name.replace("_", " ").capitalize() for variant in ChromeVariant
         ]
-        variant_index: int = select(options=chrome_variants, return_index=True)
-        variant = list(ChromeVariant)[variant_index]
+
+        chrome_variant: Optional[str] = questionary.select(
+            message="Which variant of Chrome are you using?",
+            choices=chrome_variants,
+            use_indicator=True,
+            style=style,
+        ).ask()
+
+        handle_null_response(chrome_variant)
+        assert chrome_variant is not None
+
+        variant = list(ChromeVariant)[chrome_variants.index(chrome_variant)]
         logger.info("Variant selected: %s", variant)
         return variant
 
@@ -129,10 +195,15 @@ class InitExecutor:
         Set the Chrome profiles based on the selected Chrome variant and the user prompt.
         """
 
-        console = Console()
-
         profiles_executor = self._get_profiles_executor()
-        profiles = profiles_executor.get_profiles()
+        try:
+            profiles = profiles_executor.get_profiles()
+        except FileNotFoundError as e:
+            logger.error(
+                "Profiles root directory was not found! "
+                "Are you sure that you selected the correct Chrome variant?"
+            )
+            raise e
 
         if not profiles:
             logger.error(
@@ -140,19 +211,25 @@ class InitExecutor:
             )
             raise RuntimeError("No Chrome profile found!")
 
-        profiles_str = [str(profile) for profile in profiles]
-        console.print("Found the following profiles. De-select them at will.")
-        indices: List[int] = select_multiple(
-            options=profiles_str,
-            return_indices=True,
-            ticked_indices=list(range(len(profiles_str))),
-            minimal_count=1,
-        )
+        profiles_as_str = [str(profile) for profile in profiles]
+        chosen_profiles: Optional[List[str]] = questionary.checkbox(
+            message="Found the following profiles. Selected all by default. De-select them at will.",
+            choices=[
+                Choice(title=profile, checked=True) for profile in profiles_as_str
+            ],
+            style=style,
+        ).ask()
+
+        handle_null_response(chosen_profiles)
+        assert chosen_profiles is not None
 
         profiles_to_use: List[ChromeProfile] = []
-        for index in indices:
-            profiles_to_use.append(profiles[index])
+        for profile_str in chosen_profiles:
+            index: int = profiles_as_str.index(profile_str)
+            profile = profiles[index]
+            profiles_to_use.append(profile)
 
+        logger.info("Chosen profiles: %s", profiles_to_use)
         return profiles_to_use
 
     @staticmethod
@@ -161,22 +238,15 @@ class InitExecutor:
         Get the Chromedriver path after prompting the user where to find it.
         """
 
-        console = Console()
-        console.print("Specify the path to the Chromedriver executable.")
-        console.print(
-            "Leave empty for the default, [b u]chromedriver[/]. "
-            "It will be looked for in the PATH env variable."
-        )
-
-        str_path = prompt("Path:")
-        if not str_path:
-            path = DEFAULT_CHROMEDRIVER_PATH
-        else:
-            path = Path(str_path)
-            if not path.is_file():
-                raise FileNotFoundError(path)
-
-        return path
+        path_str: Optional[str] = questionary.path(
+            "What's the path to the Chromedriver executable?",
+            validate=lambda v: Path(v).is_file(),
+            complete_style=CompleteStyle.READLINE_LIKE,
+            style=style,
+        ).ask()
+        handle_null_response(path_str)
+        assert path_str is not None
+        return Path(path_str)
 
     @staticmethod
     def get_config_path() -> Path:
@@ -184,22 +254,31 @@ class InitExecutor:
         Get the path to the config file.
         """
 
-        console = Console()
-
         while True:
-            str_path = prompt(
-                "Path to output the Config file. Leave empty for the default, [b u]config.yaml[/]"
-            )
-            if not str_path:
-                path = DEFAULT_CONFIG_PATH
-            else:
-                path = Path(str_path)
-            if not path.is_file():
-                break
-            else:
-                console.print("[b red]The path you provided already exists.[/]")
-                should_overwrite = confirm("Do you want to overwrite it?")
-                if should_overwrite:
-                    break
+            path_str: Optional[str] = questionary.path(
+                "Path to output the YAML Config file. Leave empty for the default, config.yaml",
+                complete_style=CompleteStyle.READLINE_LIKE,
+                validate=lambda v: v == "" or not Path(v).is_dir(),
+                style=style,
+            ).ask()
+            handle_null_response(path_str)
+            assert path_str is not None
+            if not path_str:
+                path_str = "config.yaml"
+            path = Path(path_str)
+            logger.info("Path provided: %s", path)
 
+            if path.is_file():
+                will_overwrite: Optional[bool] = questionary.confirm(
+                    message="The path you provided already exists! Do you want to overwrite it?",
+                    default=False,
+                ).ask()
+                handle_null_response(will_overwrite)
+                assert will_overwrite is not None
+                if will_overwrite:
+                    break
+            else:
+                break
+
+        logger.info("Path that will be used for the config: %s", path)
         return path
