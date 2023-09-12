@@ -416,7 +416,7 @@ class EmailExecutor:
         for profile in self.config.automsr.profiles:
             steps: List[Step] = []
 
-            step_types: List[StepType] = StepType.get_ordered_steps()
+            step_types: List[StepType] = StepType.get_run_steps()
 
             for step_type in step_types:
                 if profile.skip:

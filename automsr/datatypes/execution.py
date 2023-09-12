@@ -37,7 +37,7 @@ class StepType(Enum):
     MOBILE_SEARCHES = auto()
 
     @classmethod
-    def get_ordered_steps(cls) -> List["StepType"]:
+    def get_run_steps(cls) -> List["StepType"]:
         """
         Returns the step ordered as expected by the `run` flow.
         """
@@ -54,6 +54,8 @@ class StepType(Enum):
             # complete searches
             cls.PC_SEARCHES,
             cls.MOBILE_SEARCHES,
+            # retrieve the dashboard again to get updated points
+            cls.GET_DASHBOARD,
             # get the total points
             cls.GET_POINTS,
             # end the session
