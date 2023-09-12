@@ -19,7 +19,7 @@ style = Style(
     [
         ("highlighted", "fg:#673ab7 bold"),
         ("qmark", "fg:#673ab7 bold"),
-        ("question", "bold"),
+        ("question", "green bold"),
         ("answer", "fg:yellow bold"),
     ]
 )
