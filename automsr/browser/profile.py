@@ -4,7 +4,7 @@ import os
 import sys
 from enum import Enum, auto
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from attrs import define
 
@@ -20,6 +20,7 @@ class ChromeVariant(Enum):
     """
 
     CHROME = auto()
+    CHROME_BETA = auto()
     CHROME_CANARY = auto()
     CHROMIUM = auto()
 
@@ -91,21 +92,43 @@ class ProfilesExecutor:
     chrome_variant: ChromeVariant = ChromeVariant.CHROME
     profiles_root_path: Optional[Path] = None
 
-    CHROME_PROFILES_LOCATIONS = {
+    # source: https://chromium.googlesource.com/chromium/src/+/master/docs/user_data_dir.md#default-location
+    CHROME_DEFAULT_PROFILES_LOCATIONS: ClassVar[
+        Dict[str, Dict[ChromeVariant, Path]]
+    ] = {
         "macOS": {
-            ChromeVariant.CHROME: f"{ENV_HOME}/Library/Application Support/Google/Chrome",
-            ChromeVariant.CHROME_CANARY: f"{ENV_HOME}/Library/Application Support/Google/Chrome",
-            ChromeVariant.CHROMIUM: f"{ENV_HOME}/Library/Application Support/Google/Chrome",
+            ChromeVariant.CHROME: Path(
+                f"{ENV_HOME}/Library/Application Support/Google/Chrome"
+            ),
+            ChromeVariant.CHROME_BETA: Path(
+                f"{ENV_HOME}/Library/Application Support/Google/Chrome Beta"
+            ),
+            ChromeVariant.CHROME_CANARY: Path(
+                f"{ENV_HOME}/Library/Application Support/Google/Chrome Canary"
+            ),
+            ChromeVariant.CHROMIUM: Path(
+                f"{ENV_HOME}/Library/Application Support/Chromium"
+            ),
         },
         "windows": {
-            ChromeVariant.CHROME: f"{ENV_LOCALAPPDATA}\\Google\\Chrome\\User Data",
-            ChromeVariant.CHROME_CANARY: f"{ENV_LOCALAPPDATA}\\Google\\Chrome SxS\\User Data",
-            ChromeVariant.CHROMIUM: f"{ENV_HOME}/Library/Application Support/Chromium",
+            ChromeVariant.CHROME: Path(
+                f"{ENV_LOCALAPPDATA}\\Google\\Chrome\\User Data"
+            ),
+            ChromeVariant.CHROME_BETA: Path(
+                f"{ENV_LOCALAPPDATA}\\Google\\Chrome Beta\\User Data"
+            ),
+            ChromeVariant.CHROME_CANARY: Path(
+                f"{ENV_LOCALAPPDATA}\\Google\\Chrome SxS\\User Data"
+            ),
+            ChromeVariant.CHROMIUM: Path(f"{ENV_LOCALAPPDATA}\\Chromium\\User Data"),
         },
         "linux": {
-            ChromeVariant.CHROME: f"{ENV_HOME}/.config/google-chrome",
-            ChromeVariant.CHROME_CANARY: f"{ENV_HOME}/.config/google-chrome-beta",
-            ChromeVariant.CHROMIUM: f"{ENV_HOME}/.config/chromium",
+            ChromeVariant.CHROME: Path(f"{ENV_HOME}/.config/google-chrome"),
+            ChromeVariant.CHROME_BETA: Path(f"{ENV_HOME}/.config/google-chrome-beta"),
+            ChromeVariant.CHROME_CANARY: Path(
+                f"{ENV_HOME}/.config/google-chrome-unstable"
+            ),
+            ChromeVariant.CHROMIUM: Path(f"{ENV_HOME}/.config/chromium"),
         },
     }
 
@@ -116,7 +139,7 @@ class ProfilesExecutor:
 
         if self.profiles_root_path is not None:
             logger.info(
-                "Profiles root path manually set to: %s", self.profiles_root_path
+                "Profiles root path was manually set to: %s", self.profiles_root_path
             )
             return self.profiles_root_path
 
@@ -124,12 +147,11 @@ class ProfilesExecutor:
         logger.debug("Platform to use: %s", platform)
         logger.debug("Chrome variant to use: %s", self.chrome_variant)
 
-        profiles_root_path_str = self.CHROME_PROFILES_LOCATIONS[platform][
+        profiles_root_path = self.CHROME_DEFAULT_PROFILES_LOCATIONS[platform][
             self.chrome_variant
         ]
-        profiles_root_path = Path(profiles_root_path_str)
         logger.info(
-            "Profiles root path automatically found to be: %s", profiles_root_path
+            "Profiles root path was automatically found to be: %s", profiles_root_path
         )
         return profiles_root_path
 
