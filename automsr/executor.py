@@ -62,7 +62,9 @@ def get_available_points(dashboard: Dashboard) -> int:
     Return the available points that a user can have.
     """
 
-    return dashboard.points()
+    points = dashboard.points()
+    logger.info("Available points: %s", points)
+    return points
 
 
 @define
@@ -140,7 +142,7 @@ class SingleTargetExecutor:
         steps: List[Step] = []
 
         # Get the list of steps in the correct order of execution
-        step_types: List[StepType] = StepType.get_ordered_steps()
+        step_types: List[StepType] = StepType.get_run_steps()
 
         # If the profile is marked as skipped, return this result.
         if self.profile.skip:
@@ -262,10 +264,15 @@ class SingleTargetExecutor:
     def get_dashboard(self) -> Dashboard:
         """
         Retrieve a Dashboard object from the current page.
-
-        This method is expected to be run inside the Rewards homepage.
         """
 
+        # Go to the Rewards homepage where the dashboard is defined
+        self.browser.go_to(self.config.automsr.rewards_homepage)
+
+        # Simulate the user landing on the page and waiting a little bit
+        time.sleep(1)
+
+        # Get the dashboard via JS
         raw_data: Dict[str, Any] = self.browser.execute_script("return dashboard;")
         dashboard = Dashboard(**raw_data)
         return dashboard
