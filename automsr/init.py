@@ -9,6 +9,7 @@ from prompt_toolkit.shortcuts import CompleteStyle
 from questionary import Choice, Style
 
 from automsr.browser.profile import ChromeProfile, ChromeVariant, ProfilesExecutor
+from automsr.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,56 @@ class InitExecutor:
         if self.config_path is None:
             self.config_path = self.get_config_path()
 
+        # TODO email section
+
+        config = self.get_config()
+        self.store_config(config=config)
+
+    def get_config(self) -> Config:
+        """
+        Get a config representation based on the status of the object.
+        """
+
+        assert self.profiles is not None
+        profiles_obj = [
+            {"email": p.displayed_name, "profile": p.path.stem} for p in self.profiles
+        ]
+        automsr_obj = {"profiles": profiles_obj}
+
+        assert self.profiles_root is not None
+        assert self.chromedriver_path is not None
+        selenium_obj = {
+            "profiles_root": str(self.profiles_root),
+            "chromedriver_path": str(self.chromedriver_path),
+        }
+
+        # TODO
+        email_obj = {
+            "enable": None,
+            "recipient": None,
+            "sender": None,
+            "sender_password": None,
+        }
+
+        config = Config.from_dict(
+            data={
+                "version": "v1",
+                "automsr": automsr_obj,
+                "selenium": selenium_obj,
+                "email": email_obj,
+            }
+        )
+
+        return config
+
+    def store_config(self, config: Config) -> None:
+        """
+        Store a config object to disk based on the state of this object.
+        """
+
+        assert self.config_path is not None
+        config.store(path=self.config_path)
+
     def check_if_interactive_shell_is_needed(self) -> None:
         """
         Check if an interactive shell is needed, based on the state of the object.
@@ -219,7 +270,7 @@ class InitExecutor:
 
         profiles_as_str = [str(profile) for profile in profiles]
         chosen_profiles: Optional[List[str]] = questionary.checkbox(
-            message="Found the following profiles. Select the ones you intend to use with AutoMSR.",
+            message="Found the following profiles. Select the ones you intend to use.",
             choices=[
                 Choice(title=profile, checked=False) for profile in profiles_as_str
             ],
