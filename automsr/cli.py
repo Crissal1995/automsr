@@ -37,7 +37,7 @@ class Args:
     format: OutputFormat = field(default=OutputFormat.LIST, converter=OutputFormat)
 
     # Init args
-    # ...
+    enable_logs: bool = False
 
 
 def run(args: Args) -> None:
@@ -82,6 +82,12 @@ def init(args: Args) -> None:
     """
     Method to invoke when `init` is executed.
     """
+
+    if not args.enable_logs:
+        _logger = logging.getLogger()
+        while _logger.hasHandlers():
+            _logger.removeHandler(_logger.handlers[0])
+        _logger.addHandler(logging.NullHandler())
 
     executor = InitExecutor()
     executor.execute()
@@ -151,9 +157,15 @@ def add_init_flags(parser: ArgumentParser) -> None:
     """
     Add `init` flags to a generic parser.
 
-    Flags provided: no one.
+    Flags provided:
+    * --enable-logs
     """
 
+    parser.add_argument(
+        "--enable-logs",
+        action="store_true",
+        help="Enable logging to stderr. Defaults to False to avoid output pollution.",
+    )
     parser.set_defaults(func=init)
 
 
