@@ -223,6 +223,7 @@ class InitExecutor:
             choices=[
                 Choice(title=profile, checked=False) for profile in profiles_as_str
             ],
+            validate=lambda choices: len(choices) > 0 or "Select at least one profile",
             style=style,
         ).ask()
 
@@ -246,7 +247,7 @@ class InitExecutor:
 
         path_str: Optional[str] = questionary.path(
             "What's the path to the Chromedriver executable?",
-            validate=lambda v: Path(v).is_file(),
+            validate=lambda v: Path(v).is_file() or "File not found",
             complete_style=CompleteStyle.READLINE_LIKE,
             style=style,
         ).ask()
@@ -262,9 +263,11 @@ class InitExecutor:
 
         while True:
             path_str: Optional[str] = questionary.path(
-                "Path to output the YAML Config file. Leave empty for the default, config.yaml",
+                "Path to output the YAML Config file. Leave empty for the default: config.yaml",
                 complete_style=CompleteStyle.READLINE_LIKE,
-                validate=lambda v: v == "" or not Path(v).is_dir(),
+                validate=lambda v: v == ""
+                or not Path(v).is_dir()
+                or "Path invalid or directory",
                 style=style,
             ).ask()
             handle_null_response(path_str)
