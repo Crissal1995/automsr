@@ -24,6 +24,13 @@ style = Style(
     ]
 )
 
+error_style = Style(
+    [
+        ("question", "red bold"),
+        ("answer", "fg:yellow bold"),
+    ]
+)
+
 
 def handle_null_response(response: Optional[Any]) -> None:
     """
@@ -212,9 +219,9 @@ class InitExecutor:
 
         profiles_as_str = [str(profile) for profile in profiles]
         chosen_profiles: Optional[List[str]] = questionary.checkbox(
-            message="Found the following profiles. Selected all by default. De-select them at will.",
+            message="Found the following profiles. Select the ones you intend to use with AutoMSR.",
             choices=[
-                Choice(title=profile, checked=True) for profile in profiles_as_str
+                Choice(title=profile, checked=False) for profile in profiles_as_str
             ],
             style=style,
         ).ask()
@@ -272,6 +279,7 @@ class InitExecutor:
                 will_overwrite: Optional[bool] = questionary.confirm(
                     message="The path you provided already exists! Do you want to overwrite it?",
                     default=False,
+                    style=error_style,
                 ).ask()
                 handle_null_response(will_overwrite)
                 assert will_overwrite is not None
