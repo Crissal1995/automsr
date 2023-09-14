@@ -148,11 +148,19 @@ class InitExecutor:
         """
 
         assert self.profiles is not None
-        dummy_email = "must-change-this-with-correct-email-address@outlook.com"
+        dummy_email = "must-change-this-with-a-correct-email-address@outlook.com"
         profiles_obj = [
             {"email": p.get_email() or dummy_email, "profile": p.path.stem}
             for p in self.profiles
         ]
+        if any(profile["email"] == dummy_email for profile in profiles_obj):
+            questionary.print(
+                text=(
+                    "At least one email address was not found automatically. "
+                    "Please add it yourself in the config file."
+                ),
+                style="red bold",
+            )
         automsr_obj = {"profiles": profiles_obj}
 
         assert self.profiles_root is not None
