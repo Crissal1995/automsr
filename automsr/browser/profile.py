@@ -1,12 +1,16 @@
 import json
 import logging
 import os
+import sqlite3
 import sys
 from enum import Enum, auto
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional, Set, Tuple
 
+from attr import field
 from attrs import define
+
+from automsr.config import validate_email
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,7 @@ class ChromeVariant(Enum):
     """
 
     CHROME = auto()
+    CHROME_BETA = auto()
     CHROME_CANARY = auto()
     CHROMIUM = auto()
 
@@ -85,27 +90,120 @@ class ChromeProfile:
         displayed_name = preferences_dict.get("profile", {}).get("name", "")
         return cls(displayed_name=displayed_name, path=path)
 
+    def get_email(self) -> Optional[str]:
+        """
+        Try to get the Outlook email address from the profile data.
+        """
+
+        allowed_domains = {"outlook", "live", "hotmail", "msn"}
+
+        @define(order=True, frozen=True)
+        class Record:
+            email: str = field(order=False)
+            timestamp: int
+
+            @classmethod
+            def from_row(cls, row: Tuple[str, str]) -> Optional["Record"]:
+                """
+                Parse a row obtained from the Login Data database of Chrome.
+
+                If the row is not compatible with our criteria, returns None.
+                """
+
+                assert len(row) == 2
+                email_value: str = row[0]
+                timestamp_value: int = int(row[1])
+
+                if not validate_email(email_value, raise_on_error=False):
+                    return None
+
+                domain = email_value.split("@")[1].split(".")[0]
+                if domain not in allowed_domains:
+                    return None
+
+                return cls(email=email_value, timestamp=timestamp_value)
+
+        # TODO check if this path is valid for every OS
+        login_database: Path = self.path / "Login Data"
+        if not login_database.is_file():
+            logger.debug("No login database found: %s", login_database)
+            return None
+
+        with sqlite3.connect(login_database) as conn:
+            cur = conn.execute(
+                """\
+                select t.username_value, t.date_last_used
+                from main.logins t
+                where t.username_value <> ''
+                and t.origin_url like '%live.com%';"""
+            )
+            all_rows: List[Tuple[str, str]] = cur.fetchall()
+
+        valid_records: List[Optional[Record]] = [
+            Record.from_row(row=row) for row in all_rows
+        ]
+        valid_non_null_records: List[Record] = [
+            record for record in valid_records if record is not None
+        ]
+        unique_emails: Set[str] = {record.email for record in valid_non_null_records}
+        logger.debug("Outlook emails found: %s", unique_emails)
+
+        if not unique_emails:
+            logger.debug("No Outlook email found!")
+            return None
+        elif len(unique_emails) > 1:
+            logger.debug(
+                "More than one Outlook email found! Will return the latest email used."
+            )
+            latest_record: Record = max(valid_non_null_records)
+            return latest_record.email
+        else:
+            logger.debug("Found only one Outlook email.")
+            return unique_emails.pop()
+
 
 @define
 class ProfilesExecutor:
     chrome_variant: ChromeVariant = ChromeVariant.CHROME
     profiles_root_path: Optional[Path] = None
 
-    CHROME_PROFILES_LOCATIONS = {
+    # source: https://chromium.googlesource.com/chromium/src/+/master/docs/user_data_dir.md#default-location
+    CHROME_DEFAULT_PROFILES_LOCATIONS: ClassVar[
+        Dict[str, Dict[ChromeVariant, Path]]
+    ] = {
         "macOS": {
-            ChromeVariant.CHROME: f"{ENV_HOME}/Library/Application Support/Google/Chrome",
-            ChromeVariant.CHROME_CANARY: f"{ENV_HOME}/Library/Application Support/Google/Chrome",
-            ChromeVariant.CHROMIUM: f"{ENV_HOME}/Library/Application Support/Google/Chrome",
+            ChromeVariant.CHROME: Path(
+                f"{ENV_HOME}/Library/Application Support/Google/Chrome"
+            ),
+            ChromeVariant.CHROME_BETA: Path(
+                f"{ENV_HOME}/Library/Application Support/Google/Chrome Beta"
+            ),
+            ChromeVariant.CHROME_CANARY: Path(
+                f"{ENV_HOME}/Library/Application Support/Google/Chrome Canary"
+            ),
+            ChromeVariant.CHROMIUM: Path(
+                f"{ENV_HOME}/Library/Application Support/Chromium"
+            ),
         },
         "windows": {
-            ChromeVariant.CHROME: f"{ENV_LOCALAPPDATA}\\Google\\Chrome\\User Data",
-            ChromeVariant.CHROME_CANARY: f"{ENV_LOCALAPPDATA}\\Google\\Chrome SxS\\User Data",
-            ChromeVariant.CHROMIUM: f"{ENV_HOME}/Library/Application Support/Chromium",
+            ChromeVariant.CHROME: Path(
+                f"{ENV_LOCALAPPDATA}\\Google\\Chrome\\User Data"
+            ),
+            ChromeVariant.CHROME_BETA: Path(
+                f"{ENV_LOCALAPPDATA}\\Google\\Chrome Beta\\User Data"
+            ),
+            ChromeVariant.CHROME_CANARY: Path(
+                f"{ENV_LOCALAPPDATA}\\Google\\Chrome SxS\\User Data"
+            ),
+            ChromeVariant.CHROMIUM: Path(f"{ENV_LOCALAPPDATA}\\Chromium\\User Data"),
         },
         "linux": {
-            ChromeVariant.CHROME: f"{ENV_HOME}/.config/google-chrome",
-            ChromeVariant.CHROME_CANARY: f"{ENV_HOME}/.config/google-chrome-beta",
-            ChromeVariant.CHROMIUM: f"{ENV_HOME}/.config/chromium",
+            ChromeVariant.CHROME: Path(f"{ENV_HOME}/.config/google-chrome"),
+            ChromeVariant.CHROME_BETA: Path(f"{ENV_HOME}/.config/google-chrome-beta"),
+            ChromeVariant.CHROME_CANARY: Path(
+                f"{ENV_HOME}/.config/google-chrome-unstable"
+            ),
+            ChromeVariant.CHROMIUM: Path(f"{ENV_HOME}/.config/chromium"),
         },
     }
 
@@ -116,7 +214,7 @@ class ProfilesExecutor:
 
         if self.profiles_root_path is not None:
             logger.info(
-                "Profiles root path manually set to: %s", self.profiles_root_path
+                "Profiles root path was manually set to: %s", self.profiles_root_path
             )
             return self.profiles_root_path
 
@@ -124,12 +222,11 @@ class ProfilesExecutor:
         logger.debug("Platform to use: %s", platform)
         logger.debug("Chrome variant to use: %s", self.chrome_variant)
 
-        profiles_root_path_str = self.CHROME_PROFILES_LOCATIONS[platform][
+        profiles_root_path = self.CHROME_DEFAULT_PROFILES_LOCATIONS[platform][
             self.chrome_variant
         ]
-        profiles_root_path = Path(profiles_root_path_str)
         logger.info(
-            "Profiles root path automatically found to be: %s", profiles_root_path
+            "Profiles root path was automatically found to be: %s", profiles_root_path
         )
         return profiles_root_path
 

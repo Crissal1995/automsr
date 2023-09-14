@@ -5,12 +5,11 @@ from urllib.parse import urlparse
 
 import yaml
 from attr import define
+from email_validator import EmailNotValidError
 from email_validator import (
     ValidatedEmail as _ValidatedEmail,
 )
-from email_validator import (
-    validate_email as _validate_email,
-)
+from email_validator import validate_email as _validate_email
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr
 from typing_extensions import Annotated
 
@@ -27,13 +26,21 @@ def validate_url(value: str) -> str:
     return value
 
 
-def validate_email(value: Optional[str]) -> Optional[str]:
+def validate_email(
+    value: Optional[str], *, raise_on_error: bool = True
+) -> Optional[str]:
     if value is None:
         return None
-    validated_email: _ValidatedEmail = _validate_email(
-        value, check_deliverability=False
-    )
-    return validated_email.normalized
+    try:
+        validated_email: _ValidatedEmail = _validate_email(
+            value, check_deliverability=False
+        )
+        return validated_email.normalized
+    except EmailNotValidError as e:
+        if raise_on_error:
+            raise e
+        else:
+            return None
 
 
 ValidatedVersion = Annotated[str, AfterValidator(validate_version)]
@@ -152,6 +159,95 @@ class Config(BaseModel):
         """
 
         return cls(**data)
+
+    def store(
+        self, path: Optional[Path] = None, *, optional_keys: bool = False
+    ) -> Optional[str]:
+        """
+        Write the config file to a specified path.
+        If the path is None, then it will be dumped to the stdout.
+
+        The format used is YAML.
+
+        If `optional_keys` is True, then also optional keys will be added to the
+        resulting config file.
+
+        >>> _config = Config.from_dict({
+        ...     "automsr": {"profiles": [{"email": "foo@gmail.com", "profile": "my-profile"}]},
+        ...     "email": {
+        ...         "enable": True,
+        ...         "recipient": "foo@gmail.com",
+        ...         "sender": "bar@gmail.com",
+        ...         "sender_password": "abcd",
+        ...     },
+        ...     "selenium": {
+        ...         "profiles_root": "profiles_root",
+        ...         "chromedriver_path": "chromedriver",
+        ...     }
+        ... })
+
+        Dump to stdout
+        >>> _config.store()
+        '---\\nversion: v1\\nautomsr:\\n  profiles:\\n  - email: foo@gmail.com\\n    profile: my-profile\\n    skip: false\\nselenium:\\n  profiles_root: profiles_root\\n  chromedriver_path: chromedriver\\nemail:\\n  enable: true\\n  recipient: foo@gmail.com\\n  sender: bar@gmail.com\\n  sender_password: abcd\\n'
+
+        Dump to a file
+        >>> import tempfile
+        >>> f = tempfile.NamedTemporaryFile(mode="w", delete=False)
+        >>> _path = Path(f.name)
+        >>> _config.store(path=_path)
+        >>> f.close()
+        >>> assert _path.is_file()
+        >>> assert Config.from_yaml(_path) is not None
+        >>> _path.unlink()
+        """  # noqa: E501
+
+        data = self.get_dict(optional_keys=optional_keys)
+        output: Optional[str] = yaml.dump(
+            data=data,
+            stream=path.open(mode="w") if path is not None else None,
+            indent=2,
+            sort_keys=False,
+            explicit_start=True,
+        )
+        return output
+
+    def get_dict(self, optional_keys: bool = False) -> Dict[str, Any]:
+        """
+        Get a dictionary of the current config.
+
+        If `optional_keys` is False, non required keys
+        will be filtered out from the final config.
+        """
+
+        data = self.model_dump()
+        if isinstance(data["email"]["sender_password"], SecretStr):
+            data["email"]["sender_password"] = data["email"][
+                "sender_password"
+            ].get_secret_value()
+        if optional_keys:
+            return data
+
+        version = data["version"]
+        automsr_data = dict(profiles=data["automsr"]["profiles"])
+        selenium_data = dict(
+            profiles_root=str(data["selenium"]["profiles_root"]),
+            chromedriver_path=str(data["selenium"]["chromedriver_path"]),
+        )
+        email_data = dict(
+            enable=data["email"]["enable"],
+            # also the following keys are optional,
+            # however they are mandatory if `email/enable` is true
+            recipient=data["email"]["recipient"],
+            sender=data["email"]["sender"],
+            sender_password=data["email"]["sender_password"],
+        )
+
+        return {
+            "version": version,
+            "automsr": automsr_data,
+            "selenium": selenium_data,
+            "email": email_data,
+        }
 
 
 if __name__ == "__main__":

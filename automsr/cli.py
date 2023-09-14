@@ -9,6 +9,7 @@ from attr import define, field
 from automsr.browser.profile import OutputFormat, ProfilesExecutor
 from automsr.config import Config
 from automsr.executor import MultipleTargetsExecutor
+from automsr.init import InitExecutor
 from automsr.mail import EmailExecutor
 
 logger = logging.getLogger(__name__)
@@ -30,9 +31,13 @@ class Args:
     verbose: bool = False
 
     # Run args
+    # ...
 
     # Profiles args
     format: OutputFormat = field(default=OutputFormat.LIST, converter=OutputFormat)
+
+    # Init args
+    enable_logs: bool = False
 
 
 def run(args: Args) -> None:
@@ -71,6 +76,21 @@ def email(args: Args) -> None:
             " Check your config file and retry."
         )
         sys.exit(1)
+
+
+def init(args: Args) -> None:
+    """
+    Method to invoke when `init` is executed.
+    """
+
+    if not args.enable_logs:
+        _logger = logging.getLogger()
+        while _logger.hasHandlers():
+            _logger.removeHandler(_logger.handlers[0])
+        _logger.addHandler(logging.NullHandler())
+
+    executor = InitExecutor()
+    executor.execute()
 
 
 def add_common_flags(parser: ArgumentParser) -> None:
@@ -132,6 +152,22 @@ def add_email_flags(parser: ArgumentParser) -> None:
     parser.set_defaults(func=email)
 
 
+def add_init_flags(parser: ArgumentParser) -> None:
+    """
+    Add `init` flags to a generic parser.
+
+    Flags provided:
+    * --enable-logs
+    """
+
+    parser.add_argument(
+        "--enable-logs",
+        action="store_true",
+        help="Enable logging to stderr. Defaults to False to avoid output pollution.",
+    )
+    parser.set_defaults(func=init)
+
+
 def cli() -> None:
     # Construct the base parser
     parser = ArgumentParser()
@@ -160,6 +196,14 @@ def cli() -> None:
     )
     add_common_flags(parser=email_parser)
     add_email_flags(parser=email_parser)
+
+    # Construct the `init` parser
+    init_parser = subparsers.add_parser(
+        name="init",
+        help="Create the config file in a step-by-step procedure.",
+    )
+    add_common_flags(parser=init_parser)
+    add_init_flags(parser=init_parser)
 
     # Parse arguments
     try:
