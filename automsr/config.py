@@ -160,9 +160,12 @@ class Config(BaseModel):
 
         return cls(**data)
 
-    def store(self, path: Path, *, optional_keys: bool = False) -> None:
+    def store(
+        self, path: Optional[Path] = None, *, optional_keys: bool = False
+    ) -> Optional[str]:
         """
         Write the config file to a specified path.
+        If the path is None, then it will be dumped to the stdout.
 
         The format used is YAML.
 
@@ -171,12 +174,23 @@ class Config(BaseModel):
 
         >>> _config = Config.from_dict({
         ...     "automsr": {"profiles": [{"email": "foo@gmail.com", "profile": "my-profile"}]},
-        ...     "email": {},
+        ...     "email": {
+        ...         "enable": True,
+        ...         "recipient": "foo@gmail.com",
+        ...         "sender": "bar@gmail.com",
+        ...         "sender_password": "abcd",
+        ...     },
         ...     "selenium": {
-        ...         "profiles_root": "profiles/root",
+        ...         "profiles_root": "profiles_root",
         ...         "chromedriver_path": "chromedriver",
         ...     }
         ... })
+
+        Dump to stdout
+        >>> _config.store()
+        '---\\nversion: v1\\nautomsr:\\n  profiles:\\n  - email: foo@gmail.com\\n    profile: my-profile\\n    skip: false\\nselenium:\\n  profiles_root: profiles_root\\n  chromedriver_path: chromedriver\\nemail:\\n  enable: true\\n  recipient: foo@gmail.com\\n  sender: bar@gmail.com\\n  sender_password: abcd\\n'
+
+        Dump to a file
         >>> import tempfile
         >>> f = tempfile.NamedTemporaryFile(mode="w", delete=False)
         >>> _path = Path(f.name)
@@ -185,16 +199,17 @@ class Config(BaseModel):
         >>> assert _path.is_file()
         >>> assert Config.from_yaml(_path) is not None
         >>> _path.unlink()
-        """
+        """  # noqa: E501
 
         data = self.get_dict(optional_keys=optional_keys)
-        yaml.dump(
+        output: Optional[str] = yaml.dump(
             data=data,
-            stream=path.open(mode="w"),
+            stream=path.open(mode="w") if path is not None else None,
             indent=2,
             sort_keys=False,
             explicit_start=True,
         )
+        return output
 
     def get_dict(self, optional_keys: bool = False) -> Dict[str, Any]:
         """
@@ -205,6 +220,10 @@ class Config(BaseModel):
         """
 
         data = self.model_dump()
+        if isinstance(data["email"]["sender_password"], SecretStr):
+            data["email"]["sender_password"] = data["email"][
+                "sender_password"
+            ].get_secret_value()
         if optional_keys:
             return data
 
