@@ -5,8 +5,9 @@ import sqlite3
 import sys
 from enum import Enum, auto
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional, Tuple
+from typing import ClassVar, Dict, List, Optional, Set, Tuple
 
+from attr import field
 from attrs import define
 
 from automsr.config import validate_email
@@ -96,6 +97,32 @@ class ChromeProfile:
 
         allowed_domains = {"outlook", "live", "hotmail", "msn"}
 
+        @define(order=True, frozen=True)
+        class Record:
+            email: str = field(order=False)
+            timestamp: int
+
+            @classmethod
+            def from_row(cls, row: Tuple[str, str]) -> Optional["Record"]:
+                """
+                Parse a row obtained from the Login Data database of Chrome.
+
+                If the row is not compatible with our criteria, returns None.
+                """
+
+                assert len(row) == 2
+                email_value: str = row[0]
+                timestamp_value: int = int(row[1])
+
+                if not validate_email(email_value, raise_on_error=False):
+                    return None
+
+                domain = email_value.split("@")[1].split(".")[0]
+                if domain not in allowed_domains:
+                    return None
+
+                return cls(email=email_value, timestamp=timestamp_value)
+
         # TODO check if this path is valid for every OS
         login_database: Path = self.path / "Login Data"
         if not login_database.is_file():
@@ -103,31 +130,36 @@ class ChromeProfile:
             return None
 
         with sqlite3.connect(login_database) as conn:
-            cur = conn.execute("select t.username_value from main.logins t")
-            all_rows: List[Tuple[str]] = cur.fetchall()
+            cur = conn.execute(
+                """\
+                select t.username_value, t.date_last_used
+                from main.logins t
+                where t.username_value <> ''
+                and t.origin_url like '%live.com%';"""
+            )
+            all_rows: List[Tuple[str, str]] = cur.fetchall()
 
-        logger.debug("Database read: %s", all_rows)
-        valid_values: List[str] = []
-        for row in all_rows:
-            value = row[0]
-            if not validate_email(value, raise_on_error=False):
-                continue
-            domain = value.split("@")[1].split(".")[0]
-            if domain not in allowed_domains:
-                continue
-            valid_values.append(value)
+        valid_records: List[Optional[Record]] = [
+            Record.from_row(row=row) for row in all_rows
+        ]
+        valid_non_null_records: List[Record] = [
+            record for record in valid_records if record is not None
+        ]
+        unique_emails: Set[str] = {record.email for record in valid_non_null_records}
+        logger.debug("Outlook emails found: %s", unique_emails)
 
-        unique_values = set(valid_values)
-        logger.debug("Values found: %s", unique_values)
-        if not unique_values:
+        if not unique_emails:
             logger.debug("No Outlook email found!")
             return None
-        elif len(unique_values) > 1:
-            logger.debug("More than one Outlook email found! Will return a random one.")
-            return unique_values.pop()
+        elif len(unique_emails) > 1:
+            logger.debug(
+                "More than one Outlook email found! Will return the latest email used."
+            )
+            latest_record: Record = max(valid_non_null_records)
+            return latest_record.email
         else:
             logger.debug("Found only one Outlook email.")
-            return unique_values.pop()
+            return unique_emails.pop()
 
 
 @define
