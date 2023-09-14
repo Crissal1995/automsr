@@ -1,12 +1,15 @@
 import json
 import logging
 import os
+import sqlite3
 import sys
 from enum import Enum, auto
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional
+from typing import ClassVar, Dict, List, Optional, Tuple
 
 from attrs import define
+
+from automsr.config import validate_email
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +88,46 @@ class ChromeProfile:
         preferences_dict = json.load(open(preferences_path, encoding="utf-8"))
         displayed_name = preferences_dict.get("profile", {}).get("name", "")
         return cls(displayed_name=displayed_name, path=path)
+
+    def get_email(self) -> Optional[str]:
+        """
+        Try to get the Outlook email address from the profile data.
+        """
+
+        allowed_domains = {"outlook", "live", "hotmail", "msn"}
+
+        # TODO check if this path is valid for every OS
+        login_database: Path = self.path / "Login Data"
+        if not login_database.is_file():
+            logger.debug("No login database found: %s", login_database)
+            return None
+
+        with sqlite3.connect(login_database) as conn:
+            cur = conn.execute("select t.username_value from main.logins t")
+            all_rows: List[Tuple[str]] = cur.fetchall()
+
+        logger.debug("Database read: %s", all_rows)
+        valid_values: List[str] = []
+        for row in all_rows:
+            value = row[0]
+            if not validate_email(value, raise_on_error=False):
+                continue
+            domain = value.split("@")[1].split(".")[0]
+            if domain not in allowed_domains:
+                continue
+            valid_values.append(value)
+
+        unique_values = set(valid_values)
+        logger.debug("Values found: %s", unique_values)
+        if not unique_values:
+            logger.debug("No Outlook email found!")
+            return None
+        elif len(unique_values) > 1:
+            logger.debug("More than one Outlook email found! Will return a random one.")
+            return unique_values.pop()
+        else:
+            logger.debug("Found only one Outlook email.")
+            return unique_values.pop()
 
 
 @define
