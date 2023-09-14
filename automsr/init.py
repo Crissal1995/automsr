@@ -148,8 +148,10 @@ class InitExecutor:
         """
 
         assert self.profiles is not None
+        dummy_email = "must-change-this-with-correct-email-address@outlook.com"
         profiles_obj = [
-            {"email": p.displayed_name, "profile": p.path.stem} for p in self.profiles
+            {"email": p.get_email() or dummy_email, "profile": p.path.stem}
+            for p in self.profiles
         ]
         automsr_obj = {"profiles": profiles_obj}
 
