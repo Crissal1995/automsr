@@ -63,6 +63,12 @@ $ automsr run
 $ automsr run --config path/to/a/config.yaml
 ```
 
+### Generate automatically a Config file
+
+```shell
+$ automsr init
+```
+
 ### Retrieve local Chrome profiles
 
 ```shell
