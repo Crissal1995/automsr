@@ -91,7 +91,6 @@ def init(args: Args) -> None:
 
     executor = InitExecutor()
     executor.execute()
-    sys.exit(1)
 
 
 def add_common_flags(parser: ArgumentParser) -> None:

@@ -5,12 +5,11 @@ from urllib.parse import urlparse
 
 import yaml
 from attr import define
+from email_validator import EmailNotValidError
 from email_validator import (
     ValidatedEmail as _ValidatedEmail,
 )
-from email_validator import (
-    validate_email as _validate_email,
-)
+from email_validator import validate_email as _validate_email
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr
 from typing_extensions import Annotated
 
@@ -27,13 +26,21 @@ def validate_url(value: str) -> str:
     return value
 
 
-def validate_email(value: Optional[str]) -> Optional[str]:
+def validate_email(
+    value: Optional[str], *, raise_on_error: bool = True
+) -> Optional[str]:
     if value is None:
         return None
-    validated_email: _ValidatedEmail = _validate_email(
-        value, check_deliverability=False
-    )
-    return validated_email.normalized
+    try:
+        validated_email: _ValidatedEmail = _validate_email(
+            value, check_deliverability=False
+        )
+        return validated_email.normalized
+    except EmailNotValidError as e:
+        if raise_on_error:
+            raise e
+        else:
+            return None
 
 
 ValidatedVersion = Annotated[str, AfterValidator(validate_version)]

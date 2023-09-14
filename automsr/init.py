@@ -4,19 +4,20 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 import questionary
-from attr import asdict, define
+from attr import asdict, define, field
 from prompt_toolkit.shortcuts import CompleteStyle
 from questionary import Choice, Style
 
 from automsr.browser.profile import ChromeProfile, ChromeVariant, ProfilesExecutor
-from automsr.config import Config
+from automsr.config import Config, validate_email
 
 logger = logging.getLogger(__name__)
 
+# Defaults
 DEFAULT_CONFIG_PATH = Path("config.yaml")
 
-# style to use with `questionary` prompts
-style = Style(
+# Styles to use with `questionary` prompts
+default_style = Style(
     [
         ("highlighted", "fg:#673ab7 bold"),
         ("qmark", "fg:#673ab7 bold"),
@@ -90,6 +91,14 @@ class InitExecutor:
     # Automsr config
     profiles: Optional[List[ChromeProfile]] = None
 
+    # Email config
+    email_enabled: Optional[bool] = None
+    email_recipient: Optional[str] = None
+    email_sender: Optional[str] = None
+    email_sender_password: Optional[str] = field(
+        default=None, repr=lambda password: "***"
+    )
+
     # Generic config
     config_path: Optional[Path] = None
 
@@ -119,7 +128,16 @@ class InitExecutor:
         if self.config_path is None:
             self.config_path = self.get_config_path()
 
-        # TODO email section
+        if self.email_enabled is None:
+            self.email_enabled = self.get_email_enabled()
+
+        if self.email_enabled:
+            if self.email_recipient is None:
+                self.email_recipient = self.get_email_recipient()
+            if self.email_sender is None:
+                self.email_sender = self.get_email_sender()
+            if self.email_sender_password is None:
+                self.email_sender_password = self.get_email_sender_password()
 
         config = self.get_config()
         self.store_config(config=config)
@@ -142,17 +160,26 @@ class InitExecutor:
             "chromedriver_path": str(self.chromedriver_path),
         }
 
-        # TODO
+        assert self.email_enabled is not None
+
+        if self.email_enabled:
+            assert self.email_recipient is not None
+            assert self.email_sender is not None
+            assert self.email_sender_password is not None
+        else:
+            logger.debug(
+                "Not performing email attributes' check for None, since email sending is disabled."
+            )
+
         email_obj = {
-            "enable": None,
-            "recipient": None,
-            "sender": None,
-            "sender_password": None,
+            "enable": self.email_enabled,
+            "recipient": self.email_recipient,
+            "sender": self.email_sender,
+            "sender_password": self.email_sender_password,
         }
 
         config = Config.from_dict(
             data={
-                "version": "v1",
                 "automsr": automsr_obj,
                 "selenium": selenium_obj,
                 "email": email_obj,
@@ -216,7 +243,7 @@ class InitExecutor:
             message="Which variant of Chrome are you using?",
             choices=chrome_variants,
             use_indicator=True,
-            style=style,
+            style=default_style,
         ).ask()
 
         handle_null_response(chrome_variant)
@@ -275,7 +302,7 @@ class InitExecutor:
                 Choice(title=profile, checked=False) for profile in profiles_as_str
             ],
             validate=lambda choices: len(choices) > 0 or "Select at least one profile",
-            style=style,
+            style=default_style,
         ).ask()
 
         handle_null_response(chosen_profiles)
@@ -300,7 +327,7 @@ class InitExecutor:
             "What's the path to the Chromedriver executable?",
             validate=lambda v: Path(v).is_file() or "File not found",
             complete_style=CompleteStyle.READLINE_LIKE,
-            style=style,
+            style=default_style,
         ).ask()
         handle_null_response(path_str)
         assert path_str is not None
@@ -314,12 +341,12 @@ class InitExecutor:
 
         while True:
             path_str: Optional[str] = questionary.path(
-                "Path to output the YAML Config file. Leave empty for the default: config.yaml",
+                "Output path for the YAML Config file. Leave empty for the default: ./config.yaml",
                 complete_style=CompleteStyle.READLINE_LIKE,
                 validate=lambda v: v == ""
                 or not Path(v).is_dir()
                 or "Path invalid or directory",
-                style=style,
+                style=default_style,
             ).ask()
             handle_null_response(path_str)
             assert path_str is not None
@@ -344,3 +371,70 @@ class InitExecutor:
 
         logger.info("Path that will be used for the config: %s", path)
         return path
+
+    @staticmethod
+    def get_email_enabled() -> bool:
+        """
+        Get a boolean representing if the email sending should be enabled or not.
+        """
+
+        email_enabled: Optional[bool] = questionary.confirm(
+            message="Do you want to enable the sending of a status email after the execution?",
+            default=True,
+            style=default_style,
+        ).ask()
+        handle_null_response(email_enabled)
+        assert email_enabled is not None
+        return email_enabled
+
+    @staticmethod
+    def get_email_recipient() -> str:
+        """
+        Get the recipient for the status email.
+        """
+
+        recipient: Optional[str] = questionary.text(
+            message="What is the recipient of the status email?",
+            validate=lambda x: True
+            if validate_email(x, raise_on_error=False) is not None
+            else "Invalid email!",
+            style=default_style,
+        ).ask()
+        handle_null_response(recipient)
+        assert recipient is not None
+        return recipient
+
+    @staticmethod
+    def get_email_sender() -> str:
+        """
+        Get the sender for the status email.
+        """
+
+        sender: Optional[str] = questionary.text(
+            message="What is the sender of the status email?",
+            validate=lambda x: True
+            if validate_email(x, raise_on_error=False) is not None
+            else "Invalid email!",
+            style=default_style,
+        ).ask()
+        handle_null_response(sender)
+        assert sender is not None
+        return sender
+
+    @staticmethod
+    def get_email_sender_password() -> str:
+        """
+        Get the sender's password for the status email.
+        """
+
+        password: Optional[str] = questionary.password(
+            message=(
+                "What is the password of the sender email? "
+                "Please use an app password if you activated 2FA on this account."
+            ),
+            validate=lambda x: bool(x.strip()) or "Empty password!",
+            style=default_style,
+        ).ask()
+        handle_null_response(password)
+        assert password is not None
+        return password
