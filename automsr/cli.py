@@ -31,7 +31,7 @@ class Args:
     verbose: bool = False
 
     # Run args
-    # ...
+    multiprocess: bool = False
 
     # Profiles args
     format: OutputFormat = field(default=OutputFormat.LIST, converter=OutputFormat)
@@ -47,7 +47,12 @@ def run(args: Args) -> None:
 
     config = Config.from_yaml(args.config)
     executor = MultipleTargetsExecutor(config=config)
-    executor.execute()
+    if args.multiprocess:
+        logger.debug("Multiprocess execution selected.")
+        executor.execute_multiprocess()
+    else:
+        logger.debug("Single-process execution selected.")
+        executor.execute()
     logger.info("Execution finished!")
 
 
@@ -118,9 +123,15 @@ def add_run_flags(parser: ArgumentParser) -> None:
     """
     Add `run` flags to a generic parser.
 
-    Flags provided: no one.
+    Flags provided:
+    * --multiprocess
     """
 
+    parser.add_argument(
+        "--multiprocess",
+        action="store_true",
+        help="Enable execution for profiles to be multiprocess rather than single-process.",
+    )
     parser.set_defaults(func=run)
 
 

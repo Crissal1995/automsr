@@ -4,8 +4,10 @@ from datetime import timedelta
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Union, cast
 
+import joblib
 import selenium.common.exceptions
 from attr import define, field
+from joblib import delayed
 from selenium.common import NoSuchElementException
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
@@ -67,7 +69,7 @@ def get_available_points(dashboard: Dashboard) -> int:
     return points
 
 
-@define
+@define(slots=False)
 class SingleTargetExecutor:
     """
     Executor class driving the completion of all the tasks associated with Rewards.
@@ -589,6 +591,28 @@ class MultipleTargetsExecutor:
             status = executor.execute()
             logger.info("Status of execution for profile %s: %s", profile, status)
             statuses.append(status)
+
+        email_executor = EmailExecutor(config=self.config)
+        if email_executor.are_messages_enabled():
+            email_executor.send_message(statuses=statuses)
+
+    def execute_multiprocess(self) -> None:
+        """
+        Spawn a SingleTargetExecutor for every profile specified in the `config` file.
+
+        This method will execute the main functionality in a parallel and out of bounds way.
+        """
+
+        profiles: List[Profile] = self.config.automsr.profiles
+        executors: List[SingleTargetExecutor] = [
+            SingleTargetExecutor(config=self.config, profile=profile)
+            for profile in profiles
+        ]
+
+        parallel = joblib.Parallel(n_jobs=3, return_as="list")
+        statuses: List[Status] = parallel(
+            delayed(executor.execute)() for executor in executors
+        )
 
         email_executor = EmailExecutor(config=self.config)
         if email_executor.are_messages_enabled():

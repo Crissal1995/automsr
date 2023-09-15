@@ -54,3 +54,9 @@ exclude = [".?v(irtualv?)?env"]
 
 [tool.pytest.ini_options]
 addopts = "--doctest-modules"
+
+[[tool.mypy.overrides]]
+module = [
+    "joblib",
+]
+ignore_missing_imports = true
