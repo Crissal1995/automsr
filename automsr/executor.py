@@ -2,7 +2,7 @@ import logging
 import time
 from datetime import timedelta
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
 
 import selenium.common.exceptions
 from attr import define, field
@@ -57,6 +57,13 @@ class CannotDetermineQuizTypeException(QuizException):
     """
 
 
+class AccountSuspendedException(ExecutorException):
+    """
+    Exception raised when the account related to the Executor
+    was suspended because of cheats.
+    """
+
+
 def get_available_points(dashboard: Dashboard) -> int:
     """
     Return the available points that a user can have.
@@ -81,7 +88,7 @@ class SingleTargetExecutor:
 
     def _get_execution_function(
         self, step_type: StepType, dashboard: Optional[Dashboard] = None
-    ) -> Callable[[], Optional[Union[Dashboard, int]]]:
+    ) -> Callable[[], Union[None, Dashboard, int, bool]]:
         """
         Return the function associated to the input execution step.
         """
@@ -89,7 +96,10 @@ class SingleTargetExecutor:
         func: Callable
 
         if step_type is StepType.START_SESSION:
-            return self.start_session
+            func = self.start_session
+
+        elif step_type is StepType.CHECK_SUSPENDED:
+            func = self.is_account_suspended
 
         elif step_type is StepType.GET_DASHBOARD:
             func = self.get_dashboard
@@ -101,8 +111,6 @@ class SingleTargetExecutor:
             StepType.MOBILE_SEARCHES,
             StepType.GET_POINTS,
         ):
-            assert dashboard is not None
-
             if step_type is StepType.PROMOTIONS:
                 func = partial(self.execute_promotions, dashboard=dashboard)
             elif step_type is StepType.PUNCHCARDS:
@@ -143,6 +151,7 @@ class SingleTargetExecutor:
 
         # Get the list of steps in the correct order of execution
         step_types: List[StepType] = StepType.get_run_steps()
+        unskippable_step_types: Set[StepType] = StepType.get_unskippable_steps()
 
         # If the profile is marked as skipped, return this result.
         if self.profile.skip:
@@ -159,6 +168,7 @@ class SingleTargetExecutor:
             return status
 
         # Declare the variables needed in the following loop.
+        is_suspended = False
         dashboard: Optional[Dashboard] = None
         points: Optional[int] = None
 
@@ -170,9 +180,6 @@ class SingleTargetExecutor:
                 step_type=step_type, dashboard=dashboard
             )
 
-            # Declare the outcome of the step.
-            outcome: Optional[OutcomeType] = None
-
             # Declare the explanation of the step, if non-success.
             explanation: Optional[str] = None
 
@@ -180,6 +187,20 @@ class SingleTargetExecutor:
             start_counter: float = time.perf_counter()
 
             try:
+                # If the account is already determined to be suspended,
+                # then raise an artificial exception instead of executing the function.
+                if is_suspended and step_type not in unskippable_step_types:
+                    logger.info("Account is suspended and the step is not unskippable.")
+                    raise AccountSuspendedException()
+                elif is_suspended:
+                    logger.info("Account is suspended but the step is unskippable.")
+                else:
+                    logger.info("Account is not suspended.")
+
+                # If we are here, it means that either the account is not suspended
+                # (good weather scenario) or that the step was unskippable.
+                # Either way, we continue with the flow execution.
+
                 # Execute the function.
                 retval = function()
 
@@ -192,6 +213,10 @@ class SingleTargetExecutor:
                 elif step_type is StepType.GET_POINTS:
                     points = cast(int, retval)
                     assert isinstance(points, int)
+
+                elif step_type is StepType.CHECK_SUSPENDED:
+                    is_suspended = cast(bool, retval)
+                    assert isinstance(is_suspended, bool)
 
                 # Otherwise, we expect nothing as return value.
                 else:
@@ -209,6 +234,12 @@ class SingleTargetExecutor:
             except NotImplementedError:
                 outcome = OutcomeType.SKIPPED
                 explanation = "Step not implemented yet."
+                logger.warning(explanation)
+
+            # This is needed for suspended accounts
+            except AccountSuspendedException:
+                outcome = OutcomeType.SUSPENDED
+                explanation = "Step not executed since account was suspended."
                 logger.warning(explanation)
 
             # If no exception is raised, the step is successful.
@@ -260,6 +291,17 @@ class SingleTargetExecutor:
         """
 
         self.browser.driver.quit()
+
+    def is_account_suspended(self) -> bool:
+        """
+        Determine if the current account is suspended or not.
+        """
+
+        try:
+            self.browser.driver.find_element(by=By.ID, value="suspendedAccount")
+            return True
+        except selenium.common.exceptions.NoSuchElementException:
+            return False
 
     def get_dashboard(self) -> Dashboard:
         """

@@ -66,6 +66,7 @@ class StatusMessage:
             OutcomeType.SUCCESS: "✔️",
             OutcomeType.FAILURE: "❌",
             OutcomeType.SKIPPED: "⏭️",
+            OutcomeType.SUSPENDED: "🔒",
         }
 
         overall_outcome = self.status.get_outcome()

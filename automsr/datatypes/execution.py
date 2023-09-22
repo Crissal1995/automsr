@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 from enum import Enum, auto
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from attr import define
 
@@ -15,15 +15,18 @@ class OutcomeType(Enum):
     Possible outcome for an execution.
     """
 
-    FAILURE = "failure"
-    SUCCESS = "success"
-    SKIPPED = "skipped"
+    FAILURE = auto()
+    SUCCESS = auto()
+    SKIPPED = auto()
+    SUSPENDED = auto()
 
 
 class StepType(Enum):
     """
     Type of execution step found during the normal execution.
     """
+
+    CHECK_SUSPENDED = auto()
 
     START_SESSION = auto()
     END_SESSION = auto()
@@ -45,6 +48,8 @@ class StepType(Enum):
         return [
             # start the session
             cls.START_SESSION,
+            # check if the account was suspended
+            cls.CHECK_SUSPENDED,
             # retrieve the dashboard
             cls.GET_DASHBOARD,
             # complete the punchcards, if any
@@ -61,6 +66,14 @@ class StepType(Enum):
             # end the session
             cls.END_SESSION,
         ]
+
+    @classmethod
+    def get_unskippable_steps(cls) -> Set["StepType"]:
+        """
+        Returns the steps that must be always executed.
+        """
+
+        return {cls.START_SESSION, cls.CHECK_SUSPENDED, cls.END_SESSION}
 
 
 @define
@@ -94,6 +107,7 @@ class Status:
         >>> success = Step(type=ANY, outcome=OutcomeType.SUCCESS)
         >>> failure = Step(type=ANY, outcome=OutcomeType.FAILURE)
         >>> skipped = Step(type=ANY, outcome=OutcomeType.SKIPPED)
+        >>> suspended = Step(type=ANY, outcome=OutcomeType.SUSPENDED)
 
         >>> Status(profile=profile, steps=[], points=None).get_outcome().name
         'SKIPPED'
@@ -105,22 +119,28 @@ class Status:
         'SKIPPED'
         >>> Status(profile=profile, steps=[skipped, skipped, failure], points=None).get_outcome().name
         'FAILURE'
+        >>> Status(profile=profile, steps=[skipped, skipped, suspended], points=None).get_outcome().name
+        'SUSPENDED'
         """
 
         outcomes = [step.outcome for step in self.steps]
+        set_outcomes = set(outcomes)
 
         # If no step is present, the status defaults to SKIPPED.
-        if not outcomes:
+        if not set_outcomes:
             return OutcomeType.SKIPPED
 
         # The outcome is SKIPPED if all the outcomes are SKIPPED.
-        if all(outcome is OutcomeType.SKIPPED for outcome in outcomes):
+        if len(set_outcomes) == 1 and OutcomeType.SKIPPED in set_outcomes:
             return OutcomeType.SKIPPED
 
-        # The outcome is SUCCESS if no outcome is FAILURE,
-        # so they are either SUCCESS or SKIPPED.
-        if not any(outcome is OutcomeType.FAILURE for outcome in outcomes):
-            return OutcomeType.SUCCESS
+        # If any outcome is SUSPENDED, the overall outcome is such.
+        if OutcomeType.SUSPENDED in set_outcomes:
+            return OutcomeType.SUSPENDED
 
-        # If we are here, at least one outcome is FAILURE.
-        return OutcomeType.FAILURE
+        # If any outcome is FAILURE, the overall outcome is such.
+        if OutcomeType.FAILURE in set_outcomes:
+            return OutcomeType.FAILURE
+
+        # If we are here, we either have all SUCCESS, or a mix of them and SKIPPED.
+        return OutcomeType.SUCCESS
