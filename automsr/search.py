@@ -1,22 +1,12 @@
 import logging
 import random
 import string
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Generator
-from urllib.parse import urlparse
 
 from selenium.webdriver.common.keys import Keys
 
 logger = logging.getLogger(__name__)
-
-
-def is_valid_url(url: str) -> bool:
-    try:
-        result = urlparse(url)
-    except (AttributeError, ValueError):
-        return False
-    else:
-        return all(field for field in (result.scheme, result.netloc, result.path))
 
 
 class SearchGenerator(ABC):
@@ -25,22 +15,38 @@ class SearchGenerator(ABC):
     query for Bing searches
     """
 
+    @abstractmethod
     def query_gen(self) -> Generator[str, None, None]:
         """
         Returns a generator of queries to be used with Bing searches
         """
 
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
+    @abstractmethod
     def sleep_time(self) -> float:
         """
         Returns the time to sleep in seconds between Bing searches
         """
 
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class RandomSearchGenerator(SearchGenerator):
+    """
+    >>> search_generator = RandomSearchGenerator()
+    >>> search_generator.sleep_time()
+    1.5
+
+    >>> import random
+    >>> random.seed(0)
+    >>> query_generator = search_generator.query_gen()
+    >>> next(query_generator)
+    'vtkgnkuhmpxnhtqgxzvxisxrmclpxzmwguoaskvramwgiweogzulcinycosovozpplpkoh'
+    >>> for _ in range(100):
+    ...     assert next(query_generator) == Keys.BACKSPACE
+    """
+
     def sleep_time(self):
         return 1.5
 
