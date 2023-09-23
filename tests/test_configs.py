@@ -31,3 +31,11 @@ class TestConfigs(unittest.TestCase):
         self.assertEqual(
             config.email.sender_password.get_secret_value(), "my_secret_password"
         )
+
+    def test_non_existing_config(self) -> None:
+        """
+        Test that an exception is raised if a wrong value is provided to `load_config`.
+        """
+
+        with self.assertRaises(FileNotFoundError):
+            load_config(name="i-do-not-exist.yaml")
