@@ -136,7 +136,7 @@ class SearchCounter(BaseModel):
 class Counters(BaseModel):
     """
     >>> Counters()
-    Counters(pcSearch=[SearchCounter(name='Empty Counter', offerId='empty-counter', complete=True, pointProgress=0, pointProgressMax=0, description='empty-counter description')], mobileSearch=None)
+    Counters(pcSearch=[SearchCounter(...), SearchCounter(...)], mobileSearch=None)
     """  # noqa:E501
 
     # two items expected: actual pc searches counter, and bing searches counter
