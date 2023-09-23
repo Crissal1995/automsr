@@ -100,6 +100,17 @@ class SearchCounter(BaseModel):
     pointProgressMax: int
     description: str
 
+    @classmethod
+    def empty_counter(cls) -> "SearchCounter":
+        return cls(
+            name="Empty Counter",
+            offerId="empty-counter",
+            complete=True,
+            pointProgress=0,
+            pointProgressMax=0,
+            description="empty-counter description",
+        )
+
     def is_completable(self) -> bool:
         return not self.complete
 
@@ -123,12 +134,21 @@ class SearchCounter(BaseModel):
 
 
 class Counters(BaseModel):
+    """
+    >>> Counters()
+    Counters(pcSearch=[SearchCounter(...), SearchCounter(...)], mobileSearch=None)
+    """  # noqa:E501
+
     # two items expected: actual pc searches counter, and bing searches counter
-    pcSearch: List[SearchCounter] = Field(..., min_length=2, max_length=2)
+    pcSearch: List[SearchCounter] = Field(
+        default=[SearchCounter.empty_counter(), SearchCounter.empty_counter()],
+        min_length=2,
+        max_length=2,
+    )
 
     # one item expected: actual mobile searches counter
     mobileSearch: Optional[List[SearchCounter]] = Field(
-        None, min_length=1, max_length=1
+        default=None, min_length=1, max_length=1
     )
 
 
