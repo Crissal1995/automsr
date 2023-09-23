@@ -60,6 +60,12 @@ class TestDatatypes(unittest.TestCase):
         """
 
         for dashboard_file in DASHBOARD_ROOT.iterdir():
-            if dashboard_file.suffix != ".json":
-                continue
             _ = Dashboard(**json.load(open(dashboard_file)))
+
+    def test_non_existing_dashboard(self) -> None:
+        """
+        Test that an exception is raised if a wrong value is provided to `load_dashboard`.
+        """
+
+        with self.assertRaises(FileNotFoundError):
+            load_dashboard(name="i-do-not-exist.json")
