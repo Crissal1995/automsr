@@ -1,10 +1,13 @@
+import smtplib
 import textwrap
 import unittest
 from datetime import timedelta
+from typing import cast
+from unittest.mock import MagicMock, Mock, patch
 
 from automsr.config import Profile
 from automsr.datatypes.execution import OutcomeType, Status, Step, StepType
-from automsr.mail import StatusMessage
+from automsr.mail import EmailConnection, StatusMessage
 
 
 class MailTestCase(unittest.TestCase):
@@ -111,3 +114,58 @@ class MailTestCase(unittest.TestCase):
         status_message = StatusMessage(status=status)
         message = status_message.to_html()
         self.assertEqual(expected_message, message)
+
+
+class ConnectionTestCase(unittest.TestCase):
+    """
+    Base class for tests related to connection test cases.
+    """
+
+    @patch("smtplib.SMTP")
+    def test_get_connection(self, _smtp_mock: MagicMock) -> None:
+        connection = EmailConnection(
+            sender="user1@foo.com",
+            password="super-strong-password",
+            host="smtp.foo.com",
+            port=123,
+            tls=True,
+        )
+
+        # good weather scenario: smtp.close() didn't raise
+        with connection.open_smtp_connection() as smtp_mock:
+            pass
+        cast(MagicMock, smtp_mock).close.assert_called_once()
+
+    @patch("smtplib.SMTP")
+    def test_get_connection_with_exception(self, _smtp_mock: MagicMock) -> None:
+        connection = EmailConnection(
+            sender="user1@foo.com",
+            password="super-strong-password",
+            host="smtp.foo.com",
+            port=123,
+            tls=True,
+        )
+
+        # bad weather scenario: smtp.close() raised
+        with connection.open_smtp_connection() as smtp_mock:
+            cast(
+                MagicMock, smtp_mock
+            ).close.side_effect = smtplib.SMTPServerDisconnected
+        cast(MagicMock, smtp_mock).close.assert_called_once()
+
+        with self.assertRaises(smtplib.SMTPServerDisconnected):
+            smtp_mock.close()
+
+    @patch("smtplib.SMTP")
+    @patch.object(EmailConnection, "open_smtp_connection")
+    def test_send_message(self, conn_mock: MagicMock, smtp_mock: MagicMock) -> None:
+        conn_mock.return_value.__enter__.return_value = smtp_mock
+
+        connection = EmailConnection(
+            sender="user1@foo.com",
+            password="super-strong-password",
+            host="smtp.foo.com",
+            port=123,
+            tls=True,
+        )
+        connection.send_message(message=Mock())

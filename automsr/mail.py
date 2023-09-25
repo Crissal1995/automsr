@@ -2,8 +2,9 @@ import datetime
 import logging
 import random
 import smtplib
+from contextlib import contextmanager
 from email.message import EmailMessage
-from typing import Dict, List, Optional
+from typing import Dict, Generator, List, Optional
 
 import markdown
 from attr import define, field
@@ -176,30 +177,26 @@ class EmailConnection:
     host: str
     port: int = field(converter=int)
     tls: bool = field(default=False, converter=bool)
-    smtp: smtplib.SMTP = field(init=False)
 
-    def open(self) -> None:
+    @contextmanager
+    def open_smtp_connection(self) -> Generator[smtplib.SMTP, None, None]:
         """
         Open an SMTP connection and try to log in with mail server.
         """
 
-        self.smtp = smtplib.SMTP(host=self.host, port=self.port)
-        self.smtp.ehlo()
+        smtp = smtplib.SMTP(host=self.host, port=self.port)
+        smtp.ehlo()
         if self.tls:
-            self.smtp.starttls()
-        self.smtp.login(self.sender, self.password)
-
-    def close(self) -> None:
-        """
-        Closes an SMTP established connection.
-        """
+            smtp.starttls()
+        smtp.login(self.sender, self.password)
 
         try:
-            self.smtp.quit()
-        except smtplib.SMTPServerDisconnected:
-            pass
+            yield smtp
         finally:
-            logger.debug("SMTP connection closed")
+            try:
+                smtp.close()
+            except smtplib.SMTPServerDisconnected:
+                pass
 
     def test_connection(self) -> None:
         """
@@ -207,8 +204,8 @@ class EmailConnection:
         Any exception is raised to the caller.
         """
 
-        self.open()
-        self.close()
+        with self.open_smtp_connection():
+            pass
         logger.info("Email connection was successful")
 
     def send_message(self, message: ExecutionMessage) -> None:
@@ -216,16 +213,9 @@ class EmailConnection:
         Send a Message using the provided credentials and SMTP.
         """
         smtp_message = message.get_message()
-        self.smtp.send_message(msg=smtp_message)
+        with self.open_smtp_connection() as smtp:
+            smtp.send_message(msg=smtp_message)
         logger.debug("Message sent correctly with smtp!")
-
-    def __enter__(self):
-        return self.open()
-
-    def __exit__(self, _exc_type, _exc_value, _traceback):
-        # Check docs for more info on these parameters:
-        # https://docs.python.org/3/reference/datamodel.html#object.__exit__
-        self.close()
 
 
 @define
@@ -391,16 +381,17 @@ class EmailExecutor:
         connection: EmailConnection = EmailConnectionFactory(
             config=self.config
         ).get_connection_strict()
-        with connection:
-            message = ExecutionMessage(
-                sender=connection.sender,
-                recipient=recipient,
-                status_messages=status_messages,
-            )
-            if subject is not None:
-                message.subject = subject
-            connection.send_message(message=message)
-            logger.info("Message sent correctly!")
+
+        message = ExecutionMessage(
+            sender=connection.sender,
+            recipient=recipient,
+            status_messages=status_messages,
+        )
+        if subject is not None:
+            message.subject = subject
+
+        connection.send_message(message=message)
+        logger.info("Message sent correctly!")
 
     def send_mock_message(self, *, seed: int = 0) -> None:
         """
