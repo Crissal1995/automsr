@@ -60,7 +60,7 @@ class MailTestCase(unittest.TestCase):
             """\
             <h3>Profile: foo@bar.com</h3>
             <p><strong>Points: N/A</strong></p>
-            <p><strong>Overall outcome: ❌ FAILURE</strong></p>
+            <p><strong>Overall outcome: 🔒 SUSPENDED</strong></p>
             <table>
             <thead>
             <tr>
@@ -89,6 +89,12 @@ class MailTestCase(unittest.TestCase):
             <td style="text-align: left;">0:00:55</td>
             <td style="text-align: left;">Something broke again?!</td>
             </tr>
+            <tr>
+            <td style="text-align: center;">🔒</td>
+            <td style="text-align: left;">CHECK_SUSPENDED</td>
+            <td style="text-align: left;">0:01:40</td>
+            <td style="text-align: left;">You were banned!</td>
+            </tr>
             </tbody>
             </table>"""
         )
@@ -108,6 +114,12 @@ class MailTestCase(unittest.TestCase):
                 type=StepType.END_SESSION,
                 explanation="Something broke again?!",
                 duration=timedelta(seconds=55),
+            ),
+            Step(
+                outcome=OutcomeType.SUSPENDED,
+                type=StepType.CHECK_SUSPENDED,
+                explanation="You were banned!",
+                duration=timedelta(seconds=100),
             ),
         ]
         status = Status(profile=profile, steps=steps, points=points)
