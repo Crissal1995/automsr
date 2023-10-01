@@ -7,13 +7,13 @@ from typing import Any, Callable, Dict, List, Optional, Set, Union, cast
 import selenium.common.exceptions
 from attr import define, field
 from selenium.common import NoSuchElementException
-from selenium.webdriver import Keys
+from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from tqdm import tqdm
 
 from automsr.browser.browser import Browser
-from automsr.config import Config, Profile
+from automsr.config import Config, Profile, SearchType
 from automsr.datatypes.dashboard import (
     Dashboard,
     Promotion,
@@ -27,7 +27,7 @@ from automsr.datatypes.execution import (
     StepType,
 )
 from automsr.mail import EmailExecutor
-from automsr.search import RandomSearchGenerator
+from automsr.search import FakerSearchGenerator, RandomSearchGenerator, SearchGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -372,11 +372,20 @@ class SingleTargetExecutor:
             old_user_agent = self.browser.get_user_agent()
             self.browser.change_user_agent(user_agent=user_agent)
 
-        search_generator = RandomSearchGenerator()
-        sleep_time = search_generator.sleep_time()
-        query = search_generator.query_gen()
-
         self.browser.go_to_bing()
+
+        search_type = self.config.automsr.search_type
+        generator: SearchGenerator
+        if search_type is SearchType.RANDOM:
+            generator = RandomSearchGenerator()
+        elif search_type is SearchType.LOREM:
+            seed = int(time.time())  # generate a new seed every time
+            generator = FakerSearchGenerator(seed=seed)
+        else:
+            raise ValueError(search_type)
+
+        sleep_time_generator = generator.sleep_time()
+        query_generator = generator.query()
 
         for i in tqdm(range(safe_amount)):
             logger.debug("Executing search: %s/%s", i + 1, safe_amount)
@@ -386,18 +395,25 @@ class SingleTargetExecutor:
                 by=By.ID, value="sb_form_q"
             )
 
-            # send the next item of the generator to the input field
-            element.send_keys(next(query))
+            # retrieve the query to send to the searchbar
+            query = next(query_generator)
+
+            # send the query one character at the time
+            actions = ActionChains(driver=self.browser.driver)
+            actions.send_keys_to_element(element, query)
+            actions.perform()
 
             # sleep to prevent issues with Selenium interacting with the page
-            time.sleep(0.5)
+            time.sleep(1)
 
             # send ENTER to perform a search
             element.send_keys(Keys.ENTER)
 
             # sleep a certain amount of time
+            sleep_time = next(sleep_time_generator)
             time.sleep(sleep_time)
 
+        # At the end of the execution restore the old user-agent, if needed
         if user_agent is not None:
             logger.debug("Restoring original user-agent: %s", old_user_agent)
             assert old_user_agent is not None
