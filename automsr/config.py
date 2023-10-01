@@ -1,4 +1,5 @@
 import json
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
@@ -12,6 +13,11 @@ from email_validator import (
 from email_validator import validate_email as _validate_email
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, SecretStr
 from typing_extensions import Annotated
+
+
+class SearchType(Enum):
+    RANDOM = "random"
+    LOREM = "lorem"
 
 
 def validate_version(value: str) -> str:
@@ -73,10 +79,22 @@ class Profile(BaseModel):
 class AutomsrConfig(BaseModel):
     """
     >>> profiles = [{"email": "1@gmail.com", "profile": "p1"}, {"email": "2@gmail.com", "profile": "p2"}]
-    >>> _ = AutomsrConfig(profiles=profiles)
+    >>> config = AutomsrConfig(profiles=profiles)
+    >>> assert config.search_type is SearchType.RANDOM
+
+    >>> config = AutomsrConfig(**{"profiles": profiles, "search_type": "lorem"})
+    >>> assert config.search_type is SearchType.LOREM
+
+    >>> AutomsrConfig(**{"profiles": profiles, "search_type": "foo"})  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    pydantic_core._pydantic_core.ValidationError: 1 validation error for AutomsrConfig
+    search_type
+      Input should be 'random' or 'lorem' [type=enum, input_value='foo', input_type=str]
     """
 
     profiles: List[Profile] = Field(..., min_length=1)
+    search_type: SearchType = Field(default=SearchType.RANDOM)
 
     rewards_homepage: ValidatedURL = Defaults.rewards_homepage
     bing_homepage: ValidatedURL = Defaults.bing_homepage

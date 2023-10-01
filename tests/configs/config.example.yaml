@@ -6,6 +6,13 @@ version: v1
 
 # Required.
 automsr:
+  # Optional.
+  # Type of search generator used with Bing searches.
+  # Can be:
+  # - random (DEFAULT): a string of random characters will be used.
+  # - lorem: a lorem-ipsum-like sentence will be used.
+  search_type: random
+
   # Required.
   # List of profiles to provide to the tool.
   # A profile represent a Chrome profile already logged in https://rewards.bing.com
